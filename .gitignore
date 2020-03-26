@@ -1,32 +1,32 @@
-# Prerequisites
-*.d
+/*
+!.gitignore
+!LICENSE
+!*.md
+!*.dat
 
-# Compiled Object files
-*.slo
-*.lo
-*.o
-*.obj
+# Code folder 
+!/ichnos_code
+/ichnos_code/*
+!/ichnos_code/*.h
+!/ichnos_code/*.cpp
+!/ichnos_code/*.sln
+!/ichnos_code/*.vcxproj
 
-# Precompiled Headers
-*.gch
-*.pch
+# Houdini folder
+!/ichnos_hou
+/ichnos_hou/*
+!/ichnos_hou/ichnos
+/ichnos_hou/ichnos/*
+!/ichnos_hou/ichnos/*.dat
+!/ichnos_hou/ichnos/*.hipnc
+!/ichnos_hou/ichnos/hda
+/ichnos_hou/ichnos/hda/*
+!/ichnos_hou/ichnos/hda/*.hdanc
+!/ichnos_hou/ichnos/examples
+/ichnos_hou/ichnos/examples/*
+!/ichnos_hou/ichnos/examples/*.dat
 
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
 
-# Fortran module files
-*.mod
-*.smod
 
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
 
-# Executables
-*.exe
-*.out
-*.app
+

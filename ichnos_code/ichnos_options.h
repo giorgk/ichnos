@@ -1,0 +1,158 @@
+#pragma once
+
+#include <iostream>
+
+#include <boost/mpi.hpp>
+#include <boost/program_options.hpp>
+
+#include "ichnos_structures.h"
+
+
+namespace po = boost::program_options;
+
+
+namespace ICHNOS {
+	class options {
+	public:
+		options(boost::mpi::communicator& world_in);
+
+		bool readInput(int argc, char* argv[]);
+
+		std::string getVelFname() {
+			return velocityFieldFileName;
+		}
+
+		ParticleOptions Popt;
+		DomainOptions Dopt;
+
+		
+
+	private:
+		boost::mpi::communicator world;
+		bool bIsMultiThreaded = true;
+		int nThreads = 1;
+		std::string velocityFieldFileName;
+	};
+
+	options::options(boost::mpi::communicator& world_in)
+		:
+		world(world_in)
+	{
+		if (world.size() > 1) {
+			bIsMultiThreaded = false;
+		}
+	}
+
+	bool options::readInput(int argc, char* argv[]) {
+		// Command line options
+		po::options_description commandLineOptions("Command line options");
+		commandLineOptions.add_options()
+			("version,v", "print version information")
+			("help,h", "Get a list of options in the configuration file")
+			("config,c", po::value<std::string >(), "Set configuration file")
+			;
+
+		po::variables_map vm_cmd;
+
+		po::store(po::parse_command_line(argc, argv, commandLineOptions), vm_cmd);
+
+		if (vm_cmd.size() == 0) {
+			if (world.rank() == 0) {
+				std::cout << " To run Ichnos specify the configuration file as" << std::endl;
+				std::cout << "-c config" << std::endl << std::endl;;
+				std::cout << "Other command line options are:" << std::endl;
+				std::cout << commandLineOptions << std::endl;
+			}
+			return false;
+		}
+
+		if (vm_cmd.count("version")) {
+			if (world.rank() == 0) {
+				std::cout << "|------------------|" << std::endl;
+				std::cout << "|      ICHNOS      |" << std::endl;
+				std::cout << "| Version : 0.0.01 |" << std::endl;
+				std::cout << "|    by  giorgk    |" << std::endl;
+				std::cout << "|------------------|" << std::endl;
+			}
+			return false;
+		}
+
+		// Configuration file options
+		po::options_description config_options("Configuration file options");
+		config_options.add_options()
+			("nThreads", po::value<int>()->default_value(1), "Number of threads")
+			("VelocityConfig", po::value<std::string >(), "Set configuration file for the velocity field")
+			("Stuckiter", po::value<int>()->default_value(10), "After Stuckiter exit particle tracking")
+			("Method", po::value<std::string >(), "Method for time steping")
+			("DomainPolygon", po::value<std::string >(), "A filename that containts the vertices of the outline polygon")
+			("TopElevation", po::value<std::string >(), "A filename with the point cloud of the top elevation")
+			("BottomElevation", po::value<std::string >(), "A filename with the point cloud of the bottom elevation")
+			("PartilceFile", po::value<std::string >(), "A filename with the initial positions of particles")
+			("WellFile", po::value<std::string >(), "A filename with the well locations")
+			("Direction", po::value<double>()->default_value(1), "Backward or forward particle tracking")
+			("StepSize", po::value<double>()->default_value(1), "Step Size in units of length")
+			("MaxStepSize", po::value<double>()->default_value(2), "Maximum Step Size in units of length")
+			("MinStepSize", po::value<double>()->default_value(0.1), "Minimum Step Size in units of length")
+			("ToleranceStepSize", po::value<double>()->default_value(0.1), "Tolerance when the RK45 is used")
+			("MaxIterationsPerStreamline", po::value<int>()->default_value(1000), "Maximum number of steps per streamline")
+			("MaxProcessorExchanges", po::value<int>()->default_value(50), "Maximum number of that a particles are allowed to change processors")
+			("OutputFile", po::value<std::string >(), "Prefix for the output file")
+			("ParticlesInParallel", po::value<int>()->default_value(1000), "After Stuckiter exit particle tracking")
+			;
+
+		if (vm_cmd.count("help")) {
+			if (world.rank() == 0) {
+				std::cout << " To run ICHNOS specify the configuration file as" << std::endl;
+				std::cout << "-c config" << std::endl << std::endl;;
+				std::cout << "Other command line options are:" << std::endl;
+				std::cout << commandLineOptions << std::endl;
+
+				std::cout << "ICHNOS configuration file options:" << std::endl;
+				std::cout << "The options without default values are mandatory" << std::endl;
+				std::cout << "(All options are case sensitive)" << std::endl;
+				std::cout << "------------------------------" << std::endl;
+				std::cout << config_options << std::endl;
+			}
+			return false;
+		}
+
+		po::variables_map vm_cfg;
+		if (vm_cmd.count("config")) {
+			std::cout << "Configuration file: " << vm_cmd["config"].as<std::string>().c_str() << std::endl;
+			po::store(po::parse_config_file<char>(vm_cmd["config"].as<std::string>().c_str(), config_options), vm_cfg);
+			nThreads = vm_cfg["nThreads"].as<int>();
+			velocityFieldFileName = vm_cfg["VelocityConfig"].as<std::string>();
+
+			// particle tracking options
+			Popt.StuckIterations = vm_cfg["Stuckiter"].as<int>();
+			SolutionMethods method = castMethod2Enum(vm_cfg["Method"].as<std::string>());
+			if (method == SolutionMethods::INVALID)
+				return false;
+			else {
+				Popt.method = method;
+			}
+			double tmp = vm_cfg["Direction"].as<double>();
+			if (tmp >= 0)
+				Popt.Direction = 1;
+			else
+				Popt.Direction = -1;
+
+			Popt.StepSize = vm_cfg["StepSize"].as<double>();
+			Popt.MaxStepSize = vm_cfg["MaxStepSize"].as<double>();
+			Popt.MinStepSize = vm_cfg["MinStepSize"].as<double>();
+			Popt.ToleranceStepSize = vm_cfg["ToleranceStepSize"].as<double>();
+			Popt.MaxIterationsPerStreamline = vm_cfg["MaxIterationsPerStreamline"].as<int>();
+			Popt.MaxProcessorExchanges = vm_cfg["MaxProcessorExchanges"].as<int>();
+			Popt.ParticlesInParallel = vm_cfg["ParticlesInParallel"].as<int>(); 
+			Popt.ParticleFile = vm_cfg["PartilceFile"].as<std::string>();
+			Popt.WellFile = vm_cfg["WellFile"].as<std::string>();
+			Popt.OutputFile = vm_cfg["OutputFile"].as<std::string>();
+
+			// Domain options
+			Dopt.OutlineFile = vm_cfg["DomainPolygon"].as<std::string>();
+			Dopt.TopElevationFile = vm_cfg["TopElevation"].as<std::string>();
+			Dopt.BottomeElevationFile = vm_cfg["BottomElevation"].as<std::string>();
+		}
+		return true;
+	}
+}
