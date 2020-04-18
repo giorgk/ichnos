@@ -377,22 +377,79 @@ namespace ICHNOS {
 
 		double ssdir = adaptStepSize * popt.Direction;
 
-		//Runge-Kutta-Fehlberg Method (RKF45)		// Step 1 ----------------------------		int istep = 0;		p2 = v1.normalize() * CF[istep][0] * ssdir + P.getP();
+		//Runge-Kutta-Fehlberg Method (RKF45)
+		// Step 1 ----------------------------
+		int istep = 0;
+		p2 = v1.normalize() * CF[istep][0] * ssdir + P.getP();
 		er = CheckNewPointAndCalcVelocity(p2, v2, proc);
 		DEBUG::displayPVasVex(p2, v2);
-		if (v2.isZero()) { return false; }		// Step 2 ----------------------------		istep++;		v_m = v1 * CF[istep][1] + v2 * CF[istep][2];		p3 = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
+		if (v2.isZero()) { return false; }
+
+		// Step 2 ----------------------------
+		istep++;
+		v_m = v1 * CF[istep][1] + v2 * CF[istep][2];
+		p3 = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
 		er = CheckNewPointAndCalcVelocity(p3, v3, proc);
 		DEBUG::displayPVasVex(p3, v3);
-		if (v3.isZero()) return false;		// Step 3 ----------------------------		istep++;		v_m = v1 * CF[istep][1] + v2 * CF[istep][2] + v3 * CF[istep][3];		p4 = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
+		if (v3.isZero()) return false;
+
+		// Step 3 ----------------------------
+		istep++;
+		v_m = v1 * CF[istep][1] + v2 * CF[istep][2] + v3 * CF[istep][3];
+		p4 = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
 		er = CheckNewPointAndCalcVelocity(p4, v4, proc);
 		DEBUG::displayPVasVex(p4, v4);
-		if (v4.isZero()) return false;		// Step 4 ----------------------------		istep++;		v_m = v1 * CF[istep][1] + v2 * CF[istep][2] + v3 * CF[istep][3] + v4 * CF[istep][4];		p5 = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
+		if (v4.isZero()) return false;
+
+		// Step 4 ----------------------------
+		istep++;
+		v_m = v1 * CF[istep][1] + v2 * CF[istep][2] + v3 * CF[istep][3] + v4 * CF[istep][4];
+		p5 = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
 		er = CheckNewPointAndCalcVelocity(p5, v5, proc);
 		DEBUG::displayPVasVex(p5, v5);
-		if (v5.isZero()) return false;		// Step 5 ----------------------------		istep++;		v_m = v1 * CF[istep][1] + v2 * CF[istep][2] + v3 * CF[istep][3] + v4 * CF[istep][4] + v5 * CF[istep][5];		p6 = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
+		if (v5.isZero()) return false;
+
+		// Step 5 ----------------------------
+		istep++;
+		v_m = v1 * CF[istep][1] + v2 * CF[istep][2] + v3 * CF[istep][3] + v4 * CF[istep][4] + v5 * CF[istep][5];
+		p6 = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
 		er = CheckNewPointAndCalcVelocity(p6, v6, proc);
 		DEBUG::displayPVasVex(p6, v6);
-		if (v6.isZero()) return false;		//// Calculate the point using two different paths		istep++;		v_m = v1 * CF[istep][1] + v3 * CF[istep][2] + v4 * CF[istep][3] + v5 * CF[istep][4];		yn = v_m.normalize() * CF[istep][0] * ssdir + P.getP();		DEBUG::displayVectorasVex(yn);		istep++;		v_m = v1 * CF[istep][1] + v3 * CF[istep][2] + v4 * CF[istep][3] + v5 * CF[istep][4] + v6 * CF[istep][5];		zn = v_m.normalize() * CF[istep][0] * ssdir + P.getP();		DEBUG::displayVectorasVex(zn);		double R = (yn - zn).len();		if (R < popt.ToleranceStepSize) {			// We can increase the step size			adaptStepSize = 0.84 * pow(popt.ToleranceStepSize / R, 0.25) * popt.StepSize;			if (adaptStepSize > popt.MaxStepSize)				adaptStepSize = popt.MaxStepSize;			if (adaptStepSize < popt.MinStepSize)				adaptStepSize = popt.MinStepSize;			pnew = yn;		}		else {			if (adaptStepSize > popt.MinStepSize) {				adaptStepSize = 0.84 * pow(popt.ToleranceStepSize / R, 0.25) * popt.StepSize;				RK45Step(P, pnew, er);			}			else {				pnew = yn;				std::cout << "The algorithm will continue although it cannot reach the desired accuracy of "					<< popt.ToleranceStepSize					<< "with the limit of minimum step size " << popt.MinStepSize << std::endl;				std::cout << "Either relax the tolerance or reduce the Minimum Step Size" << std::endl;			}		}
+		if (v6.isZero()) return false;
+
+		//// Calculate the point using two different paths
+		istep++;
+		v_m = v1 * CF[istep][1] + v3 * CF[istep][2] + v4 * CF[istep][3] + v5 * CF[istep][4];
+		yn = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
+		DEBUG::displayVectorasVex(yn);
+		istep++;
+		v_m = v1 * CF[istep][1] + v3 * CF[istep][2] + v4 * CF[istep][3] + v5 * CF[istep][4] + v6 * CF[istep][5];
+		zn = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
+		DEBUG::displayVectorasVex(zn);
+		double R = (yn - zn).len();
+
+		if (R < popt.ToleranceStepSize) {
+			// We can increase the step size
+			adaptStepSize = 0.84 * pow(popt.ToleranceStepSize / R, 0.25) * popt.StepSize;
+			if (adaptStepSize > popt.MaxStepSize)
+				adaptStepSize = popt.MaxStepSize;
+			if (adaptStepSize < popt.MinStepSize)
+				adaptStepSize = popt.MinStepSize;
+			pnew = yn;
+		}
+		else {
+			if (adaptStepSize > popt.MinStepSize) {
+				adaptStepSize = 0.84 * pow(popt.ToleranceStepSize / R, 0.25) * popt.StepSize;
+				RK45Step(P, pnew, er);
+			}
+			else {
+				pnew = yn;
+				std::cout << "The algorithm will continue although it cannot reach the desired accuracy of "
+					<< popt.ToleranceStepSize
+					<< "with the limit of minimum step size " << popt.MinStepSize << std::endl;
+				std::cout << "Either relax the tolerance or reduce the Minimum Step Size" << std::endl;
+			}
+		}
 		return true;
 	}
 
