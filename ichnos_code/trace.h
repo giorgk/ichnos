@@ -304,60 +304,72 @@ namespace ICHNOS {
 	}
 
 	bool ParticleTrace::EulerStep(const Particle& P, vec3& pnew, ExitReason& er) {
-		pnew = P.getV()* (1 / P.getV().len())* popt.StepSize* popt.Direction + P.getP();
+		//DEBUG::displayParitcleasVex(P, true);
+		pnew = P.getV().normalize()* popt.StepSize* popt.Direction + P.getP();
+		//DEBUG::displayVectorasVex(pnew);
 		return true;
 	}
 
 	bool ParticleTrace::RK2Step(const Particle& P, vec3& pnew, ExitReason& er) {
+		DEBUG::displayParitcleasVex(P, true);
 		// We set this value to the current processor however this is not actually used
 		// as it does not get out of this function
 		// The actual processor will be calculated outside this function
 		int proc = world.rank();
 		// Find the new position using the velocity of the current point
-		vec3 p1 = P.getV()* (1 / P.getV().len())*popt.StepSize * popt.Direction + P.getP();
+		vec3 p1 = P.getV().normalize()*popt.StepSize * popt.Direction + P.getP();
+		
 		// Find the velocity on that point
 		vec3 v1;
 		er = CheckNewPointAndCalcVelocity(p1, v1, proc);
+		DEBUG::displayPVasVex(p1, v1);
 		if (v1.isZero()) return false;
 		// Take a step with the average velocity
 		vec3 v_m = v1 * 0.5 + P.getV() * 0.5;
-		pnew = P.getV()* (1 / v_m.len())* popt.StepSize* popt.Direction + P.getP();
+		pnew = v_m.normalize() * popt.StepSize* popt.Direction + P.getP();
+		DEBUG::displayVectorasVex(pnew);
 		return true;
 	}
 
 	bool ParticleTrace::RK4Step(const Particle& P, vec3& pnew, ExitReason& er) {
+		//DEBUG::displayParitcleasVex(P, true);
 		// See RK2Step
 		int proc = world.rank();
 		// Step 1 ----------------------------
 		// take a half step from the current point using the velocity of that point
-		vec3 p2 = P.getV() * (1 / (P.getV().len()/2)) * popt.StepSize * popt.Direction + P.getP();
+		vec3 p2 = P.getV().normalize() * (popt.StepSize/2) * popt.Direction + P.getP();
 		// Find the velocity on point p2 that point
 		vec3 v2;
 		er = CheckNewPointAndCalcVelocity(p2, v2, proc);
+		//DEBUG::displayPVasVex(p2, v2);
 		if (v2.isZero()) return false;
 
 		// Step 2 ----------------------------
 		// take a half step from the current point using the v2 velocity
-		vec3 p3 = v2 * (1 / (v2.len() / 2)) * popt.StepSize * popt.Direction + P.getP();
+		vec3 p3 = v2.normalize() * (popt.StepSize/2) * popt.Direction + P.getP();
 		// Find the velocity on point p3 that point
 		vec3 v3;
 		er = CheckNewPointAndCalcVelocity(p3, v3, proc);
+		//DEBUG::displayPVasVex(p3, v3);
 		if (v3.isZero()) return false;
 
 		// Step 3 ----------------------------
 		// take a full step from the current point using the v3 velocity
-		vec3 p4 = v3 * (1 / v3.len()) * popt.StepSize * popt.Direction + P.getP();
+		vec3 p4 = v3.normalize() * popt.StepSize * popt.Direction + P.getP();
 		// Find the velocity on point p4 that point
 		vec3 v4;
 		er = CheckNewPointAndCalcVelocity(p4, v4, proc);
+		//DEBUG::displayPVasVex(p4, v4);
 		if (v4.isZero()) return false;
 
-		vec3 v_m = (P.getV() + v2 * 2 + v3 * 2 + v4)*(1/6);
-		pnew = P.getV() * (1 / v_m.len()) * popt.StepSize * popt.Direction + P.getP();
+		vec3 v_m = (P.getV() + v2 * 2.0 + v3 * 2.0 + v4)*(1.0/6.0);
+		pnew = v_m.normalize() * popt.StepSize * popt.Direction + P.getP();
+		//DEBUG::displayVectorasVex(pnew);
 		return true;
 	}
 
 	bool ParticleTrace::RK45Step(const Particle& P, vec3& pnew, ExitReason& er) {
+		DEBUG::displayParitcleasVex(P, true);
 		// See RK2Step
 		int proc = world.rank();
 		vec3 v_m, p2, p3, p4, p5, p6, v2, v3, v4, v5, v6, yn, zn;
@@ -365,17 +377,22 @@ namespace ICHNOS {
 
 		double ssdir = adaptStepSize * popt.Direction;
 
-		//Runge-Kutta-Fehlberg Method (RKF45)		// Step 1 ----------------------------		int i = 0;		p2 = v1 * ((1 / (v1.len()*CF[i][0])) * ssdir) + P.getP();
+		//Runge-Kutta-Fehlberg Method (RKF45)		// Step 1 ----------------------------		int istep = 0;		p2 = v1.normalize() * CF[istep][0] * ssdir + P.getP();
 		er = CheckNewPointAndCalcVelocity(p2, v2, proc);
-		if (v2.isZero()) { return false; }		// Step 2 ----------------------------		++i;		v_m = v1 * CF[i][1] + v2 * CF[i][2];		p3 = v_m*(1/v_m.len()*CF[i][0]) * ssdir + P.getP();
+		DEBUG::displayPVasVex(p2, v2);
+		if (v2.isZero()) { return false; }		// Step 2 ----------------------------		istep++;		v_m = v1 * CF[istep][1] + v2 * CF[istep][2];		p3 = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
 		er = CheckNewPointAndCalcVelocity(p3, v3, proc);
-		if (v3.isZero()) return false;		// Step 3 ----------------------------		++i;		v_m = v1 * CF[i][1] + v2 * CF[i][2] + v3 * CF[i][3];		p4 = v_m * (1 / v_m.len() * CF[i][0]) * ssdir + P.getP();
+		DEBUG::displayPVasVex(p3, v3);
+		if (v3.isZero()) return false;		// Step 3 ----------------------------		istep++;		v_m = v1 * CF[istep][1] + v2 * CF[istep][2] + v3 * CF[istep][3];		p4 = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
 		er = CheckNewPointAndCalcVelocity(p4, v4, proc);
-		if (v4.isZero()) return false;		// Step 4 ----------------------------		++i;		v_m = v1 * CF[i][1] + v2 * CF[i][2] + v3 * CF[i][3] + v4 * CF[i][4];		p5 = v_m * (1 / v_m.len() * CF[i][0]) * ssdir + P.getP();
+		DEBUG::displayPVasVex(p4, v4);
+		if (v4.isZero()) return false;		// Step 4 ----------------------------		istep++;		v_m = v1 * CF[istep][1] + v2 * CF[istep][2] + v3 * CF[istep][3] + v4 * CF[istep][4];		p5 = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
 		er = CheckNewPointAndCalcVelocity(p5, v5, proc);
-		if (v5.isZero()) return false;		// Step 5 ----------------------------		++i;		v_m = v1 * CF[i][1] + v2 * CF[i][2] + v3 * CF[i][3] + v4 * CF[i][4] + v5 * CF[i][5];		p6 = v_m * (1 / v_m.len() * CF[i][0]) * ssdir + P.getP();
+		DEBUG::displayPVasVex(p5, v5);
+		if (v5.isZero()) return false;		// Step 5 ----------------------------		istep++;		v_m = v1 * CF[istep][1] + v2 * CF[istep][2] + v3 * CF[istep][3] + v4 * CF[istep][4] + v5 * CF[istep][5];		p6 = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
 		er = CheckNewPointAndCalcVelocity(p6, v6, proc);
-		if (v6.isZero()) return false;		//// Calculate the point using two different paths		++i;		v_m = v1 * CF[i][1] + v3 * CF[i][2] + v4 * CF[i][3] + v5 * CF[i][4];		yn = v_m * (1 / v_m.len() * CF[i][0]) * ssdir + P.getP();		i++;		v_m = v1 * CF[i][1] + v3 * CF[i][2] + v4 * CF[i][3] + v5 * CF[i][4] + v6 * CF[i][5];		zn = v_m * (1 / v_m.len() * CF[i][0]) * ssdir + P.getP();		double R = (yn - zn).len();		if (R < popt.ToleranceStepSize) {			// We can increase the step size			adaptStepSize = 0.84 * pow(popt.ToleranceStepSize / R, 0.25) * popt.StepSize;			if (adaptStepSize > popt.MaxStepSize)				adaptStepSize = popt.MaxStepSize;			if (adaptStepSize < popt.MinStepSize)				adaptStepSize = popt.MinStepSize;			pnew = yn;		}		else {			if (adaptStepSize > popt.MinStepSize) {				adaptStepSize = 0.84 * pow(popt.ToleranceStepSize / R, 0.25) * popt.StepSize;				RK45Step(P, pnew, er);			}			else {				pnew = yn;				std::cout << "The algorithm will continue although it cannot reach the desired accuracy of "					<< popt.ToleranceStepSize					<< "with the limit of minimum step size " << popt.MinStepSize << std::endl;				std::cout << "Either relax the tolerance or reduce the Minimum Step Size" << std::endl;			}		}
+		DEBUG::displayPVasVex(p6, v6);
+		if (v6.isZero()) return false;		//// Calculate the point using two different paths		istep++;		v_m = v1 * CF[istep][1] + v3 * CF[istep][2] + v4 * CF[istep][3] + v5 * CF[istep][4];		yn = v_m.normalize() * CF[istep][0] * ssdir + P.getP();		DEBUG::displayVectorasVex(yn);		istep++;		v_m = v1 * CF[istep][1] + v3 * CF[istep][2] + v4 * CF[istep][3] + v5 * CF[istep][4] + v6 * CF[istep][5];		zn = v_m.normalize() * CF[istep][0] * ssdir + P.getP();		DEBUG::displayVectorasVex(zn);		double R = (yn - zn).len();		if (R < popt.ToleranceStepSize) {			// We can increase the step size			adaptStepSize = 0.84 * pow(popt.ToleranceStepSize / R, 0.25) * popt.StepSize;			if (adaptStepSize > popt.MaxStepSize)				adaptStepSize = popt.MaxStepSize;			if (adaptStepSize < popt.MinStepSize)				adaptStepSize = popt.MinStepSize;			pnew = yn;		}		else {			if (adaptStepSize > popt.MinStepSize) {				adaptStepSize = 0.84 * pow(popt.ToleranceStepSize / R, 0.25) * popt.StepSize;				RK45Step(P, pnew, er);			}			else {				pnew = yn;				std::cout << "The algorithm will continue although it cannot reach the desired accuracy of "					<< popt.ToleranceStepSize					<< "with the limit of minimum step size " << popt.MinStepSize << std::endl;				std::cout << "Either relax the tolerance or reduce the Minimum Step Size" << std::endl;			}		}
 		return true;
 	}
 

@@ -1,11 +1,11 @@
 VelocityConfig = f:\UCDAVIS\ICHNOS\vf_config.dat
 Stuckiter = 50
-Method = Euler
+Method = RK45
 DomainPolygon = f:\UCDAVIS\ICHNOS\ichnos_hou\ichnos\examples\test_domainOutline_1.dat
 TopElevation = 50
 BottomElevation = -50
 Direction = 1
-StepSize = 1
+StepSize = 10
 MaxStepSize = 20
 MinStepSize = 0.1
 MaxIterationsPerStreamline = 1000

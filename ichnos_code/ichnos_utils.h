@@ -11,6 +11,25 @@
 
 namespace ICHNOS {
 
+	namespace DEBUG {
+		void displayParitcleasVex(const Particle& P, bool prinAttr) {
+			vec3 vn = P.getV() * (1 / P.getV().len());
+			std::cout << "p = addpoint(0,{" << P.getP().x << "," << P.getP().z << "," << P.getP().y << "});";
+			if (prinAttr)
+				std::cout << " setpointattrib(0,'N',p,{" << vn.x << "," << vn.z << "," << vn.y << "},'set');";
+			std::cout << std::endl;
+		}
+		void displayVectorasVex(vec3 p) {
+			std::cout << "p = addpoint(0,{" << p.x << "," << p.z << "," << p.y << "});" << std::endl;
+		}
+		void displayPVasVex(vec3 p, vec3 v) {
+			vec3 vn = v * (1 / v.len());
+			std::cout << "p = addpoint(0,{" << p.x << "," << p.z << "," << p.y << "});";
+			std::cout << " setpointattrib(0,'N',p,{" << vn.x << "," << vn.z << "," << vn.y << "},'set');";
+			std::cout << std::endl;
+		}
+	}
+
 	std::string num2Padstr(int i, int n) {
 		std::stringstream ss;
 		ss << std::setw(n) << std::setfill('0') << i;

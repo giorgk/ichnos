@@ -13,8 +13,12 @@ int main(int argc, char* argv[])
     boost::mpi::environment env{ argc, argv };
     boost::mpi::communicator world;
 
+    if (world.rank() == 0) {
+        std::cout << "Ichnos will run using " << world.size() << " processors" << std::endl;
+        std::cout << "Good luck with that!" << std::endl;
 
-    std::cout << world.rank() << "," << world.size() << std::endl;
+    }
+
     ICHNOS::options OPT(world);
     if (!OPT.readInput(argc, argv))
         return 0;

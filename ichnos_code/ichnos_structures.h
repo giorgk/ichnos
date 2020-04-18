@@ -9,7 +9,7 @@
 #include <nanoflann.hpp>
 
 namespace ICHNOS {
-
+	
 	struct WellOptions {
 		int Nparticles;
 		int Nlayer;
@@ -55,6 +55,11 @@ namespace ICHNOS {
 		bool isInvalid() {
 			bool tf = std::sqrt((x + 99999) * (x + 99999) + (y + 99999) * (y + 99999) + (z + 99999) * (z + 99999)) < 0.0000000001;
 			return tf;
+		}
+
+		vec3 normalize() {
+			double length = len();
+			return (vec3(x / length, y / length, z / length));
 		}
 	};
 
@@ -153,7 +158,8 @@ namespace ICHNOS {
 		NO_EXIT,
 		MAX_INNER_ITER,
 		FIRST_POINT_GHOST,
-		FAR_AWAY
+		FAR_AWAY,
+		NO_REASON
 	};
 
 	std::string castExitReasons2String(ExitReason er) {
@@ -169,6 +175,7 @@ namespace ICHNOS {
 		ExitReasonsMap.insert(std::pair<ExitReason, std::string>(ExitReason::MAX_INNER_ITER, "MAX_INNER_ITER"));
 		ExitReasonsMap.insert(std::pair<ExitReason, std::string>(ExitReason::FIRST_POINT_GHOST, "FIRST_POINT_GHOST"));
 		ExitReasonsMap.insert(std::pair<ExitReason, std::string>(ExitReason::FAR_AWAY, "FAR_AWAY"));
+		ExitReasonsMap.insert(std::pair<ExitReason, std::string>(ExitReason::NO_REASON, "NO_REASON"));
 		it = ExitReasonsMap.find(er);
 		if (it != ExitReasonsMap.end())
 			return it->second;
@@ -284,7 +291,7 @@ namespace ICHNOS {
 		int Eid;
 		int Sid;
 		std::vector<Particle > SL;
-		ExitReason exitreason;
+		ExitReason exitreason = ExitReason::NO_REASON;
 		vec3 BL;
 		vec3 BU;
 		int IterationsWithoutExpansion = 0;
@@ -336,13 +343,13 @@ namespace ICHNOS {
 
 	std::vector<std::vector<double> > getRK45coef() {
 		std::vector<std::vector<double> > RKcoef;
-		RKcoef.push_back(std::vector<double>{1 / 4, 1 / 4});
-		RKcoef.push_back(std::vector<double>{3 / 8, 3 / 32, 9 / 32});
-		RKcoef.push_back(std::vector<double>{12 / 13, 1932 / 2197, -7200 / 2197, 7296 / 2197});
-		RKcoef.push_back(std::vector<double>{1, 439 / 216, -8, 3680 / 513, -845 / 4104});
-		RKcoef.push_back(std::vector<double>{1/2, -8 / 27, 2, -3544 / 2565, 1859 / 4104, -11 / 40});
-		RKcoef.push_back(std::vector<double>{1, 25 / 216, 1408/2565, 2197 / 4101, -1 / 5});
-		RKcoef.push_back(std::vector<double>{1, 16 / 135, 6656 / 12825, 28561 / 56430, -9 / 50, 2/55});
+		RKcoef.push_back(std::vector<double>{1.0 / 4.0, 1.0 / 4.0});
+		RKcoef.push_back(std::vector<double>{3.0 / 8.0, 3.0 / 32.0, 9.0 / 32.0});
+		RKcoef.push_back(std::vector<double>{12.0 / 13.0, 1932.0 / 2197.0, -7200.0 / 2197.0, 7296.0 / 2197.0});
+		RKcoef.push_back(std::vector<double>{1.0, 439.0 / 216.0, -8.0, 3680.0 / 513.0, -845.0 / 4104.0});
+		RKcoef.push_back(std::vector<double>{1.0 / 2.0, -8.0 / 27.0, 2.0, -3544.0 / 2565.0, 1859.0 / 4104.0, -11.0 / 40.0});
+		RKcoef.push_back(std::vector<double>{1.0, 2.05 / 216.0, 1408.0 /2565.0, 2197.0 / 4101.0, -1.0 / 5.0});
+		RKcoef.push_back(std::vector<double>{1.0, 16.0 / 135.0, 6656.0 / 12825.0, 28561.0 / 56430.0, -9.0 / 50.0, 2.0 /55.0});
 
 		return RKcoef;
 	}
