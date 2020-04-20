@@ -185,14 +185,33 @@ namespace ICHNOS {
 	}
 
 	struct ParticleOptions {
+		
 		SolutionMethods method;
+		// THe maximum number of iteratiosn that each streamline is alloweded not to expand
 		int StuckIterations;
+		// When the method is adaptive this is the maximum step size
 		double MaxStepSize;
+		// When the method is adaptive this is the minimum step size
 		double MinStepSize;
+		// This is the step size of the initial step size for the adaptive
 		double StepSize;
+		// This is the minimum step size at the exit side of the particles
+		double minExitStepSize;
+		//When the method is adaptive this is the tolerance
 		double ToleranceStepSize;
+		// When the method is adaptive this modifies the rate of change of the step size.
+		double increasRatechange;
+
+		// When the method is adaptive this limits the upper threshold of step decrease.
+		// For example if the decrease is lower that 1 but very close to one then it may be possible that
+		// the algorithm will repeat the decreasing of the step size many times by a very small amount.
+		double limitUpperDecreaseStep;
+
+		// The direction of the particle tracing
 		double Direction;
+		// The maximum steps for each streamline
 		int MaxIterationsPerStreamline;
+		// The maximum number of exchanges between processors
 		int MaxProcessorExchanges;
 		std::string ParticleFile;
 		std::string WellFile;
@@ -348,7 +367,7 @@ namespace ICHNOS {
 		RKcoef.push_back(std::vector<double>{12.0 / 13.0, 1932.0 / 2197.0, -7200.0 / 2197.0, 7296.0 / 2197.0});
 		RKcoef.push_back(std::vector<double>{1.0, 439.0 / 216.0, -8.0, 3680.0 / 513.0, -845.0 / 4104.0});
 		RKcoef.push_back(std::vector<double>{1.0 / 2.0, -8.0 / 27.0, 2.0, -3544.0 / 2565.0, 1859.0 / 4104.0, -11.0 / 40.0});
-		RKcoef.push_back(std::vector<double>{1.0, 2.05 / 216.0, 1408.0 /2565.0, 2197.0 / 4101.0, -1.0 / 5.0});
+		RKcoef.push_back(std::vector<double>{1.0, 25.0 / 216.0, 1408.0 /2565.0, 2197.0 / 4101.0, -1.0 / 5.0});
 		RKcoef.push_back(std::vector<double>{1.0, 16.0 / 135.0, 6656.0 / 12825.0, 28561.0 / 56430.0, -9.0 / 50.0, 2.0 /55.0});
 
 		return RKcoef;

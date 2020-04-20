@@ -125,7 +125,7 @@ namespace ICHNOS {
 		int my_rank = world.rank();
 		int n_proc = world.size();
 
-		const std::string log_file_name = (popt.OutputFile + "_iter_" + num2Padstr(iter, 4) + "_proc_" + num2Padstr(my_rank+1, 4) + ".traj");
+		const std::string log_file_name = (popt.OutputFile + "_iter_" + num2Padstr(iter, 4) + "_proc_" + num2Padstr(my_rank, 4) + ".traj");
 
 		std::ofstream log_file;
 		log_file.open(log_file_name.c_str());
@@ -171,7 +171,7 @@ namespace ICHNOS {
 			MPI::Send_receive_streamlines(Snew, S, world);
 			std::cout << my_rank << " S new size: " << S.size() << std::endl;
 			
-			if (trace_iter == 5) {
+			if (trace_iter == 10) {
 				std::cout << "exit after " << trace_iter << " Iteration. DONT FORGET TO REMOVE THIS Condition" << std::endl;
 				break;
 			}
@@ -184,6 +184,8 @@ namespace ICHNOS {
 	}
 
 	ExitReason ParticleTrace::traceInner(Streamline& S) {
+		// Reset the step size
+		adaptStepSize = popt.StepSize;
 		vec3 v;
 		vec3 p = S.getLastParticle().getP();
 		int proc = world.rank();
@@ -211,10 +213,12 @@ namespace ICHNOS {
 		//S.getLastParticle().displayAsVEX(true);
 
 		int count_iterations = 0;
+		//DEBUG::displayParticleasVex(S.getLastParticle(), true);
 		while (er == ExitReason::NO_EXIT) {
 			bool foundPoint = findNextPoint(S.getLastParticle(), p, er);
 			if (foundPoint) {
 				er = CheckNewPointAndCalcVelocity(p, v, proc);
+				//DEBUG::displayPVasVex(p, v);
 				S.AddParticle(Particle(p, v, proc, S.getLastParticle()));
 				//S.getLastParticle().displayAsVEX(true);
 				// In the unlike event that the velocity of the point is indeed zero
@@ -311,7 +315,7 @@ namespace ICHNOS {
 	}
 
 	bool ParticleTrace::RK2Step(const Particle& P, vec3& pnew, ExitReason& er) {
-		DEBUG::displayParitcleasVex(P, true);
+		DEBUG::displayParticleasVex(P, true);
 		// We set this value to the current processor however this is not actually used
 		// as it does not get out of this function
 		// The actual processor will be calculated outside this function
@@ -369,7 +373,7 @@ namespace ICHNOS {
 	}
 
 	bool ParticleTrace::RK45Step(const Particle& P, vec3& pnew, ExitReason& er) {
-		DEBUG::displayParitcleasVex(P, true);
+		// DEBUG::displayParitcleasVex(P, true);
 		// See RK2Step
 		int proc = world.rank();
 		vec3 v_m, p2, p3, p4, p5, p6, v2, v3, v4, v5, v6, yn, zn;
@@ -382,23 +386,35 @@ namespace ICHNOS {
 		int istep = 0;
 		p2 = v1.normalize() * CF[istep][0] * ssdir + P.getP();
 		er = CheckNewPointAndCalcVelocity(p2, v2, proc);
-		DEBUG::displayPVasVex(p2, v2);
+		// DEBUG::displayPVasVex(p2, v2);
 		if (v2.isZero()) { return false; }
+		if (adaptStepSize > popt.minExitStepSize)
+			if (er == ExitReason::EXIT_SIDE || er == ExitReason::EXIT_BOTTOM || er == ExitReason::EXIT_TOP) {
+				adaptStepSize = adaptStepSize * 0.24;
+				RK45Step(P, pnew, er);
+				return true;
+			}
 
 		// Step 2 ----------------------------
 		istep++;
 		v_m = v1 * CF[istep][1] + v2 * CF[istep][2];
 		p3 = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
 		er = CheckNewPointAndCalcVelocity(p3, v3, proc);
-		DEBUG::displayPVasVex(p3, v3);
+		//DEBUG::displayPVasVex(p3, v3);
 		if (v3.isZero()) return false;
+		if (adaptStepSize > popt.minExitStepSize)
+			if (er == ExitReason::EXIT_SIDE || er == ExitReason::EXIT_BOTTOM || er == ExitReason::EXIT_TOP) {
+				adaptStepSize = adaptStepSize * 0.37;
+				RK45Step(P, pnew, er);
+				return true;
+			}
 
 		// Step 3 ----------------------------
 		istep++;
 		v_m = v1 * CF[istep][1] + v2 * CF[istep][2] + v3 * CF[istep][3];
 		p4 = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
 		er = CheckNewPointAndCalcVelocity(p4, v4, proc);
-		DEBUG::displayPVasVex(p4, v4);
+		// DEBUG::displayPVasVex(p4, v4);
 		if (v4.isZero()) return false;
 
 		// Step 4 ----------------------------
@@ -406,7 +422,7 @@ namespace ICHNOS {
 		v_m = v1 * CF[istep][1] + v2 * CF[istep][2] + v3 * CF[istep][3] + v4 * CF[istep][4];
 		p5 = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
 		er = CheckNewPointAndCalcVelocity(p5, v5, proc);
-		DEBUG::displayPVasVex(p5, v5);
+		// DEBUG::displayPVasVex(p5, v5);
 		if (v5.isZero()) return false;
 
 		// Step 5 ----------------------------
@@ -414,40 +430,49 @@ namespace ICHNOS {
 		v_m = v1 * CF[istep][1] + v2 * CF[istep][2] + v3 * CF[istep][3] + v4 * CF[istep][4] + v5 * CF[istep][5];
 		p6 = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
 		er = CheckNewPointAndCalcVelocity(p6, v6, proc);
-		DEBUG::displayPVasVex(p6, v6);
+		// DEBUG::displayPVasVex(p6, v6);
 		if (v6.isZero()) return false;
+		if ( adaptStepSize > popt.minExitStepSize )
+			if (er == ExitReason::EXIT_SIDE || er == ExitReason::EXIT_BOTTOM || er == ExitReason::EXIT_TOP ) {
+				adaptStepSize = adaptStepSize * 0.45;
+				RK45Step(P, pnew, er);
+				return true;
+			}
 
 		//// Calculate the point using two different paths
 		istep++;
 		v_m = v1 * CF[istep][1] + v3 * CF[istep][2] + v4 * CF[istep][3] + v5 * CF[istep][4];
 		yn = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
-		DEBUG::displayVectorasVex(yn);
+		// DEBUG::displayVectorasVex(yn);
 		istep++;
 		v_m = v1 * CF[istep][1] + v3 * CF[istep][2] + v4 * CF[istep][3] + v5 * CF[istep][4] + v6 * CF[istep][5];
 		zn = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
-		DEBUG::displayVectorasVex(zn);
+		// DEBUG::displayVectorasVex(zn);
 		double R = (yn - zn).len();
+		double q = 0.84 * pow(popt.ToleranceStepSize / R, 0.25);
 
-		if (R < popt.ToleranceStepSize) {
+		if (q >= 1) {
+			q = std::min(q, popt.increasRatechange);
 			// We can increase the step size
-			adaptStepSize = 0.84 * pow(popt.ToleranceStepSize / R, 0.25) * popt.StepSize;
+			adaptStepSize = adaptStepSize * q;
 			if (adaptStepSize > popt.MaxStepSize)
 				adaptStepSize = popt.MaxStepSize;
-			if (adaptStepSize < popt.MinStepSize)
-				adaptStepSize = popt.MinStepSize;
+			//if (adaptStepSize < popt.MinStepSize)
+			//	adaptStepSize = popt.MinStepSize;
 			pnew = yn;
 		}
 		else {
-			if (adaptStepSize > popt.MinStepSize) {
-				adaptStepSize = 0.84 * pow(popt.ToleranceStepSize / R, 0.25) * popt.StepSize;
-				RK45Step(P, pnew, er);
-			}
-			else {
+			if (adaptStepSize <= popt.MinStepSize) {
 				pnew = yn;
 				std::cout << "The algorithm will continue although it cannot reach the desired accuracy of "
 					<< popt.ToleranceStepSize
 					<< "with the limit of minimum step size " << popt.MinStepSize << std::endl;
 				std::cout << "Either relax the tolerance or reduce the Minimum Step Size" << std::endl;
+			}
+			else {
+				q = std::min(q, popt.limitUpperDecreaseStep);
+				adaptStepSize = adaptStepSize * q;
+				RK45Step(P, pnew, er);
 			}
 		}
 		return true;

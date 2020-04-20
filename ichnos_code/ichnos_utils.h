@@ -12,7 +12,7 @@
 namespace ICHNOS {
 
 	namespace DEBUG {
-		void displayParitcleasVex(const Particle& P, bool prinAttr) {
+		void displayParticleasVex(const Particle& P, bool prinAttr) {
 			vec3 vn = P.getV() * (1 / P.getV().len());
 			std::cout << "p = addpoint(0,{" << P.getP().x << "," << P.getP().z << "," << P.getP().y << "});";
 			if (prinAttr)

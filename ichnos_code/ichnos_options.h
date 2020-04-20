@@ -92,7 +92,10 @@ namespace ICHNOS {
 			("Direction", po::value<double>()->default_value(1), "Backward or forward particle tracking")
 			("StepSize", po::value<double>()->default_value(1), "Step Size in units of length")
 			("MaxStepSize", po::value<double>()->default_value(2), "Maximum Step Size in units of length")
+			("increasRatechange", po::value<double>()->default_value(1.5), "Maximum Step Size in units of length")
 			("MinStepSize", po::value<double>()->default_value(0.1), "Minimum Step Size in units of length")
+			("minExitStepSize", po::value<double>()->default_value(0.1), "Minimum Step Size at the exit as percentage of the stepsize")
+			("limitUpperDecreaseStep", po::value<double>()->default_value(0.75), "Upper limit of decrease step size")
 			("ToleranceStepSize", po::value<double>()->default_value(0.1), "Tolerance when the RK45 is used")
 			("MaxIterationsPerStreamline", po::value<int>()->default_value(1000), "Maximum number of steps per streamline")
 			("MaxProcessorExchanges", po::value<int>()->default_value(50), "Maximum number of that a particles are allowed to change processors")
@@ -140,6 +143,24 @@ namespace ICHNOS {
 			Popt.StepSize = vm_cfg["StepSize"].as<double>();
 			Popt.MaxStepSize = vm_cfg["MaxStepSize"].as<double>();
 			Popt.MinStepSize = vm_cfg["MinStepSize"].as<double>();
+			Popt.increasRatechange = vm_cfg["increasRatechange"].as<double>();
+			if (Popt.increasRatechange < 1) {
+				std::cout << "increasRatechange should be higher than 1. It gets the default value of 1.5" << std::endl;
+				Popt.increasRatechange = 1.5;
+			}
+			Popt.limitUpperDecreaseStep = vm_cfg["limitUpperDecreaseStep"].as<double>();
+			if (Popt.limitUpperDecreaseStep < 0 || Popt.limitUpperDecreaseStep > 1) {
+				std::cout << "limitUpperDecreaseStep should be between 0 and 1. It gets the default value of 0.75" << std::endl;
+				Popt.limitUpperDecreaseStep = 0.75;
+			}
+			Popt.minExitStepSize = vm_cfg["minExitStepSize"].as<double>();
+			if (Popt.minExitStepSize < 0 || Popt.minExitStepSize > 1) {
+				if (Popt.minExitStepSize < 0 || Popt.minExitStepSize > 1) {
+					std::cout << "minExitStepSize should be between 0 and 1. It gets the default value of 0.1" << std::endl;
+					Popt.minExitStepSize = 0.1;
+				}
+			}
+			Popt.minExitStepSize = Popt.StepSize * Popt.minExitStepSize;
 			Popt.ToleranceStepSize = vm_cfg["ToleranceStepSize"].as<double>();
 			Popt.MaxIterationsPerStreamline = vm_cfg["MaxIterationsPerStreamline"].as<int>();
 			Popt.MaxProcessorExchanges = vm_cfg["MaxProcessorExchanges"].as<int>();
