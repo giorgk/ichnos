@@ -95,7 +95,9 @@ namespace ICHNOS {
 			if (my_rank == 0) {
 				std::default_random_engine generator;
 				int N = popt.ParticlesInParallel;
-				if (static_cast<int>(ALL_Streamlines.size()) < popt.ParticlesInParallel + 1000) {
+				int minPartinparallel = 10;
+				std::cout << "Dont forget to harcode the minPartinparallel back to 1000. Currently is " << minPartinparallel << std::endl;
+				if (static_cast<int>(ALL_Streamlines.size()) < popt.ParticlesInParallel + minPartinparallel) {
 					N = ALL_Streamlines.size();
 				}
 
@@ -108,7 +110,7 @@ namespace ICHNOS {
 					Part_Streamlines.push_back(ALL_Streamlines[ii]);
 					ALL_Streamlines.erase(ALL_Streamlines.begin() + ii);
 				}
-				//std::cout << "There are " << ALL_Streamlines.size() << " Streamlines to trace" << std::endl;
+				std::cout << "Simulating " << Part_Streamlines.size() << " Streamlines. # streamlines to trace: "  << ALL_Streamlines.size() << std::endl;
 			}
 			world.barrier();
 			//std::cout << my_rank << " Before: " << Part_Streamlines.size() << std::endl;
@@ -116,8 +118,13 @@ namespace ICHNOS {
 			//std::cout << my_rank << " After: " << Part_Streamlines.size() << std::endl;
 
 			traceOuter(Part_Streamlines, outer_iter);
-			
-			break;
+			outer_iter++;
+			if (ALL_Streamlines.size() == 0)
+				break;
+		}
+		if (my_rank == 0) {
+			std::cout << "Particle tracking completed. You can now gather the streamlines by running:" << std::endl;
+			std::cout << "./ichnos -c " << popt.configfile << " -g -n " << nproc << " -i " << outer_iter << std::endl;
 		}
 	}
 
@@ -155,7 +162,7 @@ namespace ICHNOS {
 			}
 
 			world.barrier();
-			std::cout << "Proc " << my_rank << " will send " << Snew.size() << " particles" << std::endl;
+			//std::cout << "Proc " << my_rank << " will send " << Snew.size() << " particles" << std::endl;
 			int N_part2track = Snew.size();
 			//std::cout << "Proc " << my_rank << " N_part2send = " << N_part2send << std::endl;
 			MPI::sumScalar<int>(N_part2track, n_proc, world, MPI_INT);
@@ -169,16 +176,18 @@ namespace ICHNOS {
 				break;
 
 			MPI::Send_receive_streamlines(Snew, S, world);
-			std::cout << my_rank << " S new size: " << S.size() << std::endl;
+			//std::cout << my_rank << " S new size: " << S.size() << std::endl;
 			
-			if (trace_iter == 10) {
-				std::cout << "exit after " << trace_iter << " Iteration. DONT FORGET TO REMOVE THIS Condition" << std::endl;
-				break;
-			}
+			//if (trace_iter == 10) {
+			//	std::cout << "exit after " << trace_iter << " Iteration. DONT FORGET TO REMOVE THIS Condition" << std::endl;
+			//	break;
+			//}
 
 			trace_iter++;
-			if (trace_iter > popt.MaxProcessorExchanges)
+			if (trace_iter > popt.MaxProcessorExchanges) {
+				std::cout << "exit after MaxProcessorExchanges was reached: trace_iter = " << trace_iter << std::endl;
 				break;
+			}
 		}
 		log_file.close();
 	}

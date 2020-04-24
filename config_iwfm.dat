@@ -1,0 +1,17 @@
+VelocityConfig = f:\UCDAVIS\ICHNOS\vf_iwfm_config.dat
+Stuckiter = 10
+Method = Euler
+DomainPolygon = f:\UCDAVIS\ichnos\IchnosRwrkspc\examples\c2vsimDomain.ich
+TopElevation = f:\UCDAVIS\ichnos\IchnosRwrkspc\examples\topElevation.ich
+BottomElevation = f:\UCDAVIS\ichnos\IchnosRwrkspc\examples\bottomElevation.ich
+Direction = -1
+StepSize = 1
+MaxStepSize = 5
+MinStepSize = 0.1
+MaxIterationsPerStreamline = 1000
+ToleranceStepSize = 0.1
+PartilceFile = f:\UCDAVIS\ICHNOS\ichnos_hou\ichnos\examples\test_particles_1.dat
+WellFile = f:\UCDAVIS\ichnos\ichnos_hou\ichnos\examples\test_wells1.dat
+OutputFile = f:\UCDAVIS\ICHNOS\ichnos_hou\ichnos\examples\RectSingleOUT
+ParticlesInParallel = 90
+VelocityType = IWFM

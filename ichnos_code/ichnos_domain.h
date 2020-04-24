@@ -12,7 +12,7 @@ namespace ICHNOS {
 		virtual void bisInPolygon(vec3& p, bool& tf) {};
 		virtual void getTopBottomElevation(vec3 p, double& top, double& bottom) {};
 	protected:
-		boostPolygon outlinePoly;
+		multiPoly domainPoly;
 		DomainOptions Dopt;
 	};
 
@@ -46,7 +46,8 @@ namespace ICHNOS {
 		:
 		DomainBase(Dopt_in)
 	{
-		READ::readPolygonDomain(Dopt.OutlineFile, outlinePoly);
+		domainPoly.readfromFile(Dopt.polygonFile);
+		//READ::readPolygonDomain(Dopt.OutlineFile, outlinePoly);
 		
 		if (is_input_scalar(Dopt.TopElevationFile)) {
 			isTopCloud = false;
@@ -72,11 +73,12 @@ namespace ICHNOS {
 	}
 
 	void Domain2D::bisInPolygon(vec3& p, bool& tf) {
-		boostPoint pnt(p.x, p.y);
-		if (boost::geometry::within(pnt, outlinePoly))
-			tf = true;
-		else
-			tf = false;
+		tf = domainPoly.is_point_in(p.x, p.y);
+		//boostPoint pnt(p.x, p.y);
+		//if (boost::geometry::within(pnt, outlinePoly))
+		//	tf = true;
+		//else
+		//	tf = false;
 	}
 
 	void Domain2D::getTopBottomElevation(vec3 p, double& top, double& bottom) {

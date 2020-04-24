@@ -155,6 +155,8 @@
     <ClInclude Include="ichnos_options.h" />
     <ClInclude Include="ichnos_structures.h" />
     <ClInclude Include="ichnos_utils.h" />
+    <ClInclude Include="iwfmVelocity.h" />
+    <ClInclude Include="LayerVelocity.h" />
     <ClInclude Include="trace.h" />
     <ClInclude Include="velocity_base.h" />
   </ItemGroup>

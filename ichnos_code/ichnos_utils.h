@@ -217,7 +217,95 @@ namespace ICHNOS {
 				return true;
 			}
 		}
+
+		bool readTrajfiles(std::string filename, streamlineMap& Smap) {
+			std::ifstream datafile(filename.c_str());
+			if (!datafile.good()) {
+				std::cout << "Can't open the file" << filename << std::endl;
+				return false;
+			}
+			else {
+				std::string line, er_str;
+				int eid, sid, pid, eid_prev, sid_prev;
+				gPart particle;
+				gStream streamline;
+				streamlineMap::iterator eIt;
+				std::map<int, gStream >::iterator sIt;
+				eid_prev = -9;
+				sid_prev = -9;
+				while (getline(datafile, line)) {
+					std::istringstream inp(line.c_str());
+					inp >> pid;
+					inp >> eid;
+					inp >> sid;
+					if (pid < 0) {
+						inp >> er_str;
+					}
+					else {
+						inp >> particle.p.x;
+						inp >> particle.p.y;
+						inp >> particle.p.z;
+						inp >> particle.v.x;
+						inp >> particle.v.y;
+						inp >> particle.v.z;
+						//inp >> particle.age;
+					}
+
+					bool dofind = true;
+					if (eid_prev == eid && sid_prev == sid)
+						dofind = false;
+
+					if (dofind)
+						eIt = Smap.find(eid);
+
+					if (eIt != Smap.end()) {
+						if (dofind)
+							sIt = eIt->second.find(sid);
+						if (sIt != eIt->second.end()) {
+							if (pid < 0) {
+								sIt->second.ex = castExitReasons2Enum(er_str);
+							}
+							else {
+								sIt->second.particles.insert(std::pair<int, gPart>(pid, particle));
+							}
+						}
+						else {
+							gStream gs;
+							if (pid < 0) {
+								gs.ex = castExitReasons2Enum(er_str);
+							}
+							else {
+								gs.particles.insert(std::pair<int, gPart>(pid, particle));
+							}
+							eIt->second.insert(std::pair<int, gStream >(sid, gs));
+							sIt = eIt->second.find(sid);
+						}
+					}
+					else {
+						gStream gs;
+						if (pid < 0) {
+							gs.ex = castExitReasons2Enum(er_str);
+						}
+						else {
+							gs.particles.insert(std::pair<int, gPart>(pid, particle));
+						}
+						std::map<int, gStream > tmpStream;
+						tmpStream.insert(std::pair<int, gStream>(sid, gs));
+						Smap.insert(std::pair<int, std::map<int, gStream > >(eid, tmpStream));
+						// make sure that the iterators are pointing to the new data that were just inserted
+						// most likely the following lines will belong to the same streamline
+						eIt = Smap.find(eid);
+						sIt = eIt->second.find(sid);
+					}
+					sid_prev = sid;
+					eid_prev = eid;
+				}
+				return true;
+			}
+		}
 	}
+
+	
 
 	namespace WRITE {
 		void PrintParticle2Log(std::ofstream& log_file, Streamline& S, int i) {
@@ -229,13 +317,83 @@ namespace ICHNOS {
 				<< pp.getP().x << " \t" << pp.getP().y << " \t" << pp.getP().z << " \t"
 				<< std::setprecision(4) << std::fixed
 				<< pp.getV().x << " \t" << pp.getV().y << " \t" << pp.getV().z << " \t"
-				<< pp.getAge() << std::endl;
+				/*<< pp.getAge()*/ << std::endl;
 		}
 		void PrintExitReason(std::ofstream& log_file, Streamline& S, ExitReason er) {
 			log_file << -9 << " \t"
 				<< S.getEid() << " \t"
 				<< S.getSid() << " \t" 
 				<< castExitReasons2String(er) << std::endl;
+		}
+
+		void printStreamslineMap(std::string filename, streamlineMap& SM) {
+			std::ofstream out_file;
+			out_file.open(filename.c_str());
+			streamlineMap::iterator eit = SM.begin();
+			std::map<int, gStream >::iterator sit;
+			std::map<int, gPart>::iterator pit;
+			
+			for (eit; eit != SM.end(); ++eit) {
+				sit = eit->second.begin();
+				for (sit; sit != eit->second.end(); ++sit) {
+					pit = sit->second.particles.begin();
+					double age = 0;
+					int i = 0;
+					vec3 p_prev, p_curr;
+					vec3 v_prev, v_curr, v_m;
+					for (pit; pit != sit->second.particles.end(); ++pit) {
+						if (i == 0) {
+							p_prev = pit->second.p;
+							v_prev = pit->second.v;
+						}
+						else {
+							p_curr = pit->second.p;
+							v_curr = pit->second.v;
+							v_m = (v_prev + v_curr) * 0.5;
+							double dst = (p_curr - p_prev).len();
+							age += dst / v_m.len();
+							p_prev = p_curr;
+							v_prev = v_curr;
+						}
+						out_file << eit->first << "\t"
+							<< sit->first << "\t"
+							<< std::setprecision(2) << std::fixed
+							<< pit->second.p.x << "\t"
+							<< pit->second.p.y << "\t"
+							<< pit->second.p.z << "\t"
+							<< std::setprecision(5) << std::fixed
+							<< pit->second.v.x << "\t"
+							<< pit->second.v.y << "\t"
+							<< pit->second.v.z << "\t" 
+							<< age << std::endl;
+						i++;
+					}
+				}
+			}
+			out_file.close();
+		}
+	}
+
+	void gather_particles(ICHNOS::options& opt) {
+		streamlineMap Smap;
+		for (int i = 0; i < opt.niter; ++i) {
+			for (int j = 0; j < opt.nproc; ++j) {
+				std::string filename = opt.Popt.OutputFile + "_iter_" + num2Padstr(i, 4) + "_proc_" + num2Padstr(j, 4) + ".traj";
+				std::cout << "Reading ... " << filename << std::endl;
+				bool tf = READ::readTrajfiles(filename, Smap);
+				if (!tf) {
+					std::cout << "Error while reading trajectory files" << std::endl;
+					return;
+				}
+			}
+			if (!opt.Popt.gatherOneFile) {
+				std::string filename = opt.Popt.OutputFile + "_gather_iter_" + num2Padstr(i, 4) + ".traj";
+				ICHNOS::WRITE::printStreamslineMap(filename, Smap);
+			}
+		}
+		if (opt.Popt.gatherOneFile) {
+			std::string filename = opt.Popt.OutputFile + "_gather_ALL.traj";
+			ICHNOS::WRITE::printStreamslineMap(filename, Smap);
 		}
 	}
 	

@@ -7,6 +7,7 @@
 #include "ichnos_options.h"
 #include "velocity_base.h"
 #include "trace.h"
+#include "iwfmVelocity.h"
 
 int main(int argc, char* argv[])
 {
@@ -23,16 +24,36 @@ int main(int argc, char* argv[])
     if (!OPT.readInput(argc, argv))
         return 0;
 
-    ICHNOS::pc3D VF(world);
-    VF.readVelocityField(OPT.getVelFname());
+    if (OPT.gatherMode) {
+        ICHNOS::gather_particles(OPT);
+    }
+    else {
+        switch (OPT.velocityFieldType) {
+        case ICHNOS::VelType::Cloud3d:
+        {
+            ICHNOS::pc3D VF(world);
+            VF.readVelocityField(OPT.getVelFname());
+            ICHNOS::Domain2D domain(OPT.Dopt);
+            ICHNOS::ParticleTrace pt(world, VF, domain, OPT.Popt);
+            pt.Trace();
+        }
+        case ICHNOS::VelType::IWFM:
+        {
+            IWFM::iwfmVel VF(world);
+            VF.readVelocityField(OPT.getVelFname());
+            ICHNOS::Domain2D domain(OPT.Dopt);
+            ICHNOS::ParticleTrace pt(world, VF, domain, OPT.Popt);
+            pt.Trace();
+        }
+        default:
+        {
+            std::cout << "Invalid velocity type" << std::endl;
+            break;
+        }
+        }
 
-    ICHNOS::Domain2D domain(OPT.Dopt);
+    }
     
-    std::cout << world.rank() << " has " << VF.getCloudSize() << " points" << std::endl;
-
-    ICHNOS::ParticleTrace pt(world, VF, domain, OPT.Popt);
-
-    pt.Trace();
-
+    //std::cout << world.rank() << " has " << VF.getCloudSize() << " points" << std::endl;
     return 0;
- }
+  }

@@ -4,6 +4,7 @@
 #include <boost/geometry/geometries/polygon.hpp>
 
 #include <iostream>
+#include <fstream>
 #include <vector>
 
 #include <nanoflann.hpp>
@@ -184,6 +185,29 @@ namespace ICHNOS {
 		}
 	}
 
+	ExitReason castExitReasons2Enum(std::string exitreason) {
+		std::map < std::string, ExitReason> ExitReasonMap;
+		std::map < std::string, ExitReason>::iterator it;
+		ExitReasonMap.insert(std::pair<std::string, ExitReason>("CHANGE_PROCESSOR", ExitReason::CHANGE_PROCESSOR));
+		ExitReasonMap.insert(std::pair<std::string, ExitReason>("EXIT_BOTTOM", ExitReason::EXIT_BOTTOM));
+		ExitReasonMap.insert(std::pair<std::string, ExitReason>("EXIT_SIDE", ExitReason::EXIT_SIDE));
+		ExitReasonMap.insert(std::pair<std::string, ExitReason>("EXIT_TOP", ExitReason::EXIT_TOP));
+		ExitReasonMap.insert(std::pair<std::string, ExitReason>("FAR_AWAY", ExitReason::FAR_AWAY));
+		ExitReasonMap.insert(std::pair<std::string, ExitReason>("FIRST_POINT_GHOST", ExitReason::FIRST_POINT_GHOST));
+		ExitReasonMap.insert(std::pair<std::string, ExitReason>("INIT_OUT", ExitReason::INIT_OUT));
+		ExitReasonMap.insert(std::pair<std::string, ExitReason>("MAX_INNER_ITER", ExitReason::MAX_INNER_ITER));
+		ExitReasonMap.insert(std::pair<std::string, ExitReason>("NO_EXIT", ExitReason::NO_EXIT));
+		ExitReasonMap.insert(std::pair<std::string, ExitReason>("NO_REASON", ExitReason::NO_REASON));
+		ExitReasonMap.insert(std::pair<std::string, ExitReason>("STUCK", ExitReason::STUCK));
+		it = ExitReasonMap.find(exitreason);
+		if (it != ExitReasonMap.end())
+			return it->second;
+		else {
+			return ExitReason::NO_REASON;
+		}
+	}
+
+
 	struct ParticleOptions {
 		
 		SolutionMethods method;
@@ -217,10 +241,14 @@ namespace ICHNOS {
 		std::string WellFile;
 		int ParticlesInParallel;
 		std::string OutputFile;
+		// During gathering puut all streamlines into one file.
+		// If false each file will contain ParticlesInParallel streamlines per file
+		bool gatherOneFile;
+		std::string configfile;
 	};
 
 	struct DomainOptions {
-		std::string OutlineFile;
+		std::string polygonFile;
 		std::string TopElevationFile;
 		std::string BottomeElevationFile;
 	};
@@ -233,8 +261,8 @@ namespace ICHNOS {
 		Particle(vec3 p, vec3 v, int proc,  Particle prev);
 		vec3 getP() const { return p; }
 		vec3 getV() const { return v; }
-		double getAge() const { return age; }
-		void SetAge(double a) { age = a; }
+		//double getAge() const { return age; }
+		//void SetAge(double a) { age = a; }
 		void SetV(vec3 vel) { v = vel; }
 		int getPid() const { return pid; }
 		void displayAsVEX(bool printAttrib);
@@ -244,7 +272,7 @@ namespace ICHNOS {
 		int pid;
 		vec3 p;
 		vec3 v;
-		double age;
+		//double age;
 		int proc;
 	};
 
@@ -253,7 +281,7 @@ namespace ICHNOS {
 		p(p)
 	{
 		pid = 0;
-		age = 0;
+		//age = 0;
 		proc = -9;
 	}
 
@@ -264,7 +292,7 @@ namespace ICHNOS {
 		v(v),
 		proc(proc)
 	{
-		age = 0;
+		//age = 0;
 	}
 
 	Particle::Particle(vec3 p, vec3 v, int proc, Particle prev)
@@ -274,8 +302,8 @@ namespace ICHNOS {
 		proc(proc)
 	{
 		pid = prev.getPid() + 1;
-		double d = (p - prev.getP()).len();
-		age = prev.getAge() + d / prev.getV().len();
+		//double d = (p - prev.getP()).len();
+		//age = prev.getAge() + d / prev.getV().len();
 	}
 
 	void Particle::displayAsVEX(bool printAttrib) {
@@ -372,11 +400,98 @@ namespace ICHNOS {
 
 		return RKcoef;
 	}
+
+	// A temporary structure that is used durign the gathering phase
+	struct gPart {
+		vec3 p;
+		vec3 v;
+		//double age;
+	};
+
+	struct gStream {
+		std::map<int, gPart> particles;
+		ExitReason ex;
+	};
+
+	//				 Eid		  Sid	
+	typedef std::map<int, std::map<int, gStream > > streamlineMap;
 }
 
 typedef nanoflann::KDTreeSingleIndexAdaptor<nanoflann::L2_Simple_Adaptor<double, ICHNOS::pointCloud< ICHNOS::vec3 > >, ICHNOS::pointCloud<ICHNOS::vec3 >, 3 > nano_kd_tree_vector;
 typedef nanoflann::KDTreeSingleIndexAdaptor<nanoflann::L2_Simple_Adaptor<double, ICHNOS::pointCloud< double > >, ICHNOS::pointCloud<double >, 3 > nano_kd_tree_scalar;
+typedef nanoflann::KDTreeSingleIndexAdaptor<nanoflann::L2_Simple_Adaptor<double, ICHNOS::pointCloud< int > >, ICHNOS::pointCloud<int >, 3 > nano_kd_tree_int;
 
 typedef boost::geometry::model::d2::point_xy<double> boostPoint;
 typedef boost::geometry::model::polygon<boostPoint> boostPolygon;
+
+class multiPoly {
+public:
+	multiPoly() {};
+	bool readfromFile(std::string filename);
+	bool is_point_in(double x, double y);
+private:
+	std::vector<boostPolygon> outside;
+	std::vector<boostPolygon> inside;
+};
+
+
+// The format is
+// N polygons
+// Repeat the following N times
+// Np points of the polygons 1 for polygon or 0 if its a hole
+// Read Np coordinates x,y. Orientation doesn't matter and will be corrected inside the code
+bool multiPoly::readfromFile(std::string filename) {
+	std::ifstream datafile(filename.c_str());
+	if (!datafile.good()) {
+		std::cout << "Can't open the file" << filename << std::endl;
+		return false;
+	}
+	else {
+		int Npoly, Np, orien;
+		double x, y;
+		std::string line;
+		while (getline(datafile, line))
+		{
+			std::istringstream inp(line.c_str());
+			boostPolygon polygon;
+			std::vector<boostPoint> polygonPoints;
+			inp >> Np;
+			inp >> orien;
+			for (int j = 0; j < Np; ++j) {
+				getline(datafile, line);
+				inp.str(line.c_str());
+				inp >> x;
+				inp >> y;
+				polygonPoints.push_back(boostPoint(x, y));
+			}
+			boost::geometry::assign_points(polygon, polygonPoints);
+			boost::geometry::correct(polygon);
+			if (orien == 0) {
+				outside.push_back(polygon);
+			}
+			else {
+				inside.push_back(polygon);
+			}
+
+		}
+		datafile.close();
+		return true;
+	}
+}
+
+bool multiPoly::is_point_in(double x, double y) {
+	boostPoint pnt(x, y);
+	for (unsigned int i = 0; i < outside.size(); ++i) {
+		if (boost::geometry::within(pnt, outside[i])) {
+			return false;
+		}
+	}
+	for (unsigned int i = 0; i < inside.size(); ++i) {
+		if (boost::geometry::within(pnt, inside[i])) {
+			return true;
+		}
+	}
+	return false;
+}
+
 

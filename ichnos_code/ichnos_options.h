@@ -12,6 +12,38 @@ namespace po = boost::program_options;
 
 
 namespace ICHNOS {
+	enum class VelType {
+		Cloud3d,
+		IWFM,
+		INVALID
+	};
+
+	std::string castVelType2String(VelType vt) {
+		std::map <VelType, std::string> vtMap;
+		std::map <VelType, std::string>::iterator it;
+		vtMap.insert(std::pair<VelType, std::string>(VelType::Cloud3d, "Cloud3d"));
+		vtMap.insert(std::pair<VelType, std::string>(VelType::IWFM, "IWFM"));
+		it = vtMap.find(vt);
+		if (it != vtMap.end())
+			return it->second;
+		else {
+			return "INVALID";
+		}
+	}
+
+	VelType castVelType2Enum(std::string vt) {
+		std::map < std::string, VelType> vtMap;
+		std::map < std::string, VelType>::iterator it;
+		vtMap.insert(std::pair<std::string, VelType>("Cloud3d", VelType::Cloud3d));
+		vtMap.insert(std::pair<std::string, VelType>("IWFM", VelType::IWFM));
+		it = vtMap.find(vt);
+		if (it != vtMap.end())
+			return it->second;
+		else {
+			return VelType::INVALID;
+		}
+	}
+
 	class options {
 	public:
 		options(boost::mpi::communicator& world_in);
@@ -24,9 +56,16 @@ namespace ICHNOS {
 
 		ParticleOptions Popt;
 		DomainOptions Dopt;
+		bool gatherMode = false;
+		int nproc;
+		int niter;
+
+		VelType velocityFieldType;
+		
 
 		
 
+		
 	private:
 		boost::mpi::communicator world;
 		bool bIsMultiThreaded = true;
@@ -50,6 +89,9 @@ namespace ICHNOS {
 			("version,v", "print version information")
 			("help,h", "Get a list of options in the configuration file")
 			("config,c", po::value<std::string >(), "Set configuration file")
+			("gather,g", "Triggers the gather mode. The configuration file is still needed")
+			("nproc,n", po::value<int>(), "number of processors (used in gather mode only)")
+			("iter,i", po::value<int>(), "number of iterations (used in gather mode only)")
 			;
 
 		po::variables_map vm_cmd;
@@ -100,7 +142,9 @@ namespace ICHNOS {
 			("MaxIterationsPerStreamline", po::value<int>()->default_value(1000), "Maximum number of steps per streamline")
 			("MaxProcessorExchanges", po::value<int>()->default_value(50), "Maximum number of that a particles are allowed to change processors")
 			("OutputFile", po::value<std::string >(), "Prefix for the output file")
-			("ParticlesInParallel", po::value<int>()->default_value(1000), "After Stuckiter exit particle tracking")
+			("ParticlesInParallel", po::value<int>()->default_value(1000), "Maximum number run in parallel")
+			("GatherOneFile", po::value<int>()->default_value(1), "Put all streamlines into one file")
+			("VelocityType", po::value<std::string>(), "Type of velocity. (Cloud3d or IWFM)")
 			;
 
 		if (vm_cmd.count("help")) {
@@ -121,6 +165,7 @@ namespace ICHNOS {
 
 		po::variables_map vm_cfg;
 		if (vm_cmd.count("config")) {
+			Popt.configfile = vm_cmd["config"].as<std::string>().c_str();
 			std::cout << "Configuration file: " << vm_cmd["config"].as<std::string>().c_str() << std::endl;
 			po::store(po::parse_config_file<char>(vm_cmd["config"].as<std::string>().c_str(), config_options), vm_cfg);
 			nThreads = vm_cfg["nThreads"].as<int>();
@@ -170,9 +215,39 @@ namespace ICHNOS {
 			Popt.OutputFile = vm_cfg["OutputFile"].as<std::string>();
 
 			// Domain options
-			Dopt.OutlineFile = vm_cfg["DomainPolygon"].as<std::string>();
+			Dopt.polygonFile = vm_cfg["DomainPolygon"].as<std::string>();
 			Dopt.TopElevationFile = vm_cfg["TopElevation"].as<std::string>();
 			Dopt.BottomeElevationFile = vm_cfg["BottomElevation"].as<std::string>();
+
+			velocityFieldType = castVelType2Enum(vm_cfg["VelocityType"].as<std::string>());
+			if (velocityFieldType == VelType::INVALID) {
+				return false;
+			}
+		}
+
+		
+
+		if (vm_cmd.count("gather")) {
+			gatherMode = true;
+			if (vm_cmd.count("nproc"))
+				nproc = vm_cmd["nproc"].as<int>();
+			else {
+				std::cout << "In gather mode you have to specify the number of processors (nproc) used in particle tracking" << std::endl;
+				return false;
+			}
+			if (vm_cmd.count("iter"))
+				niter = vm_cmd["iter"].as<int>();
+			else {
+				std::cout << "In gather mode you have to specify the number of iterations (iter) used particle tracking" << std::endl;
+				return false;
+			}
+			{
+				int tmp = vm_cfg["GatherOneFile"].as<int>();
+				if (tmp == 0)
+					Popt.gatherOneFile = false;
+				else
+					Popt.gatherOneFile = true;
+			}
 		}
 		return true;
 	}

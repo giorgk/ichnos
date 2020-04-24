@@ -1,0 +1,5 @@
+Prefix = f:\UCDAVIS\ichnos\IchnosRwrkspc\examples\iwfm_
+Suffix = .ich
+Nlayers = 4
+Ntsteps = 120
+OwnerThreshold=0.15
