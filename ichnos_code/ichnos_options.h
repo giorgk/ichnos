@@ -123,7 +123,9 @@ namespace ICHNOS {
 		po::options_description config_options("Configuration file options");
 		config_options.add_options()
 			("nThreads", po::value<int>()->default_value(1), "Number of threads")
+			("VelocityType", po::value<std::string>(), "Type of velocity. (Cloud3d or IWFM)")
 			("VelocityConfig", po::value<std::string >(), "Set configuration file for the velocity field")
+			("Nrealizations", po::value<int>()->default_value(1), "NUmber of realizations")
 			("Stuckiter", po::value<int>()->default_value(10), "After Stuckiter exit particle tracking")
 			("Method", po::value<std::string >(), "Method for time steping")
 			("DomainPolygon", po::value<std::string >(), "A filename that containts the vertices of the outline polygon")
@@ -144,7 +146,6 @@ namespace ICHNOS {
 			("OutputFile", po::value<std::string >(), "Prefix for the output file")
 			("ParticlesInParallel", po::value<int>()->default_value(1000), "Maximum number run in parallel")
 			("GatherOneFile", po::value<int>()->default_value(1), "Put all streamlines into one file")
-			("VelocityType", po::value<std::string>(), "Type of velocity. (Cloud3d or IWFM)")
 			;
 
 		if (vm_cmd.count("help")) {
@@ -213,6 +214,14 @@ namespace ICHNOS {
 			Popt.ParticleFile = vm_cfg["PartilceFile"].as<std::string>();
 			Popt.WellFile = vm_cfg["WellFile"].as<std::string>();
 			Popt.OutputFile = vm_cfg["OutputFile"].as<std::string>();
+			Popt.Nrealizations = vm_cfg["Nrealizations"].as<int>();
+			if (world.size() > 1 && Popt.Nrealizations > 1) {
+				Popt.Nrealizations = 1;
+				if (world.rank() == 0) {
+					std::cout << " You cannot run multiple realizations in multicore mode" << std::endl;
+					std::cout << "Nrealizations is set to 1" << std::endl;
+				}
+			}
 
 			// Domain options
 			Dopt.polygonFile = vm_cfg["DomainPolygon"].as<std::string>();

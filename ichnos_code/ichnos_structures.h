@@ -3,6 +3,9 @@
 #include <boost/geometry/geometries/point_xy.hpp>
 #include <boost/geometry/geometries/polygon.hpp>
 
+#include <boost/random/mersenne_twister.hpp>
+#include <boost/random/uniform_real_distribution.hpp>
+
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -61,6 +64,11 @@ namespace ICHNOS {
 		vec3 normalize() {
 			double length = len();
 			return (vec3(x / length, y / length, z / length));
+		}
+		void zero() {
+			x = 0.0;
+			y = 0.0;
+			z = 0.0;
 		}
 	};
 
@@ -245,6 +253,8 @@ namespace ICHNOS {
 		// If false each file will contain ParticlesInParallel streamlines per file
 		bool gatherOneFile;
 		std::string configfile;
+		// Number of realizations
+		int Nrealizations;
 	};
 
 	struct DomainOptions {
@@ -424,74 +434,120 @@ typedef nanoflann::KDTreeSingleIndexAdaptor<nanoflann::L2_Simple_Adaptor<double,
 typedef boost::geometry::model::d2::point_xy<double> boostPoint;
 typedef boost::geometry::model::polygon<boostPoint> boostPolygon;
 
-class multiPoly {
-public:
-	multiPoly() {};
-	bool readfromFile(std::string filename);
-	bool is_point_in(double x, double y);
-private:
-	std::vector<boostPolygon> outside;
-	std::vector<boostPolygon> inside;
-};
+namespace ICHNOS {
+
+	class multiPoly {
+	public:
+		multiPoly() {};
+		bool readfromFile(std::string filename);
+		bool is_point_in(double x, double y);
+	private:
+		std::vector<boostPolygon> outside;
+		std::vector<boostPolygon> inside;
+	};
 
 
-// The format is
-// N polygons
-// Repeat the following N times
-// Np points of the polygons 1 for polygon or 0 if its a hole
-// Read Np coordinates x,y. Orientation doesn't matter and will be corrected inside the code
-bool multiPoly::readfromFile(std::string filename) {
-	std::ifstream datafile(filename.c_str());
-	if (!datafile.good()) {
-		std::cout << "Can't open the file" << filename << std::endl;
-		return false;
-	}
-	else {
-		int Npoly, Np, orien;
-		double x, y;
-		std::string line;
-		while (getline(datafile, line))
-		{
-			std::istringstream inp(line.c_str());
-			boostPolygon polygon;
-			std::vector<boostPoint> polygonPoints;
-			inp >> Np;
-			inp >> orien;
-			for (int j = 0; j < Np; ++j) {
-				getline(datafile, line);
-				inp.str(line.c_str());
-				inp >> x;
-				inp >> y;
-				polygonPoints.push_back(boostPoint(x, y));
-			}
-			boost::geometry::assign_points(polygon, polygonPoints);
-			boost::geometry::correct(polygon);
-			if (orien == 0) {
-				outside.push_back(polygon);
-			}
-			else {
-				inside.push_back(polygon);
-			}
-
-		}
-		datafile.close();
-		return true;
-	}
-}
-
-bool multiPoly::is_point_in(double x, double y) {
-	boostPoint pnt(x, y);
-	for (unsigned int i = 0; i < outside.size(); ++i) {
-		if (boost::geometry::within(pnt, outside[i])) {
+	// The format is
+	// N polygons
+	// Repeat the following N times
+	// Np points of the polygons 1 for polygon or 0 if its a hole
+	// Read Np coordinates x,y. Orientation doesn't matter and will be corrected inside the code
+	bool multiPoly::readfromFile(std::string filename) {
+		std::ifstream datafile(filename.c_str());
+		if (!datafile.good()) {
+			std::cout << "Can't open the file" << filename << std::endl;
 			return false;
 		}
-	}
-	for (unsigned int i = 0; i < inside.size(); ++i) {
-		if (boost::geometry::within(pnt, inside[i])) {
+		else {
+			int Np, orien;
+			double x, y;
+			std::string line;
+			while (getline(datafile, line))
+			{
+				std::istringstream inp(line.c_str());
+				boostPolygon polygon;
+				std::vector<boostPoint> polygonPoints;
+				inp >> Np;
+				inp >> orien;
+				for (int j = 0; j < Np; ++j) {
+					getline(datafile, line);
+					std::istringstream inp1(line.c_str());
+					inp1 >> x;
+					inp1 >> y;
+					polygonPoints.push_back(boostPoint(x, y));
+				}
+				boost::geometry::assign_points(polygon, polygonPoints);
+				boost::geometry::correct(polygon);
+				if (orien == 0) {
+					outside.push_back(polygon);
+				}
+				else {
+					inside.push_back(polygon);
+				}
+
+			}
+			datafile.close();
 			return true;
 		}
 	}
-	return false;
+
+	bool multiPoly::is_point_in(double x, double y) {
+		boostPoint pnt(x, y);
+		for (unsigned int i = 0; i < outside.size(); ++i) {
+			if (boost::geometry::within(pnt, outside[i])) {
+				return false;
+			}
+		}
+		for (unsigned int i = 0; i < inside.size(); ++i) {
+			if (boost::geometry::within(pnt, inside[i])) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	class SingletonGenerator {
+		static SingletonGenerator* _instance;
+		//unsigned int seed;
+
+		SingletonGenerator() {
+			generetor.seed(std::time(0));
+		}
+
+		boost::random::uniform_real_distribution<float> uniformDistribution;
+		boost::mt19937 generetor;
+
+	public:
+		//void printSeed() {
+		//	std::cout << "Seed: " << seed << std::endl;
+		//}
+		static SingletonGenerator* getInstance() {
+			if (!_instance)
+				_instance = new SingletonGenerator;
+			return _instance;
+		}
+
+		float randomNumber() {
+			return uniformDistribution(generetor);
+		}
+		float randomNumber(float min, float max) {
+			return min + (max - min) * randomNumber();
+		}
+		int randomNumber(int min, int max) {
+			return static_cast<int>(randomNumber(static_cast<float>(min), static_cast<float>(max)));
+			//float r;
+			//int rint;
+			//while (true) {
+			//	r = randomNumber(static_cast<float>(min), static_cast<float>(max));
+			//	rint = static_cast<int>(r);
+			//	if (rint >= min && rint <= max)
+			//		break;
+			//}
+
+			//return rint;
+		}
+	};
+
 }
 
 

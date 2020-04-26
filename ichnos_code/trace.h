@@ -1,6 +1,5 @@
 #pragma once
 #include <boost/mpi.hpp>
-#include <random>
 
 #include "ichnos_structures.h"
 #include "velocity_base.h"
@@ -18,6 +17,7 @@ namespace ICHNOS {
 			ParticleOptions& popt_in);
 
 		void Trace();
+		void Trace(int ireal);
 
 		bool readInputFiles(std::vector<Streamline>& S);
 
@@ -28,7 +28,7 @@ namespace ICHNOS {
 		boost::mpi::communicator world;
 		bool findNextPoint(const Particle& P, vec3& pnew, ExitReason& er);
 		ExitReason traceInner(Streamline& S);
-		void traceOuter(std::vector<Streamline>& S, int iter);
+		void traceOuter(std::vector<Streamline>& S, int iter, int ireal);
 		ExitReason CheckNewPoint(vec3& p);
 		ExitReason CheckNewPointAndCalcVelocity(vec3& p, vec3& v, int &proc);
 
@@ -74,6 +74,10 @@ namespace ICHNOS {
 	}
 
 	void ParticleTrace::Trace() {
+		Trace(0);
+	}
+
+	void ParticleTrace::Trace(int ireal) {
 		int my_rank = world.rank();
 		int nproc = world.size();
 		// Make sure all processors are here
@@ -87,13 +91,14 @@ namespace ICHNOS {
 		}
 		// All processors have to wait for the master
 		world.barrier();
+		ICHNOS::SingletonGenerator* RG = RG->getInstance();
 
 		int outer_iter = 0;
 		while (true) {
 			Part_Streamlines.clear();
 			world.barrier();
 			if (my_rank == 0) {
-				std::default_random_engine generator;
+				
 				int N = popt.ParticlesInParallel;
 				int minPartinparallel = 10;
 				std::cout << "Dont forget to harcode the minPartinparallel back to 1000. Currently is " << minPartinparallel << std::endl;
@@ -104,9 +109,7 @@ namespace ICHNOS {
 				for (int i = 0; i < N; ++i) {
 					if (ALL_Streamlines.size() == 0)
 						break;
-					// It better to make this as singleton generator
-					std::uniform_int_distribution<int> distribution(0, ALL_Streamlines.size() - 1);
-					int ii = distribution(generator);
+					int ii = RG->randomNumber(0, ALL_Streamlines.size());
 					Part_Streamlines.push_back(ALL_Streamlines[ii]);
 					ALL_Streamlines.erase(ALL_Streamlines.begin() + ii);
 				}
@@ -117,7 +120,7 @@ namespace ICHNOS {
 			MPI::Sent_receive_Initial_streamlines_from0(Part_Streamlines, my_rank, world);
 			//std::cout << my_rank << " After: " << Part_Streamlines.size() << std::endl;
 
-			traceOuter(Part_Streamlines, outer_iter);
+			traceOuter(Part_Streamlines, outer_iter, ireal);
 			outer_iter++;
 			if (ALL_Streamlines.size() == 0)
 				break;
@@ -128,11 +131,11 @@ namespace ICHNOS {
 		}
 	}
 
-	void ParticleTrace::traceOuter(std::vector<Streamline>& S, int iter) {
+	void ParticleTrace::traceOuter(std::vector<Streamline>& S, int iter, int ireal) {
 		int my_rank = world.rank();
 		int n_proc = world.size();
 
-		const std::string log_file_name = (popt.OutputFile + "_iter_" + num2Padstr(iter, 4) + "_proc_" + num2Padstr(my_rank, 4) + ".traj");
+		const std::string log_file_name = (popt.OutputFile + "_ireal_" + num2Padstr(ireal, 4) + "_iter_" + num2Padstr(iter, 4) + "_proc_" + num2Padstr(my_rank, 4) + ".traj");
 
 		std::ofstream log_file;
 		log_file.open(log_file_name.c_str());
@@ -142,6 +145,7 @@ namespace ICHNOS {
 		while (true) {
 			Snew.clear();
 			for (unsigned int i = 0; i < S.size(); ++i) {
+					
 				ExitReason er = traceInner(S[i]);
 
 				if (er == ExitReason::FIRST_POINT_GHOST || er == ExitReason::FAR_AWAY)
@@ -317,8 +321,8 @@ namespace ICHNOS {
 	}
 
 	bool ParticleTrace::EulerStep(const Particle& P, vec3& pnew, ExitReason& er) {
-		//DEBUG::displayParitcleasVex(P, true);
-		pnew = P.getV().normalize()* popt.StepSize* popt.Direction + P.getP();
+		//DEBUG::displayParticleasVex(P, true);
+		pnew = P.getP() + P.getV().normalize() * popt.StepSize * popt.Direction;
 		//DEBUG::displayVectorasVex(pnew);
 		return true;
 	}

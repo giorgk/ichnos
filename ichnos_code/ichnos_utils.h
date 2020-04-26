@@ -13,19 +13,19 @@ namespace ICHNOS {
 
 	namespace DEBUG {
 		void displayParticleasVex(const Particle& P, bool prinAttr) {
-			vec3 vn = P.getV() * (1 / P.getV().len());
-			std::cout << "p = addpoint(0,{" << P.getP().x << "," << P.getP().z << "," << P.getP().y << "});";
+			vec3 vn = P.getV().normalize();
+			std::cout << std::setprecision(5) << std::fixed << "p = addpoint(0,{" << P.getP().x << "," << P.getP().z << "," << P.getP().y << "});";
 			if (prinAttr)
-				std::cout << " setpointattrib(0,'N',p,{" << vn.x << "," << vn.z << "," << vn.y << "},'set');";
+				std::cout << std::setprecision(5) << std::fixed << " setpointattrib(0,'N',p,{" << vn.x << "," << vn.z << "," << vn.y << "},'set');";
 			std::cout << std::endl;
 		}
 		void displayVectorasVex(vec3 p) {
-			std::cout << "p = addpoint(0,{" << p.x << "," << p.z << "," << p.y << "});" << std::endl;
+			std::cout << std::setprecision(3) << std::fixed << "p = addpoint(0,{" << p.x << "," << p.z << "," << p.y << "});" << std::endl;
 		}
 		void displayPVasVex(vec3 p, vec3 v) {
-			vec3 vn = v * (1 / v.len());
-			std::cout << "p = addpoint(0,{" << p.x << "," << p.z << "," << p.y << "});";
-			std::cout << " setpointattrib(0,'N',p,{" << vn.x << "," << vn.z << "," << vn.y << "},'set');";
+			vec3 vn = v.normalize();
+			std::cout << std::setprecision(3) << std::fixed << "p = addpoint(0,{" << p.x << "," << p.z << "," << p.y << "});";
+			std::cout << std::setprecision(3) << std::fixed << " setpointattrib(0,'N',p,{" << vn.x << "," << vn.z << "," << vn.y << "},'set');";
 			std::cout << std::endl;
 		}
 	}
@@ -420,12 +420,64 @@ namespace ICHNOS {
 					return tree->dataset.kdtree_get_pt(ret_matches[i].first, 3);
 				}
 				else {
-					w = 1 / std::pow(ret_matches[i].second, power);
+					w = 1 / std::pow(std::sqrt(ret_matches[i].second), power);
 					sumW += w;
-					sumWVal += tree->dataset.kdtree_get_pt(ret_matches[i].first, 3) * w;
+					sumWVal += tree->dataset.kdtree_get_vel_vec(ret_matches[i].first) * w;
 				}
 			}
 			return(sumWVal / sumW);
+		}
+	}
+
+	void interpolateIntTree(std::map<int, double>& id_dst, std::map<int, double>& proc_map,
+		std::unique_ptr <nano_kd_tree_int>& tree, vec3 p) {
+		double power = tree->dataset.Power;
+		double threshold = tree->dataset.Threshold;
+		double radius = tree->dataset.Radious;
+		id_dst.clear();
+		proc_map.clear();
+		double query_pt[3] = { p.x, p.y, 0.0 };
+		// This is a vector of pairs (id distance).  
+		std::vector<std::pair<size_t, double> >   ret_matches;
+		nanoflann::SearchParams params;
+		size_t N = tree->radiusSearch(&query_pt[0], radius * radius, ret_matches, params);
+		if (N == 0) {
+			std::cerr << "There are no points around (" << p.x << "," << p.y << ") whithin " << radius << "distance" << std::endl;
+			std::cerr << "consider increasing the radius" << std::endl;
+		}
+		else {
+			double sumW = 0.0;
+			double w;
+			int iproc;
+			std::map<int, double>::iterator it;
+			for (size_t i = 0; i < N; i++) {
+				iproc = tree->dataset.kdtree_get_proc(ret_matches[i].first);
+				if (ret_matches[i].second < threshold) {
+					id_dst.clear();
+					id_dst.insert(std::pair<int, double>(static_cast<int>(ret_matches[i].first), 1.0));
+					break;
+				}
+				else {
+					w = 1 / std::pow(std::sqrt(ret_matches[i].second), power);
+					it = proc_map.find(iproc);
+					if (it == proc_map.end()) {
+						proc_map.insert(std::pair<int, double>(iproc, w));
+					}
+					else {
+						it->second += w;
+					}
+					sumW += w;
+					id_dst.insert(std::pair<int, double>(static_cast<int>(ret_matches[i].first), w));
+				}
+			}
+			it = id_dst.begin();
+			for (it; it != id_dst.end(); ++it) {
+				it->second = it->second / sumW;
+			}
+			it = proc_map.begin();
+			for (it; it != proc_map.end(); ++it) {
+				it->second = it->second / sumW;
+			}
 		}
 	}
 
@@ -477,7 +529,7 @@ namespace ICHNOS {
 			int iproc;
 
 			for (size_t i = 0; i < N; i++) {
-				closest_pnts[i].z = closest_pnts[i].z * ratio * scale + closest_pnts[i].z * (1 - scale);
+				closest_pnts[i].z = closest_pnts[i].z * ratio * scale + closest_pnts[i].z * (1.0 - scale);
 				d = std::sqrt(closest_pnts[i].x * closest_pnts[i].x +
 					closest_pnts[i].y * closest_pnts[i].y +
 					(closest_pnts[i].z * closest_pnts[i].z));
