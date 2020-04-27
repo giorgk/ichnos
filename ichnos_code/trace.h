@@ -100,8 +100,8 @@ namespace ICHNOS {
 			if (my_rank == 0) {
 				
 				int N = popt.ParticlesInParallel;
-				int minPartinparallel = 10;
-				std::cout << "Dont forget to harcode the minPartinparallel back to 1000. Currently is " << minPartinparallel << std::endl;
+				int minPartinparallel = 1000;
+				//std::cout << "@#&%$&# Dont forget to harcode the minPartinparallel back to 1000. Currently is " << minPartinparallel << std::endl;
 				if (static_cast<int>(ALL_Streamlines.size()) < popt.ParticlesInParallel + minPartinparallel) {
 					N = ALL_Streamlines.size();
 				}
@@ -113,7 +113,7 @@ namespace ICHNOS {
 					Part_Streamlines.push_back(ALL_Streamlines[ii]);
 					ALL_Streamlines.erase(ALL_Streamlines.begin() + ii);
 				}
-				std::cout << "Simulating " << Part_Streamlines.size() << " Streamlines. # streamlines to trace: "  << ALL_Streamlines.size() << std::endl;
+				std::cout << "||	Simulating " << Part_Streamlines.size() << " Streamlines. # streamlines to trace: "  << ALL_Streamlines.size() << std::endl;
 			}
 			world.barrier();
 			//std::cout << my_rank << " Before: " << Part_Streamlines.size() << std::endl;
@@ -125,7 +125,7 @@ namespace ICHNOS {
 			if (ALL_Streamlines.size() == 0)
 				break;
 		}
-		if (my_rank == 0) {
+		if (my_rank == 0 && world.size() > 1 && ireal == popt.Nrealizations - 1) {
 			std::cout << "Particle tracking completed. You can now gather the streamlines by running:" << std::endl;
 			std::cout << "./ichnos -c " << popt.configfile << " -g -n " << nproc << " -i " << outer_iter << std::endl;
 		}
@@ -174,7 +174,7 @@ namespace ICHNOS {
 			world.barrier();
 			
 			if (my_rank == 0)
-				std::cout << "          Number of active particles: " << N_part2track << " --------" << std::endl << std::flush;
+				std::cout << "||		Number of active particles: " << N_part2track << " --------" << std::endl << std::flush;
 
 			if (N_part2track == 0)
 				break;
@@ -189,7 +189,7 @@ namespace ICHNOS {
 
 			trace_iter++;
 			if (trace_iter > popt.MaxProcessorExchanges) {
-				std::cout << "exit after MaxProcessorExchanges was reached: trace_iter = " << trace_iter << std::endl;
+				std::cout << "@%$^@&#$^@ exit after MaxProcessorExchanges was reached: trace_iter = " << trace_iter << std::endl;
 				break;
 			}
 		}

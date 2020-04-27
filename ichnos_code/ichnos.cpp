@@ -60,7 +60,7 @@ int main(int argc, char* argv[])
             ICHNOS::ParticleTrace pt(world, VF, domain, OPT.Popt);
             for (int i = 0; i < OPT.Popt.Nrealizations; ++i) {
                 if (world.rank() == 0)
-                    std::cout << "      ====== Realization " << i << "======" << std::endl;
+                    std::cout << "||======Realization " << i << "======" << std::endl;
                 pt.Trace(i);
             }
             break;
@@ -81,3 +81,4 @@ int main(int argc, char* argv[])
 //100 1 691636.7 4160195 -100.2
 //100 1 646753 4263260 - 50.2
 //100 1 854295 3966620 -150.2
+//100 1 804115 4006950 -200.2 Best so far

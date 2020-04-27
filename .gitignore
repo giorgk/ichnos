@@ -26,6 +26,12 @@
 /ichnos_hou/ichnos/examples/*
 !/ichnos_hou/ichnos/examples/*.dat
 
+# R workspace
+!/IchnosRwrkspc
+/IchnosRwrkspc/*
+!/IchnosRwrkspc/*.Rproj
+!/IchnosRwrkspc/*.R
+
 
 
 

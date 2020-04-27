@@ -340,7 +340,9 @@ namespace IWFM {
 
 		//std::cout << "we landed here safely" << std::endl;
 		vel.zero();
-		int r = RG->randomNumber(0, Ntsteps);
+		int r = -9;
+		while (r < 0 || r > Ntsteps - 1)
+			r = RG->randomNumber(0, Ntsteps);
 		for (unsigned int i = 0; i < itvec.size(); ++i) {
 			vel.x += itvec[i]->second.getV(0, l1, r) * weights[i] * w1;
 			vel.y += itvec[i]->second.getV(1, l1, r) * weights[i] * w1;
