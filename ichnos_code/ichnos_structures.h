@@ -431,9 +431,9 @@ namespace ICHNOS {
 	typedef std::map<int, std::map<int, gStream > > streamlineMap;
 }
 
-typedef nanoflann::KDTreeSingleIndexAdaptor<nanoflann::L2_Simple_Adaptor<double, ICHNOS::pointCloud< ICHNOS::vec3 > >, ICHNOS::pointCloud<ICHNOS::vec3 >, 3 > nano_kd_tree_vector;
-typedef nanoflann::KDTreeSingleIndexAdaptor<nanoflann::L2_Simple_Adaptor<double, ICHNOS::pointCloud< double > >, ICHNOS::pointCloud<double >, 3 > nano_kd_tree_scalar;
-typedef nanoflann::KDTreeSingleIndexAdaptor<nanoflann::L2_Simple_Adaptor<double, ICHNOS::pointCloud< int > >, ICHNOS::pointCloud<int >, 3 > nano_kd_tree_int;
+typedef nanoflann::KDTreeSingleIndexAdaptor<nanoflann::L2_Adaptor<double, ICHNOS::pointCloud< ICHNOS::vec3 > >, ICHNOS::pointCloud<ICHNOS::vec3 >, 3 > nano_kd_tree_vector;
+typedef nanoflann::KDTreeSingleIndexAdaptor<nanoflann::L2_Adaptor<double, ICHNOS::pointCloud< double > >, ICHNOS::pointCloud<double >, 3 > nano_kd_tree_scalar;
+typedef nanoflann::KDTreeSingleIndexAdaptor<nanoflann::L2_Adaptor<double, ICHNOS::pointCloud< int > >, ICHNOS::pointCloud<int >, 3 > nano_kd_tree_int;
 
 typedef boost::geometry::model::d2::point_xy<double> boostPoint;
 typedef boost::geometry::model::polygon<boostPoint> boostPolygon;
