@@ -157,6 +157,7 @@
     <ClInclude Include="ichnos_utils.h" />
     <ClInclude Include="iwfmVelocity.h" />
     <ClInclude Include="LayerVelocity.h" />
+    <ClInclude Include="npsatVelocity.h" />
     <ClInclude Include="trace.h" />
     <ClInclude Include="velocity_base.h" />
   </ItemGroup>

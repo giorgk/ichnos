@@ -82,6 +82,8 @@ namespace ICHNOS {
 		double Power;
 		double Threshold;
 		bool InterpolateOutside;
+		int NmaxPnts;
+		int NminPnts;
 
 
 		// methods required by nanoflann ------
@@ -115,6 +117,8 @@ namespace ICHNOS {
 		template <class BBOX>
 		bool kdtree_get_bbox(BBOX& /* bb */) const { return false; }
 	};
+
+	enum class interpType { INGORE, SCALAR, CLOUD };
 
 	enum class SolutionMethods
 	{

@@ -9,6 +9,7 @@
 #include "velocity_base.h"
 #include "trace.h"
 #include "iwfmVelocity.h"
+#include "npsatVelocity.h"
 
 ICHNOS::SingletonGenerator* ICHNOS::SingletonGenerator::_instance = nullptr;
 
@@ -31,7 +32,7 @@ int main(int argc, char* argv[])
     if (world.rank() == 0) {
         std::cout << "Ichnos will run using " << world.size() << " processors" << std::endl;
         std::cout << "Good luck with that!" << std::endl;
-
+        std::cout << "Reading data..." << std::endl;
     }
 
     ICHNOS::options OPT(world);
@@ -63,6 +64,17 @@ int main(int argc, char* argv[])
                     std::cout << "||======Realization " << i << "======" << std::endl;
                 pt.Trace(i);
             }
+            break;
+        }
+        case ICHNOS::VelType::NPSAT:
+        {
+            NPSAT::npsatVel VF(world);
+            VF.readVelocityField(OPT.getVelFname());
+            ICHNOS::Domain2D domain(OPT.Dopt);
+            ICHNOS::ParticleTrace pt(world, VF, domain, OPT.Popt);
+            if (world.rank() == 0)
+                std::cout << "Tracing particles..." << std::endl;
+            pt.Trace();
             break;
         }
         default:

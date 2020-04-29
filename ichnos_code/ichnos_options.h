@@ -15,6 +15,7 @@ namespace ICHNOS {
 	enum class VelType {
 		Cloud3d,
 		IWFM,
+		NPSAT,
 		INVALID
 	};
 
@@ -23,6 +24,7 @@ namespace ICHNOS {
 		std::map <VelType, std::string>::iterator it;
 		vtMap.insert(std::pair<VelType, std::string>(VelType::Cloud3d, "Cloud3d"));
 		vtMap.insert(std::pair<VelType, std::string>(VelType::IWFM, "IWFM"));
+		vtMap.insert(std::pair<VelType, std::string>(VelType::NPSAT, "NPSAT"));
 		it = vtMap.find(vt);
 		if (it != vtMap.end())
 			return it->second;
@@ -36,6 +38,7 @@ namespace ICHNOS {
 		std::map < std::string, VelType>::iterator it;
 		vtMap.insert(std::pair<std::string, VelType>("Cloud3d", VelType::Cloud3d));
 		vtMap.insert(std::pair<std::string, VelType>("IWFM", VelType::IWFM));
+		vtMap.insert(std::pair<std::string, VelType>("NPSAT", VelType::NPSAT));
 		it = vtMap.find(vt);
 		if (it != vtMap.end())
 			return it->second;
@@ -230,6 +233,7 @@ namespace ICHNOS {
 
 			velocityFieldType = castVelType2Enum(vm_cfg["VelocityType"].as<std::string>());
 			if (velocityFieldType == VelType::INVALID) {
+				std::cout << vm_cfg["VelocityType"].as<std::string>() << " is an invalid velocity type" << std::endl;
 				return false;
 			}
 		}

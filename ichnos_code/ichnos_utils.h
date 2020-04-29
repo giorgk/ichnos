@@ -107,6 +107,8 @@ namespace ICHNOS {
 						inp >> pntCld.Power;
 						inp >> pntCld.Threshold;
 						inp >> ii;
+						inp >> pntCld.NmaxPnts;
+						inp >> pntCld.NminPnts;
 						if (ii == 0)
 							pntCld.InterpolateOutside = false;
 						else
@@ -310,19 +312,19 @@ namespace ICHNOS {
 	namespace WRITE {
 		void PrintParticle2Log(std::ofstream& log_file, Streamline& S, int i) {
 			Particle pp = S.getParticle(i);
-			log_file << pp.getPid() << " \t"
-				<< S.getEid() << " \t"
-				<< S.getSid() << " \t"
+			log_file << pp.getPid() << " "
+				<< S.getEid() << " "
+				<< S.getSid() << " "
 				<< std::setprecision(3) << std::fixed
-				<< pp.getP().x << " \t" << pp.getP().y << " \t" << pp.getP().z << " \t"
+				<< pp.getP().x << " " << pp.getP().y << " " << pp.getP().z << " "
 				<< std::setprecision(4) << std::fixed
-				<< pp.getV().x << " \t" << pp.getV().y << " \t" << pp.getV().z << " \t"
+				<< pp.getV().x << " " << pp.getV().y << " " << pp.getV().z << " "
 				/*<< pp.getAge()*/ << std::endl;
 		}
 		void PrintExitReason(std::ofstream& log_file, Streamline& S, ExitReason er) {
-			log_file << -9 << " \t"
-				<< S.getEid() << " \t"
-				<< S.getSid() << " \t" 
+			log_file << -9 << " "
+				<< S.getEid() << " "
+				<< S.getSid() << " " 
 				<< castExitReasons2String(er) << std::endl;
 		}
 
@@ -355,16 +357,16 @@ namespace ICHNOS {
 							p_prev = p_curr;
 							v_prev = v_curr;
 						}
-						out_file << eit->first << "\t"
-							<< sit->first << "\t"
+						out_file << eit->first << " "
+							<< sit->first << " "
 							<< std::setprecision(2) << std::fixed
-							<< pit->second.p.x << "\t"
-							<< pit->second.p.y << "\t"
-							<< pit->second.p.z << "\t"
+							<< pit->second.p.x << " "
+							<< pit->second.p.y << " "
+							<< pit->second.p.z << " "
 							<< std::setprecision(5) << std::fixed
-							<< pit->second.v.x << "\t"
-							<< pit->second.v.y << "\t"
-							<< pit->second.v.z << "\t" 
+							<< pit->second.v.x << " "
+							<< pit->second.v.y << " "
+							<< pit->second.v.z << " " 
 							<< age << std::endl;
 						i++;
 					}
@@ -375,25 +377,29 @@ namespace ICHNOS {
 	}
 
 	void gather_particles(ICHNOS::options& opt) {
-		streamlineMap Smap;
-		for (int i = 0; i < opt.niter; ++i) {
-			for (int j = 0; j < opt.nproc; ++j) {
-				std::string filename = opt.Popt.OutputFile + "_iter_" + num2Padstr(i, 4) + "_proc_" + num2Padstr(j, 4) + ".traj";
-				std::cout << "Reading ... " << filename << std::endl;
-				bool tf = READ::readTrajfiles(filename, Smap);
-				if (!tf) {
-					std::cout << "Error while reading trajectory files" << std::endl;
-					return;
+		for (int ireal = 0; ireal < opt.Popt.Nrealizations; ++ireal) {
+			streamlineMap Smap;
+			for (int i = 0; i < opt.niter; ++i) {
+				for (int j = 0; j < opt.nproc; ++j) {
+					std::string filename = opt.Popt.OutputFile + "_ireal_" + num2Padstr(ireal, 4) +
+						"_iter_" + num2Padstr(i, 4) + "_proc_" + num2Padstr(j, 4) + ".traj";
+
+					std::cout << "Reading ... " << filename << std::endl;
+					bool tf = READ::readTrajfiles(filename, Smap);
+					if (!tf) {
+						std::cout << "Error while reading trajectory files" << std::endl;
+						return;
+					}
+				}
+				if (!opt.Popt.gatherOneFile) {
+					std::string filename = opt.Popt.OutputFile + "_ireal_" + num2Padstr(ireal, 4) + "_gather_iter_" + num2Padstr(i, 4) + ".traj";
+					ICHNOS::WRITE::printStreamslineMap(filename, Smap);
 				}
 			}
-			if (!opt.Popt.gatherOneFile) {
-				std::string filename = opt.Popt.OutputFile + "_gather_iter_" + num2Padstr(i, 4) + ".traj";
+			if (opt.Popt.gatherOneFile) {
+				std::string filename = opt.Popt.OutputFile + "_ireal_" + num2Padstr(ireal, 4) + "_gather_ALL.traj";
 				ICHNOS::WRITE::printStreamslineMap(filename, Smap);
 			}
-		}
-		if (opt.Popt.gatherOneFile) {
-			std::string filename = opt.Popt.OutputFile + "_gather_ALL.traj";
-			ICHNOS::WRITE::printStreamslineMap(filename, Smap);
 		}
 	}
 	
@@ -486,78 +492,86 @@ namespace ICHNOS {
 		double power = tree->dataset.Power;
 		double threshold = tree->dataset.Threshold;
 		double radius = tree->dataset.Radious;
+		size_t Nmax = static_cast<size_t>(tree->dataset.NmaxPnts);
+		size_t Nmin = static_cast<size_t>(tree->dataset.NminPnts);
 		proc_map.clear();
 		double query_pt[3] = { p.x, p.y, p.z };
 
 		std::vector<std::pair<size_t, double> >   ret_matches;
 		nanoflann::SearchParams params;
-		size_t N = tree->radiusSearch(&query_pt[0], radius * radius, ret_matches, params);
-		if (N == 0) {
-			//std::cerr << "There are no points around (" << p.x << "," << p.y << "," << p.z << ") whithin " << radius << "  units radius" << std::endl;
-			//std::cerr << "consider increasing the radius" << std::endl;
-			vel = vec3(-99999, -99999, -99999);
-		}
-		else {
-			// find the largest horizontal and vertical distance between the point in question and the
-			// closest points around this
-			std::vector<vec3> closest_pnts(N);
-			double xymax = 0;
-			double zmax = 0;
-			double tmpxy, tmpz;
-
-			for (size_t i = 0; i < N; i++) {
-				//std::cout << tree->dataset.kdtree_get_pnt_vec(ret_matches[i].first).x << ", "
-				//	<< tree->dataset.kdtree_get_pnt_vec(ret_matches[i].first).y << ", "
-				//	<< tree->dataset.kdtree_get_pnt_vec(ret_matches[i].first).z << std::endl;
-				closest_pnts[i] = tree->dataset.kdtree_get_pnt_vec(ret_matches[i].first) - p;
-				tmpxy = std::sqrt(closest_pnts[i].x * closest_pnts[i].x + closest_pnts[i].y * closest_pnts[i].y);
-				tmpz = std::sqrt(closest_pnts[i].z * closest_pnts[i].z);
-				if (tmpxy > xymax)
-					xymax = tmpxy;
-				if (tmpz > zmax)
-					zmax = tmpz;
+		size_t N = 0;
+		int count_attempts = 0;
+		while (N < Nmin) {
+			N = tree->radiusSearch(&query_pt[0], radius * radius, ret_matches, params);
+			radius = radius * 2;
+			count_attempts++;
+			if (count_attempts > 20) {
+				std::cout << "There are no points around (" << p.x << "," << p.y << "," << p.z << ") whithin " << radius << "  units radius" << std::endl;
+				vel = vec3();
+				return;
 			}
+		}
+		N = std::min(N, Nmax);
 
-			double ratio = xymax / zmax;
+		// find the largest horizontal and vertical distance between the point in question and the
+		// closest points around this
+		std::vector<vec3> closest_pnts(N);
+		double xymax = 0;
+		double zmax = 0;
+		double tmpxy, tmpz;
+		for (size_t i = 0; i < N; i++) {
+			//std::cout << tree->dataset.kdtree_get_pnt_vec(ret_matches[i].first).x << ", "
+			//	<< tree->dataset.kdtree_get_pnt_vec(ret_matches[i].first).y << ", "
+			//	<< tree->dataset.kdtree_get_pnt_vec(ret_matches[i].first).z << std::endl;
+			closest_pnts[i] = tree->dataset.kdtree_get_pnt_vec(ret_matches[i].first) - p;
+			tmpxy = std::sqrt(closest_pnts[i].x * closest_pnts[i].x + closest_pnts[i].y * closest_pnts[i].y);
+			tmpz = std::sqrt(closest_pnts[i].z * closest_pnts[i].z);
+			if (tmpxy > xymax)
+				xymax = tmpxy;
+			if (tmpz > zmax)
+				zmax = tmpz;
+		}
 
-			// interpolate using the scaled value
-			double w, d;
-			double sumW = 0;
-			vec3 sumWVal;
+		double ratio = xymax / zmax;
 
-			std::map<int, double>::iterator it;
-			int iproc;
+		// interpolate using the scaled value
+		double w, d;
+		double sumW = 0;
+		vec3 sumWVal;
 
-			for (size_t i = 0; i < N; i++) {
-				closest_pnts[i].z = closest_pnts[i].z * ratio * scale + closest_pnts[i].z * (1.0 - scale);
-				d = std::sqrt(closest_pnts[i].x * closest_pnts[i].x +
-					closest_pnts[i].y * closest_pnts[i].y +
-					(closest_pnts[i].z * closest_pnts[i].z));
-				iproc = tree->dataset.kdtree_get_proc(ret_matches[i].first);
-				if (d < threshold) {
-					vel = tree->dataset.kdtree_get_vel_vec(ret_matches[i].first);
+		std::map<int, double>::iterator it;
+		int iproc;
+
+		for (size_t i = 0; i < N; i++) {
+			closest_pnts[i].z = closest_pnts[i].z * ratio * scale + closest_pnts[i].z * (1.0 - scale);
+			d = std::sqrt(closest_pnts[i].x * closest_pnts[i].x +
+				closest_pnts[i].y * closest_pnts[i].y +
+				(closest_pnts[i].z * closest_pnts[i].z));
+			iproc = tree->dataset.kdtree_get_proc(ret_matches[i].first);
+			if (d < threshold) {
+				vel = tree->dataset.kdtree_get_vel_vec(ret_matches[i].first);
+			}
+			else {
+				w = 1 / std::pow(d, power);
+				it = proc_map.find(iproc);
+				if (it == proc_map.end()) {
+					proc_map.insert(std::pair<int, double>(iproc, w));
 				}
 				else {
-					w = 1 / std::pow(d, power);
-					it = proc_map.find(iproc);
-					if (it == proc_map.end()) {
-						proc_map.insert(std::pair<int, double>(iproc, w));
-					}
-					else {
-						it->second += w;
-					}
-					sumW += w;
-					sumWVal = sumWVal + tree->dataset.kdtree_get_vel_vec(ret_matches[i].first) * w;
+					it->second += w;
 				}
+				sumW += w;
+				sumWVal = sumWVal + tree->dataset.kdtree_get_vel_vec(ret_matches[i].first) * w;
 			}
-
-			it = proc_map.begin();
-			for (it; it != proc_map.end(); ++it) {
-				it->second = it->second / sumW;
-			}
-
-			vel = sumWVal * (1 / sumW);
 		}
+
+		it = proc_map.begin();
+		for (it; it != proc_map.end(); ++it) {
+			it->second = it->second / sumW;
+		}
+
+		vel = sumWVal * (1 / sumW);
+		
 	}
 
 	bool is_input_scalar(std::string input) {
