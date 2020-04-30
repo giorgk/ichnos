@@ -11,6 +11,7 @@
 !/ichnos_code/*.cpp
 !/ichnos_code/*.sln
 !/ichnos_code/*.vcxproj
+!/ichnos_code/*.txt
 
 # Houdini folder
 !/ichnos_hou
