@@ -13,58 +13,84 @@
 #include <nanoflann.hpp>
 
 namespace ICHNOS {
-	
+	/**
+	 * @brief This is a structure to hold parameters for the distribution of 
+	 * particles around the wells
+	 * 
+	 */
 	struct WellOptions {
+		//! The total number of particles around the wells 
 		int Nparticles;
+		
+		//! The number of layers that the particles are orginized.
 		int Nlayer;
+		
+		//! The particles are distributed around some distance Radius
 		double Radius;
 	};
 
+
+	/**
+	 * @brief A structure that holds a vector and some operators for the vector
+	 * 
+	 */
 	struct vec3
 	{
-		double x = 0;
-		double y = 0;
-		double z = 0;
+		double x = 0; //! The x coordinate
+		double y = 0; //! The y coordinate
+		double z = 0; //! The z coordinate
 
+		//! The default constructor sets everything to zero
 		vec3(double x = 0, double y = 0, double z = 0)
 			:
 			x(x), y(y), z(z)
 		{}
 
+		//! Element wise vector multiplication operator
 		vec3 operator*(const vec3& a) const {
 			return vec3(a.x * x, a.y * y, a.z * z);
 		}
 
+		//! Multiplication with a scalar. The scale should go to the right side 
 		vec3 operator*(const double& a) const {
 			return vec3(a * x, a * y, a * z);
 		}
 
+		//! add operator
 		vec3 operator+(const vec3& a) const {
 			return vec3(a.x + x, a.y + y, a.z + z);
 		}
 
+		//! Subtraction operator. Subtracts the other vector from this
 		vec3 operator-(const vec3& a) const {
 			//return vec3(a.x - x, a.y - y, a.z - z);
 			return vec3(x - a.x, y - a.y, z - a.z);
 		}
 
+		//! Calculates the length of the vector
 		double len() {
 			return std::sqrt(x * x + y * y + z * z);
 		}
 
+		//! Checks whether the vector is almost zero
 		bool isZero() {
 			bool tf = len() < 0.0000000001;
 			return tf;
 		}
+
+		//! Some methods sets the vector to -99999 when the calculations failed. This methods checks is the vector has this value 
 		bool isInvalid() {
 			bool tf = std::sqrt((x + 99999) * (x + 99999) + (y + 99999) * (y + 99999) + (z + 99999) * (z + 99999)) < 0.0000000001;
 			return tf;
 		}
 
+		//! make the length of the vector 1.
 		vec3 normalize() {
 			double length = len();
 			return (vec3(x / length, y / length, z / length));
 		}
+
+		//! reset the values of the vector back to 0
 		void zero() {
 			x = 0.0;
 			y = 0.0;
@@ -72,27 +98,44 @@ namespace ICHNOS {
 		}
 	};
 
+	/**
+	 * @brief This is a point could structure that is required by nanoflann to build the trees
+	 * 
+	 * @tparam S The template parameter #S correspond to the type of parameter that it is return by the interpolation method.
+	 * At the moment we employ double, vec3 and int
+	 */
 	template <typename S>
 	struct pointCloud {
+		//! This holds the coordinates of the point cloud. If the point could is 2D set the z dimention to 0
 		std::vector<vec3> pts;
+		//! Although this is named as vel it is actuall the vector that holds the values that correspond to the #pts vector.
 		std::vector<S> vel;
+		//! This is a vector that holds the ids of the processor that actually onws the point. 
+		//! For example pts[0] is owned by the proc[0]. The data are supplied by the user
 		std::vector<int> proc;
 
+		//! This hold the interpolation search radius
 		double Radious;
+		//! THis hold the Power of the interpolation
 		double Power;
+		//! This is the threshold. if the distance from a point in the cloud is smaller than the 
+		//! threshold then value is assigned directly from this point
 		double Threshold;
+		//! This is a flag whether the point cloud is allowed to interpolate if the point in question maybe slightly outside the domain
 		bool InterpolateOutside;
+		//! If more than #NmaxPnts points are whithin the #Radius only #NmaxPnts will be used
 		int NmaxPnts;
+		//! If less than #NminPnts are within the #Radius the radius will be doubled until at least #NminPnts found
 		int NminPnts;
 
 
-		// methods required by nanoflann ------
-		// Must return the number of data points
+		//! methods required by nanoflann ------
+		//! Must return the number of data points
 		inline size_t kdtree_get_point_count() const { return pts.size(); }
 
-		// Returns the dim'th component of the idx'th point in the class:
-		// Since this is inlined and the "dim" argument is typically an immediate value, the
-		//  "if/else's" are actually solved at compile time.
+		//! Returns the dim'th component of the idx'th point in the class:
+		//! Since this is inlined and the "dim" argument is typically an immediate value, the
+		//!  "if/else's" are actually solved at compile time.
 		inline double kdtree_get_pt(const size_t idx, const size_t dim) const
 		{
 			if (dim == 0) return pts[idx].x;
@@ -100,20 +143,24 @@ namespace ICHNOS {
 			else return pts[idx].z;
 		}
 
+		//! This returns the #idx th point
 		inline vec3 kdtree_get_pnt_vec(const size_t idx) const {
 			return pts[idx];
 		}
 
+		//! This returns the #idx th interpolation value of type #S
 		inline S kdtree_get_vel_vec(const size_t idx) const {
 			return vel[idx];
 		}
+
+		//! THis returns the processor id of the #idx th point
 		inline int kdtree_get_proc(const size_t idx) const {
 			return proc[idx];
 		}
 
-		// Optional bounding-box computation: return false to default to a standard bbox computation loop.
-		//   Return true if the BBOX was already computed by the class and returned in "bb" so it can be avoided to redo it again.
-		//   Look at bb.size() to find out the expected dimensionality (e.g. 2 or 3 for point clouds)
+		//! Optional bounding-box computation: return false to default to a standard bbox computation loop.
+		//!   Return true if the BBOX was already computed by the class and returned in "bb" so it can be avoided to redo it again.
+		//!   Look at bb.size() to find out the expected dimensionality (e.g. 2 or 3 for point clouds)
 		template <class BBOX>
 		bool kdtree_get_bbox(BBOX& /* bb */) const { return false; }
 	};
