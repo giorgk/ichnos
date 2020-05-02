@@ -105,7 +105,6 @@ namespace ICHNOS {
 				if (static_cast<int>(ALL_Streamlines.size()) < popt.ParticlesInParallel + minPartinparallel) {
 					N = ALL_Streamlines.size();
 				}
-
 				for (int i = 0; i < N; ++i) {
 					if (ALL_Streamlines.size() == 0)
 						break;
@@ -121,9 +120,15 @@ namespace ICHNOS {
 			//std::cout << my_rank << " After: " << Part_Streamlines.size() << std::endl;
 
 			traceOuter(Part_Streamlines, outer_iter, ireal);
+
+			int nRemainingstreamlines = ALL_Streamlines.size();
+			//std::cout << "Proc " << my_rank << " N_part2send = " << N_part2send << std::endl;
+			MPI::sumScalar<int>(nRemainingstreamlines, nproc, world, MPI_INT);
 			outer_iter++;
-			if (ALL_Streamlines.size() == 0)
+			
+			if (nRemainingstreamlines == 0)
 				break;
+			
 		}
 		if (my_rank == 0 && world.size() > 1 && ireal == popt.Nrealizations - 1) {
 			std::cout << "Particle tracking completed. You can now gather the streamlines by running:" << std::endl;
@@ -186,14 +191,15 @@ namespace ICHNOS {
 			//	std::cout << "exit after " << trace_iter << " Iteration. DONT FORGET TO REMOVE THIS Condition" << std::endl;
 			//	break;
 			//}
-
 			trace_iter++;
+			//std::cout << trace_iter << std::endl;
 			if (trace_iter > popt.MaxProcessorExchanges) {
 				std::cout << "@%$^@&#$^@ exit after MaxProcessorExchanges was reached: trace_iter = " << trace_iter << std::endl;
 				break;
 			}
 		}
 		log_file.close();
+		//std::cout << "Is here" << std::endl;
 	}
 
 	ExitReason ParticleTrace::traceInner(Streamline& S) {

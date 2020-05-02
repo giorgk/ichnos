@@ -15,7 +15,7 @@ ICHNOS::SingletonGenerator* ICHNOS::SingletonGenerator::_instance = nullptr;
 
 int main(int argc, char* argv[])
 {
-    boost::mpi::environment env{ argc, argv };
+    boost::mpi::environment env( argc, argv );
     boost::mpi::communicator world;
 
     //ICHNOS::SingletonGenerator* RG = RG->getInstance();

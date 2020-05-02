@@ -46,7 +46,7 @@ namespace ICHNOS {
 		vec3 pp;
 
 		int sid = 0;
-		for (double i = 0; i <= 1; i = i + dt){
+		for (double i = 0; i <= 1+dt/2.0; i = i + dt){
 			t = i * maxt;
 			pp.x = x + r * cos(t);
 			pp.y = y + r * sin(t);
@@ -394,6 +394,7 @@ namespace ICHNOS {
 				if (!opt.Popt.gatherOneFile) {
 					std::string filename = opt.Popt.OutputFile + "_ireal_" + num2Padstr(ireal, 4) + "_gather_iter_" + num2Padstr(i, 4) + ".traj";
 					ICHNOS::WRITE::printStreamslineMap(filename, Smap);
+					Smap.clear();
 				}
 			}
 			if (opt.Popt.gatherOneFile) {
