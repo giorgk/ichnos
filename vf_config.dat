@@ -1,3 +1,10 @@
-pcPrefix = f:\UCDAVIS\ICHNOS\ichnos_hou\ichnos\examples\Rect_Single_proc_
-pcSuffix = .dat
+Prefix = F:\UCDAVIS\ichnos\ichnos_hou\ichnos\examples\NPSAT_vel_test_
+LeadingZeros = 0
+Suffix = .vel
 OwnerThreshold=0.15
+VelocityMultiplier = 1
+Porosity = 1
+Power = 3
+Scale = 1
+Threshold = 0.0001
+FrequencyStat = 20

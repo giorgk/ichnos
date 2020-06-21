@@ -86,6 +86,38 @@ namespace ICHNOS {
 			}
 		}
 
+		void readNPSATVelocity(std::string filename, std::vector<std::pair<cgal_point, NPSAT_data>>& data) {
+			std::ifstream datafile(filename.c_str());
+			if (!datafile.good()) {
+				std::cout << "Can't open the file" << filename << std::endl;
+			}
+			else {
+				std::string line;
+				int ii;// , iproc;
+				double x, y, z; // , vx, vy, vz;
+				NPSAT_data npsat_data;
+				ii = 0;
+				while (getline(datafile, line)) {
+					if (line.size() > 1) {
+						std::istringstream inp(line.c_str());
+						inp >> x;
+						inp >> y;
+						inp >> z;
+						cgal_point(x, y, z);
+						inp >> npsat_data.v.x;
+						inp >> npsat_data.v.y;
+						inp >> npsat_data.v.z;
+						inp >> npsat_data.proc;
+						npsat_data.id = ii;
+						ii++;
+						data.push_back(std::make_pair(cgal_point(x, y, z), npsat_data));
+					}
+				}
+				std::cout << "Size of Data: " << data.size() << std::endl;
+				datafile.close();
+			}
+		}
+
 		void readVelocityFieldFile(std::string filename, pointCloud<vec3>& pntCld) {
 			std::ifstream datafile(filename.c_str());
 			if (!datafile.good()) {

@@ -3,6 +3,12 @@
 #include <boost/geometry/geometries/point_xy.hpp>
 #include <boost/geometry/geometries/polygon.hpp>
 
+
+#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
+#include <CGAL/Delaunay_triangulation_3.h>
+#include <CGAL/Delaunay_triangulation_cell_base_3.h>
+#include <CGAL/Triangulation_vertex_base_with_info_3.h>
+
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_real_distribution.hpp>
 
@@ -13,6 +19,10 @@
 #include <nanoflann.hpp>
 
 namespace ICHNOS {
+
+	
+
+
 	/**
 	 * @brief This is a structure to hold parameters for the distribution of 
 	 * particles around the wells
@@ -96,7 +106,29 @@ namespace ICHNOS {
 			y = 0.0;
 			z = 0.0;
 		}
+
+		double distance(double px, double py, double pz) {
+			return std::sqrt((x - px) * (x - px) + (y - py) * (y - py) + (z - pz) * (z - pz));
+		}
 	};
+
+	/**
+
+	*/
+	struct NPSAT_data {
+		int proc;
+		int id;
+		vec3 v;
+	};
+
+	typedef CGAL::Exact_predicates_inexact_constructions_kernel	K;
+	typedef CGAL::Triangulation_vertex_base_with_info_3<NPSAT_data, K>  Vb;
+	typedef CGAL::Delaunay_triangulation_cell_base_3<K>	Cb;
+	typedef CGAL::Triangulation_data_structure_3<Vb, Cb> Tds;
+	typedef CGAL::Delaunay_triangulation_3<K, Tds, CGAL::Fast_location>	cgal_Delaunay;
+	typedef cgal_Delaunay::Point cgal_point;
+	typedef cgal_Delaunay::Vertex_handle vertex_handle;
+	typedef cgal_Delaunay::Cell_handle cell_handle;
 
 	/**
 	 * @brief This is a point could structure that is required by nanoflann to build the trees
@@ -165,7 +197,7 @@ namespace ICHNOS {
 		bool kdtree_get_bbox(BBOX& /* bb */) const { return false; }
 	};
 
-	enum class interpType { INGORE, SCALAR, CLOUD };
+	enum class interpType { INGORE, SCALAR, CLOUD};
 
 	enum class SolutionMethods
 	{
