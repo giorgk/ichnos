@@ -242,7 +242,7 @@ namespace ICHNOS {
 				//S.getLastParticle().displayAsVEX(true);
 				// In the unlike event that the velocity of the point is indeed zero
 				// we can avoid unnessecary iterations
-				if (v.isZero())
+				if (v.isZero() & er == ExitReason::NO_EXIT)
 					return ExitReason::STUCK;
 			}
 

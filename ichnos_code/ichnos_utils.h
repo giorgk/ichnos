@@ -109,7 +109,8 @@ namespace ICHNOS {
 			}
 		}*/
 
-		void readNPSATVelocity(std::string filename, std::vector<std::pair<cgal_point, NPSAT_data>>& data) {
+		void readNPSATVelocity(std::string filename, std::vector<std::pair<cgal_point, NPSAT_data>>& data, 
+								double VelocityMultiplier) {
 			std::ifstream datafile(filename.c_str());
 			if (!datafile.good()) {
 				std::cout << "Can't open the file" << filename << std::endl;
@@ -130,6 +131,7 @@ namespace ICHNOS {
 						inp >> npsat_data.v.y;
 						inp >> npsat_data.v.z;
 						inp >> npsat_data.proc;
+						npsat_data.v = npsat_data.v * VelocityMultiplier;
 						npsat_data.id = ii;
 						ii++;
 						data.push_back(std::make_pair(cgal_point(x, y, z), npsat_data));
@@ -389,15 +391,15 @@ namespace ICHNOS {
 			std::map<int, gStream >::iterator sit;
 			std::map<int, gPart>::iterator pit;
 			
-			for (eit; eit != SM.end(); ++eit) {
+			for (; eit != SM.end(); ++eit) {
 				sit = eit->second.begin();
-				for (sit; sit != eit->second.end(); ++sit) {
+				for (; sit != eit->second.end(); ++sit) {
 					pit = sit->second.particles.begin();
 					double age = 0;
 					int i = 0;
 					vec3 p_prev, p_curr;
 					vec3 v_prev, v_curr, v_m;
-					for (pit; pit != sit->second.particles.end(); ++pit) {
+					for (; pit != sit->second.particles.end(); ++pit) {
 						if (i == 0) {
 							p_prev = pit->second.p;
 							v_prev = pit->second.v;

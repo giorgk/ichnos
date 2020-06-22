@@ -53,6 +53,7 @@ namespace NPSAT {
 		double calc_time2 = 0.0;
 		int cout_times = 0;
 		int FrequencyStat;
+		int nids_size = 0;
 		void PrintStat();
 
 		void add_interpolationVertex(std::map<int, npsatVeldata>& nids, ic::vec3& lp, ic::vec3& up, ic::vertex_handle& vh, ic::vec3& p, npsatVeldata& tmp);
@@ -61,7 +62,9 @@ namespace NPSAT {
 	npsatVel::npsatVel(boost::mpi::communicator& world_in)
 		:
 		velocityField(world_in)
-	{}
+	{
+		InterpolateOutsideDomain = true;
+	}
 
 	void npsatVel::readVelocityField(std::string vf_file) {
 		if (world.rank() == 0)
@@ -101,7 +104,7 @@ namespace NPSAT {
 
 		std::string filename = prefix + ic::num2Padstr(world.rank(), leadZeros) + suffix;
 		std::vector<std::pair<ic::cgal_point, ic::NPSAT_data>> npsat_data;
-		ic::READ::readNPSATVelocity(filename, npsat_data);
+		ic::READ::readNPSATVelocity(filename, npsat_data, multiplier);
 		auto start = std::chrono::high_resolution_clock::now();
 		T.insert(npsat_data.begin(), npsat_data.end());
 		auto finish = std::chrono::high_resolution_clock::now();
@@ -142,7 +145,6 @@ namespace NPSAT {
 
 
 	void npsatVel::calcVelocity(ic::vec3& vel, std::map<int, double>& proc_map, ic::vec3& p) {
-
 		npsatVeldata tmp;
 		ic::vertex_handle vh;
 		ic::cell_handle ch;
@@ -163,13 +165,23 @@ namespace NPSAT {
 		add_interpolationVertex(nids, lp, up, vh, p, tmp);
 
 		ch = vh->cell();
+		//std::cout << T.is_infinite(ch) << " " << std::flush;
 		//cellhandle = T.locate(ic::cgal_point(p.x, p.y, p.z), cellhandle);
+		//bool debug_this = false;
 		if (!T.is_infinite(ch)) {
 			cellhandle = ch;
 		}
+		//else{
+		//	debug_this = true;
+		//}
 		for (int i = 0; i < 4; ++i) {
 			vh = ch->vertex(i);
-			//std::cout << nd.id << " ";
+			if (T.is_infinite(vh))
+				continue;
+			//if (debug_this){
+			//	std::cout << vh->info().id << std::endl;
+			//	std::cout << T.is_infinite(vh) << std::endl;
+			//}
 			if (vh->info().id < 0)
 				continue;
 			
@@ -222,7 +234,7 @@ namespace NPSAT {
 		std::chrono::duration<double> elapsed2 = finish1 - start1;
 		calc_time2 += elapsed2.count();
 		itd = proc_map.begin();
-		for (itd; itd != proc_map.end(); ++itd) {
+		for (; itd != proc_map.end(); ++itd) {
 			itd->second = itd->second / sumW;
 		}
 		if (calc_average)
@@ -235,12 +247,13 @@ namespace NPSAT {
 		}
 		else if (porType == ic::interpType::SCALAR)
 			porosity = porosityValue;
-		vel = vel * (multiplier/porosity);
+		vel = vel * (1/porosity);
 
 		finish = std::chrono::high_resolution_clock::now();
 		elapsed = finish - start;
 		calc_time += elapsed.count();
 		cout_times++;
+		nids_size = nids.size();
 		PrintStat();
 	}
 
@@ -276,10 +289,12 @@ namespace NPSAT {
 
 	void npsatVel::PrintStat() {
 		if (cout_times > FrequencyStat) {
-			std::cout << "Search time: " << std::fixed << std::setprecision(15) << search_time/static_cast<double>(cout_times) << std::endl;
-			std::cout << "Velocity Calc time: " << std::fixed << std::setprecision(15) << calc_time/static_cast<double>(cout_times) << std::endl;
-			std::cout << "Velocity Calc time1: " << std::fixed << std::setprecision(15) << calc_time1 / static_cast<double>(cout_times) << std::endl;
-			std::cout << "Velocity Calc time2: " << std::fixed << std::setprecision(15) << calc_time2 / static_cast<double>(cout_times) << std::endl;
+			std::cout << "Search time: " << std::fixed << std::setprecision(15) << search_time/static_cast<double>(cout_times) << ", "; // std::endl;
+			std::cout << "Velocity Calc time: " << std::fixed << std::setprecision(15) << calc_time/static_cast<double>(cout_times) <<  ", ";// std::endl;
+			std::cout << std::endl << std::flush;
+			//std::cout << "Number of nodes: " << nids_size << std::endl;
+			//std::cout << "Velocity Calc time1: " << std::fixed << std::setprecision(15) << calc_time1 / static_cast<double>(cout_times) << std::endl;
+			//std::cout << "Velocity Calc time2: " << std::fixed << std::setprecision(15) << calc_time2 / static_cast<double>(cout_times) << std::endl;
  			cout_times = 0;
 			search_time = 0.0;
 			calc_time = 0.0;
