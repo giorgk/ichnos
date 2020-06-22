@@ -2,7 +2,7 @@
 
 #include <boost/mpi.hpp>
 #include <boost/program_options.hpp>
-#include <nanoflann.hpp>
+//#include <nanoflann.hpp>
 
 #include "ichnos_structures.h"
 #include "velocity_base.h"
@@ -76,8 +76,8 @@ namespace IWFM {
 		void readVelocityField(std::string vf_file);
 		void calcVelocity(ic::vec3& vel, std::map<int, double>& proc_map, ic::vec3& p);
 	private:
-		ic::pointCloud<int> xyid;
-		std::unique_ptr<nano_kd_tree_int> xy_tree;
+		//ic::pointCloud<int> xyid;
+		//std::unique_ptr<nano_kd_tree_int> xy_tree;
 		bool readXYid(std::string prefix, std::string suffix);
 		bool readElevation(std::string prefix, std::string suffix);
 		bool readVelocities(std::string prefix, std::string suffix);
@@ -121,8 +121,8 @@ namespace IWFM {
 
 		readXYid(prefix, suffix);
 
-		xy_tree = std::unique_ptr<nano_kd_tree_int>(new nano_kd_tree_int(3, xyid, nanoflann::KDTreeSingleIndexAdaptorParams(10)));
-		xy_tree->buildIndex();
+		//xy_tree = std::unique_ptr<nano_kd_tree_int>(new nano_kd_tree_int(3, xyid, nanoflann::KDTreeSingleIndexAdaptorParams(10)));
+		//xy_tree->buildIndex();
 		readElevation(prefix, suffix);
 		readVelocities(prefix, suffix);
 
@@ -143,9 +143,9 @@ namespace IWFM {
 			// Read the firt line with the parameters
 			getline(datafile, line);
 			std::istringstream inp(line.c_str());
-			inp >> xyid.Radious;
-			inp >> xyid.Power;
-			inp >> xyid.Threshold;
+			//inp >> xyid.Radious;
+			//inp >> xyid.Power;
+			//inp >> xyid.Threshold;
 
 			while (getline(datafile, line)) {
 				std::istringstream inp1(line.c_str());
@@ -153,9 +153,9 @@ namespace IWFM {
 				inp1 >> p.x;
 				inp1 >> p.y;
 				inp1 >> iproc;
-				xyid.proc.push_back(iproc);
-				xyid.pts.push_back(p);
-				xyid.vel.push_back(id);
+				//xyid.proc.push_back(iproc);
+				//xyid.pts.push_back(p);
+				//xyid.vel.push_back(id);
 				xynode xynd(p);
 				xynd.init(Nlayers, Ntsteps);
 				ND.insert(std::make_pair(id, xynd));
@@ -269,7 +269,7 @@ namespace IWFM {
 
 	void iwfmVel::calcVelocity(ic::vec3& vel, std::map<int, double>& proc_map, ic::vec3& p) {
 		std::map<int, double> id_dst;
-		ICHNOS::interpolateIntTree(id_dst, proc_map, xy_tree, p);
+		//ICHNOS::interpolateIntTree(id_dst, proc_map, xy_tree, p);
 
 		// Find the layer that the point is in
 		std::map<int, double>::iterator it;

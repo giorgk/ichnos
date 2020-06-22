@@ -30,16 +30,15 @@ namespace ICHNOS {
 		void getTopBottomElevation(vec3 p, double& top, double& bottom);
 
 	private:
-		pointCloud<double> TopElevation;
-		pointCloud<double> BottomElevation;
-		std::unique_ptr<nano_kd_tree_scalar> TopTree;
-		std::unique_ptr<nano_kd_tree_scalar> BottomTree;
+		cgal_Delaunay_2	Top_tria;
+		cgal_Delaunay_2 Bot_tria;
+		coord_map top_values;
+		coord_map bot_values;
 		
 		float top_value;
 		float bot_value;
-		bool isTopCloud;
-		bool isBottomCloud;
-		
+		bool isTopConst;
+		bool isBottomConst;
 	};
 
 	Domain2D::Domain2D(DomainOptions& Dopt_in)
@@ -50,25 +49,21 @@ namespace ICHNOS {
 		//READ::readPolygonDomain(Dopt.OutlineFile, outlinePoly);
 		
 		if (is_input_scalar(Dopt.TopElevationFile)) {
-			isTopCloud = false;
+			isTopConst = true;
 			top_value = std::stof(Dopt.TopElevationFile);
 		}
 		else {
-			READ::read2DscalarField(Dopt.TopElevationFile, TopElevation);
-			this->TopTree = std::unique_ptr<nano_kd_tree_scalar>(new nano_kd_tree_scalar(3, TopElevation, nanoflann::KDTreeSingleIndexAdaptorParams(10)));
-			TopTree->buildIndex();
-			isTopCloud = true;
+			READ::read2DscalarField(Dopt.TopElevationFile, Top_tria, top_values);
+			isTopConst = false;
 		}
 
 		if (is_input_scalar(Dopt.BottomeElevationFile)) {
-			isBottomCloud = false;
+			isBottomConst = true;
 			bot_value = std::stof(Dopt.BottomeElevationFile);
 		}
 		else {
-			READ::read2DscalarField(Dopt.BottomeElevationFile, BottomElevation);
-			this->BottomTree = std::unique_ptr<nano_kd_tree_scalar>(new nano_kd_tree_scalar(3, BottomElevation, nanoflann::KDTreeSingleIndexAdaptorParams(10)));
-			BottomTree->buildIndex();
-			isBottomCloud = true;
+			READ::read2DscalarField(Dopt.BottomeElevationFile, Bot_tria, bot_values);
+			isBottomConst = false;
 		}
 	}
 
@@ -82,13 +77,15 @@ namespace ICHNOS {
 	}
 
 	void Domain2D::getTopBottomElevation(vec3 p, double& top, double& bottom) {
-		if (isTopCloud)
-			top = interpolateScalarTree(TopTree, p);
+		if (!isTopConst) {
+			top = interpolateScatter2D(Top_tria, top_values, p.x, p.y);
+		}
 		else
 			top = top_value;
 
-		if (isBottomCloud)
-			bottom = interpolateScalarTree(BottomTree, p);
+		if (!isBottomConst) {
+			bottom = interpolateScatter2D(Bot_tria, bot_values, p.x, p.y);
+		}
 		else
 			bottom = bot_value;
 	}

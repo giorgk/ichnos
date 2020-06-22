@@ -13,7 +13,7 @@ namespace po = boost::program_options;
 
 namespace ICHNOS {
 	enum class VelType {
-		Cloud3d,
+	//	Cloud3d,
 		IWFM,
 		NPSAT,
 		INVALID
@@ -22,7 +22,7 @@ namespace ICHNOS {
 	std::string castVelType2String(VelType vt) {
 		std::map <VelType, std::string> vtMap;
 		std::map <VelType, std::string>::iterator it;
-		vtMap.insert(std::pair<VelType, std::string>(VelType::Cloud3d, "Cloud3d"));
+		//vtMap.insert(std::pair<VelType, std::string>(VelType::Cloud3d, "Cloud3d"));
 		vtMap.insert(std::pair<VelType, std::string>(VelType::IWFM, "IWFM"));
 		vtMap.insert(std::pair<VelType, std::string>(VelType::NPSAT, "NPSAT"));
 		it = vtMap.find(vt);
@@ -36,7 +36,7 @@ namespace ICHNOS {
 	VelType castVelType2Enum(std::string vt) {
 		std::map < std::string, VelType> vtMap;
 		std::map < std::string, VelType>::iterator it;
-		vtMap.insert(std::pair<std::string, VelType>("Cloud3d", VelType::Cloud3d));
+		//vtMap.insert(std::pair<std::string, VelType>("Cloud3d", VelType::Cloud3d));
 		vtMap.insert(std::pair<std::string, VelType>("IWFM", VelType::IWFM));
 		vtMap.insert(std::pair<std::string, VelType>("NPSAT", VelType::NPSAT));
 		it = vtMap.find(vt);
@@ -115,7 +115,7 @@ namespace ICHNOS {
 			if (world.rank() == 0) {
 				std::cout << "|------------------|" << std::endl;
 				std::cout << "|      ICHNOS      |" << std::endl;
-				std::cout << "| Version : 0.0.02 |" << std::endl;
+				std::cout << "| Version : 0.0.50 |" << std::endl;
 				std::cout << "|    by  giorgk    |" << std::endl;
 				std::cout << "|------------------|" << std::endl;
 			}
@@ -126,7 +126,7 @@ namespace ICHNOS {
 		po::options_description config_options("Configuration file options");
 		config_options.add_options()
 			("nThreads", po::value<int>()->default_value(1), "Number of threads")
-			("VelocityType", po::value<std::string>(), "Type of velocity. (Cloud3d or IWFM)")
+			("VelocityType", po::value<std::string>(), "Type of velocity. (NPSAT or IWFM)")
 			("VelocityConfig", po::value<std::string >(), "Set configuration file for the velocity field")
 			("Nrealizations", po::value<int>()->default_value(1), "NUmber of realizations")
 			("Stuckiter", po::value<int>()->default_value(10), "After Stuckiter exit particle tracking")

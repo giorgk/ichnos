@@ -2,7 +2,7 @@
 
 #include <boost/mpi.hpp>
 #include <boost/program_options.hpp>
-#include <nanoflann.hpp>
+//#include <nanoflann.hpp>
 
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Delaunay_triangulation_3.h>
@@ -40,9 +40,9 @@ namespace NPSAT {
 		//ic::pointCloud<ic::vec3> VelocityCloud;
 		//std::unique_ptr<nano_kd_tree_vector> VelocityTree;
 		ic::interpType porType;
-		ic::pointCloud<double> PorosityCloud;
+		//ic::pointCloud<double> PorosityCloud;
 		double porosityValue = 1.0;
-		std::unique_ptr<nano_kd_tree_scalar> PorosityTree;
+		//std::unique_ptr<nano_kd_tree_scalar> PorosityTree;
 		double multiplier = 1.0;
 		double Power;
 		double Scale = 1.0;
@@ -127,10 +127,10 @@ namespace NPSAT {
 					porosityValue = std::stod(porfile);
 				}
 				else {
-					porType = ic::interpType::CLOUD;
-					ic::READ::read2DscalarField(porfile, PorosityCloud);
-					this->PorosityTree = std::unique_ptr<nano_kd_tree_scalar>(new nano_kd_tree_scalar(3, PorosityCloud, nanoflann::KDTreeSingleIndexAdaptorParams(10)));
-					PorosityTree->buildIndex();
+					//porType = ic::interpType::CLOUD;
+					//ic::READ::read2DscalarField(porfile, PorosityCloud);
+					//this->PorosityTree = std::unique_ptr<nano_kd_tree_scalar>(new nano_kd_tree_scalar(3, PorosityCloud, nanoflann::KDTreeSingleIndexAdaptorParams(10)));
+					//PorosityTree->buildIndex();
 				}
 			}
 		}
@@ -230,8 +230,9 @@ namespace NPSAT {
 
 		//ic::interpolateVectorTree(vel, proc_map, VelocityTree, p);
 		double porosity = 1.0;
-		if (porType == ic::interpType::CLOUD)
-			porosity = ic::interpolateScalarTree(PorosityTree, p);
+		if (porType == ic::interpType::CLOUD) {
+			//porosity = ic::interpolateScalarTree(PorosityTree, p);
+		}
 		else if (porType == ic::interpType::SCALAR)
 			porosity = porosityValue;
 		vel = vel * (multiplier/porosity);

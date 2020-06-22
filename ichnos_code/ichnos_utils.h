@@ -58,8 +58,31 @@ namespace ICHNOS {
 	}
 
 	namespace READ {
+
+		void read2DscalarField(std::string filename, cgal_Delaunay_2& T, coord_map& values_map) {
+			std::ifstream datafile(filename.c_str());
+			if (!datafile.good()) {
+				std::cout << "Can't open the file" << filename << std::endl;
+			}
+			else {
+				std::string line;
+				double x, y, v;
+				while (getline(datafile, line)) {
+					if (line.size() > 1) {
+						std::istringstream inp(line.c_str());
+						inp >> x;
+						inp >> y;
+						inp >> v;
+						cgal_point_2 p(x, y);
+						T.insert(p);
+						values_map.insert(std::make_pair(p, v));
+					}
+				}
+				datafile.close();
+			}
+		}
 		
-		void read2DscalarField(std::string filename, pointCloud<double>& pntCld) {
+		/*void read2DscalarField(std::string filename, pointCloud<double>& pntCld) {
 			std::ifstream datafile(filename.c_str());
 			if (!datafile.good()) {
 				std::cout << "Can't open the file" << filename << std::endl;
@@ -84,7 +107,7 @@ namespace ICHNOS {
 				}
 				datafile.close();
 			}
-		}
+		}*/
 
 		void readNPSATVelocity(std::string filename, std::vector<std::pair<cgal_point, NPSAT_data>>& data) {
 			std::ifstream datafile(filename.c_str());
@@ -103,7 +126,6 @@ namespace ICHNOS {
 						inp >> x;
 						inp >> y;
 						inp >> z;
-						cgal_point(x, y, z);
 						inp >> npsat_data.v.x;
 						inp >> npsat_data.v.y;
 						inp >> npsat_data.v.z;
@@ -118,7 +140,7 @@ namespace ICHNOS {
 			}
 		}
 
-		void readVelocityFieldFile(std::string filename, pointCloud<vec3>& pntCld) {
+		/*void readVelocityFieldFile(std::string filename, pointCloud<vec3>& pntCld) {
 			std::ifstream datafile(filename.c_str());
 			if (!datafile.good()) {
 				std::cout << "Can't open the file" << filename << std::endl;
@@ -166,7 +188,7 @@ namespace ICHNOS {
 				datafile.close();
 
 			}
-		}
+		}*/
 
 		void readPolygonDomain(std::string filename, boostPolygon& polygon) {
 			std::ifstream datafile(filename.c_str());
@@ -435,8 +457,16 @@ namespace ICHNOS {
 			}
 		}
 	}
+
+	double interpolateScatter2D(cgal_Delaunay_2& T, coord_map& values, double x, double y) {
+		cgal_point_2 p(x, y);
+		std::vector<std::pair<cgal_point_2, coord_type>> coords;
+		coord_type norm = CGAL::natural_neighbor_coordinates_2(T, p, std::back_inserter(coords)).second;
+		coord_type res = CGAL::linear_interpolation(coords.begin(), coords.end(), norm, value_access(values));
+		return static_cast<double>(res);
+	}
 	
-	double interpolateScalarTree(std::unique_ptr<nano_kd_tree_scalar>& tree, vec3 p) {
+	/*double interpolateScalarTree(std::unique_ptr<nano_kd_tree_scalar>& tree, vec3 p) {
 		double thres = tree->dataset.Threshold;
 		double radius = tree->dataset.Radious;
 		double power = tree->dataset.Power;
@@ -466,146 +496,146 @@ namespace ICHNOS {
 			}
 			return(sumWVal / sumW);
 		}
-	}
+	}*/
 
-	void interpolateIntTree(std::map<int, double>& id_dst, std::map<int, double>& proc_map,
-		std::unique_ptr <nano_kd_tree_int>& tree, vec3 p) {
-		double power = tree->dataset.Power;
-		double threshold = tree->dataset.Threshold;
-		double radius = tree->dataset.Radious;
-		id_dst.clear();
-		proc_map.clear();
-		double query_pt[3] = { p.x, p.y, 0.0 };
-		// This is a vector of pairs (id distance).  
-		std::vector<std::pair<size_t, double> >   ret_matches;
-		nanoflann::SearchParams params;
-		size_t N = tree->radiusSearch(&query_pt[0], radius * radius, ret_matches, params);
-		if (N == 0) {
-			std::cerr << "There are no points around (" << p.x << "," << p.y << ") whithin " << radius << "distance" << std::endl;
-			std::cerr << "consider increasing the radius" << std::endl;
-		}
-		else {
-			double sumW = 0.0;
-			double w;
-			int iproc;
-			std::map<int, double>::iterator it;
-			for (size_t i = 0; i < N; i++) {
-				iproc = tree->dataset.kdtree_get_proc(ret_matches[i].first);
-				if (ret_matches[i].second < threshold) {
-					id_dst.clear();
-					id_dst.insert(std::pair<int, double>(static_cast<int>(ret_matches[i].first), 1.0));
-					break;
-				}
-				else {
-					w = 1 / std::pow(std::sqrt(ret_matches[i].second), power);
-					it = proc_map.find(iproc);
-					if (it == proc_map.end()) {
-						proc_map.insert(std::pair<int, double>(iproc, w));
-					}
-					else {
-						it->second += w;
-					}
-					sumW += w;
-					id_dst.insert(std::pair<int, double>(static_cast<int>(ret_matches[i].first), w));
-				}
-			}
-			it = id_dst.begin();
-			for (it; it != id_dst.end(); ++it) {
-				it->second = it->second / sumW;
-			}
-			it = proc_map.begin();
-			for (it; it != proc_map.end(); ++it) {
-				it->second = it->second / sumW;
-			}
-		}
-	}
+	//void interpolateIntTree(std::map<int, double>& id_dst, std::map<int, double>& proc_map,
+	//	std::unique_ptr <nano_kd_tree_int>& tree, vec3 p) {
+	//	double power = tree->dataset.Power;
+	//	double threshold = tree->dataset.Threshold;
+	//	double radius = tree->dataset.Radious;
+	//	id_dst.clear();
+	//	proc_map.clear();
+	//	double query_pt[3] = { p.x, p.y, 0.0 };
+	//	// This is a vector of pairs (id distance).  
+	//	std::vector<std::pair<size_t, double> >   ret_matches;
+	//	nanoflann::SearchParams params;
+	//	size_t N = tree->radiusSearch(&query_pt[0], radius * radius, ret_matches, params);
+	//	if (N == 0) {
+	//		std::cerr << "There are no points around (" << p.x << "," << p.y << ") whithin " << radius << "distance" << std::endl;
+	//		std::cerr << "consider increasing the radius" << std::endl;
+	//	}
+	//	else {
+	//		double sumW = 0.0;
+	//		double w;
+	//		int iproc;
+	//		std::map<int, double>::iterator it;
+	//		for (size_t i = 0; i < N; i++) {
+	//			iproc = tree->dataset.kdtree_get_proc(ret_matches[i].first);
+	//			if (ret_matches[i].second < threshold) {
+	//				id_dst.clear();
+	//				id_dst.insert(std::pair<int, double>(static_cast<int>(ret_matches[i].first), 1.0));
+	//				break;
+	//			}
+	//			else {
+	//				w = 1 / std::pow(std::sqrt(ret_matches[i].second), power);
+	//				it = proc_map.find(iproc);
+	//				if (it == proc_map.end()) {
+	//					proc_map.insert(std::pair<int, double>(iproc, w));
+	//				}
+	//				else {
+	//					it->second += w;
+	//				}
+	//				sumW += w;
+	//				id_dst.insert(std::pair<int, double>(static_cast<int>(ret_matches[i].first), w));
+	//			}
+	//		}
+	//		it = id_dst.begin();
+	//		for (it; it != id_dst.end(); ++it) {
+	//			it->second = it->second / sumW;
+	//		}
+	//		it = proc_map.begin();
+	//		for (it; it != proc_map.end(); ++it) {
+	//			it->second = it->second / sumW;
+	//		}
+	//	}
+	//}
 
-	void interpolateVectorTree(vec3& vel, std::map<int, double>& proc_map,
-		std::unique_ptr <nano_kd_tree_vector>& tree, vec3 p, float scale = 1) {
-		double power = tree->dataset.Power;
-		double threshold = tree->dataset.Threshold;
-		double radius = tree->dataset.Radious;
-		size_t Nmax = static_cast<size_t>(tree->dataset.NmaxPnts);
-		size_t Nmin = static_cast<size_t>(tree->dataset.NminPnts);
-		proc_map.clear();
-		double query_pt[3] = { p.x, p.y, p.z };
+	//void interpolateVectorTree(vec3& vel, std::map<int, double>& proc_map,
+	//	std::unique_ptr <nano_kd_tree_vector>& tree, vec3 p, float scale = 1) {
+	//	double power = tree->dataset.Power;
+	//	double threshold = tree->dataset.Threshold;
+	//	double radius = tree->dataset.Radious;
+	//	size_t Nmax = static_cast<size_t>(tree->dataset.NmaxPnts);
+	//	size_t Nmin = static_cast<size_t>(tree->dataset.NminPnts);
+	//	proc_map.clear();
+	//	double query_pt[3] = { p.x, p.y, p.z };
 
-		std::vector<std::pair<size_t, double> >   ret_matches;
-		nanoflann::SearchParams params;
-		size_t N = 0;
-		int count_attempts = 0;
-		while (N < Nmin) {
-			N = tree->radiusSearch(&query_pt[0], radius * radius, ret_matches, params);
-			radius = radius * 2;
-			count_attempts++;
-			if (count_attempts > 20) {
-				std::cout << "There are no points around (" << p.x << "," << p.y << "," << p.z << ") whithin " << radius << "  units radius" << std::endl;
-				vel = vec3();
-				return;
-			}
-		}
-		N = std::min(N, Nmax);
+	//	std::vector<std::pair<size_t, double> >   ret_matches;
+	//	nanoflann::SearchParams params;
+	//	size_t N = 0;
+	//	int count_attempts = 0;
+	//	while (N < Nmin) {
+	//		N = tree->radiusSearch(&query_pt[0], radius * radius, ret_matches, params);
+	//		radius = radius * 2;
+	//		count_attempts++;
+	//		if (count_attempts > 20) {
+	//			std::cout << "There are no points around (" << p.x << "," << p.y << "," << p.z << ") whithin " << radius << "  units radius" << std::endl;
+	//			vel = vec3();
+	//			return;
+	//		}
+	//	}
+	//	N = std::min(N, Nmax);
 
-		// find the largest horizontal and vertical distance between the point in question and the
-		// closest points around this
-		std::vector<vec3> closest_pnts(N);
-		double xymax = 0;
-		double zmax = 0;
-		double tmpxy, tmpz;
-		for (size_t i = 0; i < N; i++) {
-			//std::cout << tree->dataset.kdtree_get_pnt_vec(ret_matches[i].first).x << ", "
-			//	<< tree->dataset.kdtree_get_pnt_vec(ret_matches[i].first).y << ", "
-			//	<< tree->dataset.kdtree_get_pnt_vec(ret_matches[i].first).z << std::endl;
-			closest_pnts[i] = tree->dataset.kdtree_get_pnt_vec(ret_matches[i].first) - p;
-			tmpxy = std::sqrt(closest_pnts[i].x * closest_pnts[i].x + closest_pnts[i].y * closest_pnts[i].y);
-			tmpz = std::sqrt(closest_pnts[i].z * closest_pnts[i].z);
-			if (tmpxy > xymax)
-				xymax = tmpxy;
-			if (tmpz > zmax)
-				zmax = tmpz;
-		}
+	//	// find the largest horizontal and vertical distance between the point in question and the
+	//	// closest points around this
+	//	std::vector<vec3> closest_pnts(N);
+	//	double xymax = 0;
+	//	double zmax = 0;
+	//	double tmpxy, tmpz;
+	//	for (size_t i = 0; i < N; i++) {
+	//		//std::cout << tree->dataset.kdtree_get_pnt_vec(ret_matches[i].first).x << ", "
+	//		//	<< tree->dataset.kdtree_get_pnt_vec(ret_matches[i].first).y << ", "
+	//		//	<< tree->dataset.kdtree_get_pnt_vec(ret_matches[i].first).z << std::endl;
+	//		closest_pnts[i] = tree->dataset.kdtree_get_pnt_vec(ret_matches[i].first) - p;
+	//		tmpxy = std::sqrt(closest_pnts[i].x * closest_pnts[i].x + closest_pnts[i].y * closest_pnts[i].y);
+	//		tmpz = std::sqrt(closest_pnts[i].z * closest_pnts[i].z);
+	//		if (tmpxy > xymax)
+	//			xymax = tmpxy;
+	//		if (tmpz > zmax)
+	//			zmax = tmpz;
+	//	}
 
-		double ratio = xymax / zmax;
+	//	double ratio = xymax / zmax;
 
-		// interpolate using the scaled value
-		double w, d;
-		double sumW = 0;
-		vec3 sumWVal;
+	//	// interpolate using the scaled value
+	//	double w, d;
+	//	double sumW = 0;
+	//	vec3 sumWVal;
 
-		std::map<int, double>::iterator it;
-		int iproc;
+	//	std::map<int, double>::iterator it;
+	//	int iproc;
 
-		for (size_t i = 0; i < N; i++) {
-			closest_pnts[i].z = closest_pnts[i].z * ratio * scale + closest_pnts[i].z * (1.0 - scale);
-			d = std::sqrt(closest_pnts[i].x * closest_pnts[i].x +
-				closest_pnts[i].y * closest_pnts[i].y +
-				(closest_pnts[i].z * closest_pnts[i].z));
-			iproc = tree->dataset.kdtree_get_proc(ret_matches[i].first);
-			if (d < threshold) {
-				vel = tree->dataset.kdtree_get_vel_vec(ret_matches[i].first);
-			}
-			else {
-				w = 1 / std::pow(d, power);
-				it = proc_map.find(iproc);
-				if (it == proc_map.end()) {
-					proc_map.insert(std::pair<int, double>(iproc, w));
-				}
-				else {
-					it->second += w;
-				}
-				sumW += w;
-				sumWVal = sumWVal + tree->dataset.kdtree_get_vel_vec(ret_matches[i].first) * w;
-			}
-		}
+	//	for (size_t i = 0; i < N; i++) {
+	//		closest_pnts[i].z = closest_pnts[i].z * ratio * scale + closest_pnts[i].z * (1.0 - scale);
+	//		d = std::sqrt(closest_pnts[i].x * closest_pnts[i].x +
+	//			closest_pnts[i].y * closest_pnts[i].y +
+	//			(closest_pnts[i].z * closest_pnts[i].z));
+	//		iproc = tree->dataset.kdtree_get_proc(ret_matches[i].first);
+	//		if (d < threshold) {
+	//			vel = tree->dataset.kdtree_get_vel_vec(ret_matches[i].first);
+	//		}
+	//		else {
+	//			w = 1 / std::pow(d, power);
+	//			it = proc_map.find(iproc);
+	//			if (it == proc_map.end()) {
+	//				proc_map.insert(std::pair<int, double>(iproc, w));
+	//			}
+	//			else {
+	//				it->second += w;
+	//			}
+	//			sumW += w;
+	//			sumWVal = sumWVal + tree->dataset.kdtree_get_vel_vec(ret_matches[i].first) * w;
+	//		}
+	//	}
 
-		it = proc_map.begin();
-		for (it; it != proc_map.end(); ++it) {
-			it->second = it->second / sumW;
-		}
+	//	it = proc_map.begin();
+	//	for (it; it != proc_map.end(); ++it) {
+	//		it->second = it->second / sumW;
+	//	}
 
-		vel = sumWVal * (1 / sumW);
-		
-	}
+	//	vel = sumWVal * (1 / sumW);
+	//	
+	//}
 
 	bool is_input_scalar(std::string input) {
 		// try to convert the input to scalar

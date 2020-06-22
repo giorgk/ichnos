@@ -44,15 +44,15 @@ int main(int argc, char* argv[])
     }
     else {
         switch (OPT.velocityFieldType) {
-        case ICHNOS::VelType::Cloud3d:
-        {
-            ICHNOS::pc3D VF(world);
-            VF.readVelocityField(OPT.getVelFname());
-            ICHNOS::Domain2D domain(OPT.Dopt);
-            ICHNOS::ParticleTrace pt(world, VF, domain, OPT.Popt);
-            pt.Trace();
-            break;
-        }
+        //case ICHNOS::VelType::Cloud3d:
+        //{
+        //    ICHNOS::pc3D VF(world);
+        //    VF.readVelocityField(OPT.getVelFname());
+        //    ICHNOS::Domain2D domain(OPT.Dopt);
+        //    ICHNOS::ParticleTrace pt(world, VF, domain, OPT.Popt);
+        //    pt.Trace();
+        //    break;
+        //}
         case ICHNOS::VelType::IWFM:
         {
             IWFM::iwfmVel VF(world);

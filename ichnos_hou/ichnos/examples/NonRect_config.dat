@@ -1,0 +1,17 @@
+VelocityType = NPSAT
+VelocityConfig = f:\UCDAVIS\ichnos\ichnos_hou\ichnos\examples\NonRect_vf_config.dat
+Stuckiter = 10
+Method = Euler
+DomainPolygon = f:\UCDAVIS\ICHNOS\ichnos_hou\ichnos\examples\NonRect_domainOutline.dat
+TopElevation = f:\UCDAVIS\ICHNOS\ichnos_hou\ichnos\examples\NonRect_TopElev.dat
+BottomElevation = f:\UCDAVIS\ICHNOS\ichnos_hou\ichnos\examples\NonRect_BotElev.dat
+Direction = 1
+StepSize = 10
+MaxStepSize = 15
+MinStepSize = 0.1
+MaxIterationsPerStreamline = 5000
+ToleranceStepSize = 0.1
+PartilceFile = f:\UCDAVIS\ICHNOS\ichnos_hou\ichnos\examples\test_particles_2.dat
+WellFile = 
+OutputFile = f:\UCDAVIS\ICHNOS\ichnos_hou\ichnos\examples\NonRect_test1
+ParticlesInParallel = 90

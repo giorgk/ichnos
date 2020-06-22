@@ -237,7 +237,7 @@ namespace ICHNOS {
 			bool foundPoint = findNextPoint(S.getLastParticle(), p, er);
 			if (foundPoint) {
 				er = CheckNewPointAndCalcVelocity(p, v, proc);
-				DEBUG::displayPVasVex(p, v);
+				//DEBUG::displayPVasVex(p, v);
 				S.AddParticle(Particle(p, v, proc, S.getLastParticle()));
 				//S.getLastParticle().displayAsVEX(true);
 				// In the unlike event that the velocity of the point is indeed zero
