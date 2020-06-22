@@ -64,6 +64,14 @@ packages:
  cmake ..
  ```
 
+ If cmake finds the wrong boost version e.g the one under /usr/ for example then passing the following during cmake might help 
+ ```
+cmake -DBoost_NO_BOOST_CMAKE=TRUE \
+      -DBoost_NO_SYSTEM_PATHS=TRUE \
+      -DBOOST_ROOT:PATHNAME=/path/to/spack/var/spack/environments/ichnos/.spack-env/view/ ..
+ ```
+ see [more](https://stackoverflow.com/questions/3016448/how-can-i-get-cmake-to-find-my-alternative-boost-installation).
+
 The following is not so relevant to be deleted soon...
 
  # Building in aqua cluster
@@ -97,6 +105,7 @@ Next run cmake to configure the project. Since this is for final runs we should 
 ```
 cmake -DCMAKE_BUILD_TYPE=Release -DCGAL_DIR:PATH=/path/to/cgal-releases-CGAL-4.11.3/build/release ..
 ```
+
 At the time of writing, aqua cluster has boost verion 1.58 while the cmake requires the 1.69. to bypass this just downgrade the requested version.
 
 
