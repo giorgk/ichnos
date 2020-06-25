@@ -35,6 +35,47 @@ namespace ICHNOS {
 		ss << std::setw(n) << std::setfill('0') << i;
 		return ss.str();
 	}
+
+	void linspace(double min, double max, int n, std::vector<double>& v){
+		v.clear();
+		int iterator = 0;
+		for (int i = 0; i <= n-2; i++){
+			double temp = min + i*(max-min)/(floor(static_cast<double>(n)) - 1);
+			v.insert(v.begin() + iterator, temp);
+        	iterator += 1;
+		}
+		v.insert(v.begin() + iterator, max);
+	}
+
+	void distributeParticlesAroundWellLayered(int eid, double x, double y, double top, double bot, std::vector<Streamline>& S, WellOptions wopt){
+		std::vector<double> zval;
+		linspace(bot, top, wopt.Nlayer, zval);
+		int Nppl = wopt.Nparticles/wopt.Nlayer;
+		double rads = (2.0*M_PI)/Nppl;
+		std::vector<double> rads1; 
+		linspace(0.0, 2.0*M_PI, wopt.Nlayer, rads1);
+		std::vector<std::vector<double> > radpos;
+
+		for (unsigned int i = 0; i < static_cast<unsigned int>(wopt.Nlayer); ++i){
+			std::vector<double> tmp;
+			linspace(0 + rads/2.0 + rads1[i],
+								2.0*M_PI - rads/2.0 + rads1[i], Nppl, tmp);
+			radpos.push_back(tmp);
+		}
+		
+		int sid = 0;
+		for(int i = 0; i < wopt.Nlayer; ++i){
+			for( int j = 0; j < Nppl; ++j){
+				vec3 temp;
+				temp.x = cos(radpos[i][j])*wopt.Radius + x;
+				temp.y = sin(radpos[i][j])*wopt.Radius + y;
+				temp.z = zval[i];
+				S.push_back(Streamline(eid, sid, Particle(temp)));
+				//DEBUG::displayVectorasVex(temp);
+				sid++;
+			}
+		}
+	}
 	
 	void distributeParticlesAroundWell(int eid, double x, double y, double top, double bot, std::vector<Streamline>& S, WellOptions wopt) {
 		const double PI = 4 * atan(1);
@@ -269,7 +310,8 @@ namespace ICHNOS {
 					inp >> y;
 					inp >> top;
 					inp >> bot;
-					distributeParticlesAroundWell(eid, x, y, top, bot, S, wopt);
+					distributeParticlesAroundWellLayered(eid, x, y, top, bot, S, wopt);
+					//distributeParticlesAroundWell(eid, x, y, top, bot, S, wopt);
 				}
 				datafile.close();
 				return true;

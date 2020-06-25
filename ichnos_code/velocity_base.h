@@ -18,7 +18,7 @@ namespace ICHNOS {
 	public:
 		velocityField(boost::mpi::communicator& world_in);
 		virtual void readVelocityField(std::string vf_file){}
-		virtual void calcVelocity(vec3& vel, std::map<int, double>& proc_map, vec3& p) {}
+		virtual void calcVelocity(vec3& vel, std::map<int, double>& proc_map, vec3& p, double& step) {}
 		
 		bool bIsInGhostArea(std::map<int, double> proc_map);
 		int calcProcID(std::map<int, double> proc_map);

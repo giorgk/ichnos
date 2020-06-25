@@ -121,8 +121,8 @@ namespace ICHNOS {
 
 	*/
 	struct NPSAT_data {
-		int proc;
-		int id;
+		int proc = -9;
+		int id = -9;
 		vec3 v;
 	};
 

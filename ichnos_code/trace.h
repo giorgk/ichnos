@@ -215,7 +215,7 @@ namespace ICHNOS {
 
 		// Attempt to calculate the velocity
 		std::map<int, double> proc_map;
-		VF.calcVelocity(v, proc_map, p);
+		VF.calcVelocity(v, proc_map, p, adaptStepSize);
 		if (v.isInvalid())
 			return ExitReason::FAR_AWAY;
 		proc = VF.calcProcID(proc_map);
@@ -265,7 +265,7 @@ namespace ICHNOS {
 		// the velocity field allows it. However the particle tracking will be terminated
 		if (exitreason != ExitReason::NO_EXIT) {
 			if (VF.InterpolateOutsideDomain) {
-				VF.calcVelocity(v, proc_map, p);
+				VF.calcVelocity(v, proc_map, p, adaptStepSize);
 			}
 			else {
 				v = vec3();
@@ -273,7 +273,7 @@ namespace ICHNOS {
 			return exitreason;
 		}
 		else {
-			VF.calcVelocity(v, proc_map, p);
+			VF.calcVelocity(v, proc_map, p, adaptStepSize);
 			if (v.isInvalid())
 				return ExitReason::FAR_AWAY;
 

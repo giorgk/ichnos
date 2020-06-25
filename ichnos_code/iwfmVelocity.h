@@ -74,7 +74,7 @@ namespace IWFM {
 	public:
 		iwfmVel(boost::mpi::communicator& world_in);
 		void readVelocityField(std::string vf_file);
-		void calcVelocity(ic::vec3& vel, std::map<int, double>& proc_map, ic::vec3& p);
+		void calcVelocity(ic::vec3& vel, std::map<int, double>& proc_map, ic::vec3& p, double& step);
 	private:
 		//ic::pointCloud<int> xyid;
 		//std::unique_ptr<nano_kd_tree_int> xy_tree;
@@ -267,7 +267,7 @@ namespace IWFM {
 		return true;
 	}
 
-	void iwfmVel::calcVelocity(ic::vec3& vel, std::map<int, double>& proc_map, ic::vec3& p) {
+	void iwfmVel::calcVelocity(ic::vec3& vel, std::map<int, double>& proc_map, ic::vec3& p, double& step) {
 		std::map<int, double> id_dst;
 		//ICHNOS::interpolateIntTree(id_dst, proc_map, xy_tree, p);
 
