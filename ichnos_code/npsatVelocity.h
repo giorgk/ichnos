@@ -2,6 +2,7 @@
 
 #include <boost/mpi.hpp>
 #include <boost/program_options.hpp>
+#include <boost/iterator/zip_iterator.hpp>
 //#include <nanoflann.hpp>
 
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
@@ -14,6 +15,7 @@
 
 #include <chrono>
 #include <ctime>
+#include <utility>
 
 namespace po = boost::program_options;
 namespace ic = ICHNOS;
@@ -33,10 +35,15 @@ namespace NPSAT {
 		npsatVel(boost::mpi::communicator& world_in);
 		void readVelocityField(std::string vf_file);
 		void calcVelocity(ic::vec3& vel, std::map<int, double>& proc_map, ic::vec3& p, double& step);
+		void reset();
+		void updateStep(double& step);
 	private:
-		ic::cgal_Delaunay T;
-		ic::cell_handle cellhandle;
-		bool bCellKnown = false;
+
+		ic::search_tree Tree;
+
+		//ic::cgal_Delaunay T;
+		//ic::cell_handle cellhandle;
+		//bool bCellKnown = false;
 		//ic::pointCloud<ic::vec3> VelocityCloud;
 		//std::unique_ptr<nano_kd_tree_vector> VelocityTree;
 		ic::interpType porType;
@@ -47,22 +54,33 @@ namespace NPSAT {
 		double Power;
 		double Scale = 1.0;
 		double Threshold;
-		double search_time = 0.0;
-		double max_search_time = 0.0;
+		//double search_time = 0.0;
+		//double max_search_time = 0.0;
 		double calc_time = 0.0;
 		double max_calc_time = 0.0;
-		double calc_time1 = 0.0;
-		double calc_time2 = 0.0;
+		//double calc_time1 = 0.0;
+		//double calc_time2 = 0.0;
 		int cout_times = 0;
 		int FrequencyStat;
 		int nids_size = 0;
-		int method;
+		//int method;
 		//double max_distance = 0;
 		void PrintStat();
+
+		bool bIsInitialized = false;
+		double initial_diameter = 640;
+		double initial_ratio = 20;
+		double diameter;
+		double ratio;
+		double search_mult = 2.5;
+		double n_steps = 4;
+		ic::vec3 ll,uu,pp,vv;
+
 
 		void add_interpolationVertex(std::map<int, npsatVeldata>& nids, ic::vec3& lp, ic::vec3& up, ic::vertex_handle& vh, ic::vec3& p, npsatVeldata& tmp);
 		void calculate_BB(ic::vertex_handle& vh, ic::vec3& l, ic::vec3& u);
 		double calculate_step(ic::vec3& p, ic::vec3& v, ic::vec3& l, ic::vec3& u);
+		void calculate_search_box(ic::vec3& p, ic::vec3& l, ic::vec3& u);
 	};
 
 	npsatVel::npsatVel(boost::mpi::communicator& world_in)
@@ -70,6 +88,12 @@ namespace NPSAT {
 		velocityField(world_in)
 	{
 		InterpolateOutsideDomain = true;
+	}
+
+	void npsatVel::reset(){
+		bIsInitialized = false;
+		diameter = initial_diameter;
+		ratio = initial_ratio;
 	}
 
 	void npsatVel::readVelocityField(std::string vf_file) {
@@ -100,7 +124,7 @@ namespace NPSAT {
 		Scale = vm_vfo["Scale"].as<double>();
 		Threshold = vm_vfo["Threshold"].as<double>();
 		FrequencyStat = vm_vfo["FrequencyStat"].as<int>();
-		method = vm_vfo["Method"].as<int>();
+		//method = vm_vfo["Method"].as<int>();
 
 		std::string prefix = vm_vfo["Prefix"].as<std::string>();
 		std::string suffix;
@@ -111,15 +135,37 @@ namespace NPSAT {
 			suffix = ".ich";
 
 		std::string filename = prefix + ic::num2Padstr(world.rank(), leadZeros) + suffix;
-		std::vector<std::pair<ic::cgal_point, ic::NPSAT_data>> npsat_data;
-		ic::READ::readNPSATVelocity(filename, npsat_data, multiplier);
-		auto start = std::chrono::high_resolution_clock::now();
-		T.insert(npsat_data.begin(), npsat_data.end());
-		auto finish = std::chrono::high_resolution_clock::now();
-		std::chrono::duration<double> elapsed = finish - start;
-		std::cout << "Triangulation Building time: " << elapsed.count() << std::endl;
-		std::cout << "Number of vertices: " << T.number_of_vertices() << std::endl;
-		std::cout << "Number of cells: " << T.number_of_cells() << std::endl;
+		//std::vector<std::pair<ic::cgal_point, ic::NPSAT_data>> npsat_data;
+		//ic::READ::readNPSATVelocity(filename, npsat_data, multiplier);
+		
+		std::vector<ic::cgal_point_3> pp;
+		std::vector<ic::NPSAT_data> dd;
+		//std::vector<std::pair<ic::cgal_point_3, ic::NPSAT_data>> dd;
+		ic::READ::readNPSATVelocity(filename, pp, dd, multiplier);
+
+		/*{//Build Triangulation
+			auto start = std::chrono::high_resolution_clock::now();
+			T.insert(npsat_data.begin(), npsat_data.end());
+			auto finish = std::chrono::high_resolution_clock::now();
+			std::chrono::duration<double> elapsed = finish - start;
+			std::cout << "Triangulation Building time: " << elapsed.count() << std::endl;
+			std::cout << "Number of vertices: " << T.number_of_vertices() << std::endl;
+			std::cout << "Number of cells: " << T.number_of_cells() << std::endl;
+		}*/
+
+		{//Build tree
+			auto start = std::chrono::high_resolution_clock::now();
+			Tree.insert(boost::make_zip_iterator(boost::make_tuple( pp.begin(),dd.begin() )),
+    					boost::make_zip_iterator(boost::make_tuple( pp.end(),dd.end() ) )  );
+			Tree.build();
+			auto finish = std::chrono::high_resolution_clock::now();
+			std::chrono::duration<double> elapsed = finish - start;
+			std::cout << "Point Set Building time: " << elapsed.count() << std::endl;
+
+		}
+
+
+
 
 
 		//ic::READ::readVelocityFieldFile(filename, VelocityCloud);
@@ -153,6 +199,131 @@ namespace NPSAT {
 
 
 	void npsatVel::calcVelocity(ic::vec3& vel, std::map<int, double>& proc_map, ic::vec3& p, double& step) {
+		// If this is the first point of this streamline we will carry out one additional range search
+		ll.zero();
+		uu.zero();
+		pp.zero();
+		vv.zero();
+		if (!bIsInitialized){ 
+			calculate_search_box(p,ll,uu);
+			ic::cgal_point_3 llp(ll.x, ll.y, ll.z);
+			ic::cgal_point_3 uup(uu.x, uu.y, uu.z);
+			ic::Fuzzy_iso_box fib(llp,uup, 0.0);
+			std::vector<boost::tuples::tuple<ic::cgal_point_3, ic::NPSAT_data>> tmp;
+			//std::back_insert_iterator<std::vector<std::tuple<ic::cgal_point_3, ic::NPSAT_data>>> tmp_it(tmp);
+			Tree.search(std::back_inserter(tmp), fib);
+			if (tmp.size() == 0){
+				vel = ic::vec3(-99999,-99999,-99999);
+				return;
+			}
+			// Find the closest point
+			double mindist = 1000000000;
+			double tmp_diam;
+			double tmp_ratio;
+			ic::NPSAT_data closest_point_data;
+			for (unsigned int i = 0; i < tmp.size(); ++i){
+				double dist = p.distance(tmp[i].get<0>().x(), tmp[i].get<0>().y(), tmp[i].get<0>().z());
+				if (dist < mindist){
+					mindist = dist;
+					tmp_diam = tmp[i].get<1>().diameter;
+					tmp_ratio = tmp[i].get<1>().ratio;
+					//std::cout << tmp[1].get<1>().id << std::endl;
+				}
+			}
+			diameter = tmp_diam;
+			ratio = tmp_ratio;
+			bIsInitialized = true;
+		}
+
+		{
+			auto start = std::chrono::high_resolution_clock::now();
+			std::map<int, double>::iterator itd;
+			std::vector<boost::tuples::tuple<ic::cgal_point_3, ic::NPSAT_data>> tmp;
+			while (true){
+				tmp.clear();
+				calculate_search_box(p,ll,uu);
+				ic::cgal_point_3 llp(ll.x, ll.y, ll.z);
+				ic::cgal_point_3 uup(uu.x, uu.y, uu.z);
+				ic::Fuzzy_iso_box fib(llp,uup, 0.0);
+				Tree.search(std::back_inserter(tmp), fib);
+				if (tmp.size() >= 3){
+					break;
+				}
+				else{
+					diameter = diameter*1.5;
+					if (diameter > initial_diameter){
+						vel = ic::vec3(-99999,-99999,-99999);
+						return;
+					}
+				}
+			}
+
+			double porx, pory, porz, scaled_dist, actual_dist, w;
+			bool calc_average = true;
+			double sumW = 0;
+			ic::vec3 sumWVal;
+			double mindist = 1000000000;
+			double tmp_diam;
+			double tmp_ratio;
+
+			for (unsigned int i = 0; i < tmp.size(); ++i){
+				porx = p.x - tmp[i].get<0>().x();
+				pory = p.y - tmp[i].get<0>().y();
+				porz = p.z - tmp[i].get<0>().z();
+				actual_dist = std::sqrt(porx * porx + pory * pory + porz * porz);
+				if (actual_dist < mindist){
+					mindist = actual_dist;
+					tmp_diam = tmp[i].get<1>().diameter;
+					tmp_ratio = tmp[i].get<1>().ratio;
+				}
+
+				porz = porz * ratio * Scale + porz*(1 - Scale);
+
+				scaled_dist = std::sqrt(porx * porx + pory * pory + porz * porz);
+
+
+				if (actual_dist < Threshold){
+					vel = tmp[i].get<1>().v;
+					calc_average = false;
+				}
+				else{
+					w = 1 / std::pow(scaled_dist, Power);
+					itd = proc_map.find(tmp[i].get<1>().proc);
+					if (itd == proc_map.end()) {
+						proc_map.insert(std::pair<int, double>(tmp[i].get<1>().proc, w));
+					}
+					else{
+						itd->second += w;
+					}
+					sumW += w;
+					sumWVal = sumWVal + tmp[i].get<1>().v*w;
+				} 
+			}
+			if (tmp.size() > 50){
+				diameter = tmp_diam;
+				ratio = tmp_ratio;
+			}
+
+			itd = proc_map.begin();
+			for (; itd != proc_map.end(); ++itd) {
+				itd->second = itd->second / sumW;
+			}
+
+			if (calc_average)
+				vel = sumWVal * (1 / sumW);
+			pp = p;
+			vv = vel;
+			auto finish = std::chrono::high_resolution_clock::now();
+
+			std::chrono::duration<double> elapsed = finish - start;
+			calc_time += elapsed.count();
+			if (elapsed.count() > max_calc_time)
+			max_calc_time = elapsed.count();
+			//std::cout << "Range search time: " << std::fixed << std::setprecision(15) << elapsed.count() << " N points: " << tmp.size() <<  std::endl;
+		}
+
+
+/*
 		npsatVeldata tmp;
 		ic::vertex_handle vh;
 		ic::cell_handle ch;
@@ -253,6 +424,7 @@ namespace NPSAT {
 			ch = T.locate(ic::cgal_point(p.x, p.y, p.z), cellhandle);
 			auto finish = std::chrono::high_resolution_clock::now();
 			std::chrono::duration<double> elapsed = finish - start;
+			std::cout << "Search time Tria: " << elapsed.count() << std::endl;
 			search_time += elapsed.count();
 			if (elapsed.count() > max_search_time)
 				max_search_time = elapsed.count();
@@ -291,12 +463,12 @@ namespace NPSAT {
 		double horlen = std::min(up.x - lp.x, up.y - lp.y);
 		double verlen = up.z - lp.z;
 
-		double ratio;
+		double tmp_ratio;
 		if (verlen < 0.1){
-			ratio = 1.0;
+			tmp_ratio = 1.0;
 		}
 		else{
-			ratio = horlen / verlen;
+			tmp_ratio = horlen / verlen;
 		} 
 
 		double dist, w;
@@ -306,7 +478,7 @@ namespace NPSAT {
 		bool calc_average = true;
 		for (it = nids.begin(); it != nids.end(); ++it) {
 			//std::cout << it->first << " ";
-			it->second.p.z = it->second.p.z * ratio * Scale + it->second.p.z * (1.0 - Scale);
+			it->second.p.z = it->second.p.z * tmp_ratio * Scale + it->second.p.z * (1.0 - Scale);
 			dist = std::sqrt(it->second.p.x * it->second.p.x + it->second.p.y * it->second.p.y + it->second.p.z * it->second.p.z);
 
 			if (dist < Threshold) {
@@ -346,6 +518,9 @@ namespace NPSAT {
 		if (!std::isfinite(std::abs(vel.x)))
 			std::cout << vel.x << "," << vel.y << "," << vel.z << std::endl;
 		//ic::interpolateVectorTree(vel, proc_map, VelocityTree, p);
+
+
+*/
 		double porosity = 1.0;
 		if (porType == ic::interpType::CLOUD) {
 			//porosity = ic::interpolateScalarTree(PorosityTree, p);
@@ -353,21 +528,22 @@ namespace NPSAT {
 		else if (porType == ic::interpType::SCALAR)
 			porosity = porosityValue;
 		vel = vel * (1/porosity);
+		
+		//if (method == 4){
+		//	step = calculate_step(p, vel, lbb, ubb);
+		//}
 
-		if (method == 4){
-			step = calculate_step(p, vel, lbb, ubb);
-		}
-
-		auto finish = std::chrono::high_resolution_clock::now();
-		std::chrono::duration<double> elapsed = finish - start;
-		calc_time += elapsed.count();
-		if (elapsed.count() > max_calc_time)
-			max_calc_time = elapsed.count();
+		//auto finish = std::chrono::high_resolution_clock::now();
+		//std::chrono::duration<double> elapsed = finish - start;
+		//std::cout << "Calc time Tria: " << elapsed.count() << std::endl;
+		//calc_time += elapsed.count();
+		
 		cout_times++;
-		nids_size = nids.size();
+		//nids_size = nids.size();
 		PrintStat();
 	}
 
+/*
 	void npsatVel::add_interpolationVertex(std::map<int, npsatVeldata>& nids, ic::vec3& lp, ic::vec3& up, ic::vertex_handle& vh, ic::vec3& p, npsatVeldata& tmp) {
 		ic::NPSAT_data nd = vh->info();
 		if (nd.id < 0 || nd.proc < 0)
@@ -404,6 +580,7 @@ namespace NPSAT {
 		if (tmp_p.z() < lp.z)
 			lp.z = tmp_p.z();
 	}
+	*/
 
 	void npsatVel::calculate_BB(ic::vertex_handle& vh, ic::vec3& l, ic::vec3& u){
 		ic::cgal_point tmp_p = vh->point();
@@ -419,6 +596,10 @@ namespace NPSAT {
 			l.y = tmp_p.y();
 		if (tmp_p.z() < l.z)
 			l.z = tmp_p.z();
+	}
+
+	void npsatVel::updateStep(double& step){
+		step = calculate_step(pp, vv, ll, uu);
 	}
 
 	double npsatVel::calculate_step(ic::vec3& p, ic::vec3& v, ic::vec3& l, ic::vec3& u){
@@ -480,25 +661,37 @@ namespace NPSAT {
 
 		ic::vec3 pmin = p*(1-t_min) + p1 * t_min;
 		ic::vec3 pmax = p*(1-t_max) + p1 * t_max;
-		return pmin.distance(pmax.x, pmax.y, pmax.z)/2;
+		return pmin.distance(pmax.x, pmax.y, pmax.z)/n_steps;
+	}
+
+	void npsatVel::calculate_search_box(ic::vec3& p, ic::vec3& l, ic::vec3& u){
+		double xy_dir = (diameter/2)*search_mult;
+		double z_dir = xy_dir/ratio;
+		l.x = p.x - xy_dir;
+		l.y = p.y - xy_dir;
+		l.z = p.z - z_dir;
+		u.x = p.x + xy_dir;
+		u.y = p.y + xy_dir;
+		u.z = p.z + z_dir;
 	}
 
 	void npsatVel::PrintStat() {
 		if (cout_times > FrequencyStat) {
-			std::cout << "Search time: " << std::fixed << std::setprecision(15) << search_time/static_cast<double>(cout_times) << ", ("; // std::endl;
-			std::cout << max_search_time << "), ";
+			//std::cout << "Search time: " << std::fixed << std::setprecision(15) << search_time/static_cast<double>(cout_times) << ", ("; // std::endl;
+			//std::cout << max_search_time << "), ";
 			std::cout << "Velocity Calc time: " << std::fixed << std::setprecision(15) << calc_time/static_cast<double>(cout_times) <<  ", (";// std::endl;
 			std::cout << max_calc_time << "), ";
-			//std::cout << std::endl << std::flush;
+			std::cout << std::endl << std::flush;
 			//std::cout << "max: " << max_distance << ", ";
-			std::cout << "Number of nodes: " << nids_size << std::endl;
+			//std::cout << "Number of nodes: " << nids_size << std::endl;
 			//std::cout << "Velocity Calc time1: " << std::fixed << std::setprecision(15) << calc_time1 / static_cast<double>(cout_times) << std::endl;
 			//std::cout << "Velocity Calc time2: " << std::fixed << std::setprecision(15) << calc_time2 / static_cast<double>(cout_times) << std::endl;
  			cout_times = 0;
-			search_time = 0.0;
+			//search_time = 0.0;
 			calc_time = 0.0;
-			calc_time1 = 0.0;
-			calc_time2 = 0.0;
+			max_calc_time = 0.0;
+			//calc_time1 = 0.0;
+			//calc_time2 = 0.0;
 		}
 	}
 }

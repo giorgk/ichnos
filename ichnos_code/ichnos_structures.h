@@ -3,7 +3,7 @@
 #include <boost/geometry/geometries/point_xy.hpp>
 #include <boost/geometry/geometries/polygon.hpp>
 
-
+// Includes for interpolation
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Delaunay_triangulation_3.h>
 #include <CGAL/Delaunay_triangulation_cell_base_3.h>
@@ -14,8 +14,20 @@
 #include <CGAL/natural_neighbor_coordinates_2.h>
 #include <CGAL/interpolation_functions.h>
 
+// Includes for dD Search
+//#include <CGAL/Epick_d.h>
+#include <CGAL/Search_traits_3.h>
+#include <CGAL/Search_traits_adapter.h>
+#include <CGAL/property_map.h>
+#include <CGAL/Fuzzy_iso_box.h>
+#include <CGAL/Kd_tree.h>
+#include <CGAL/Orthogonal_k_neighbor_search.h>
+
+
+
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_real_distribution.hpp>
+#include <boost/iterator/zip_iterator.hpp>
 
 #include <iostream>
 #include <fstream>
@@ -115,6 +127,13 @@ namespace ICHNOS {
 		double distance(double px, double py, double pz) {
 			return std::sqrt((x - px) * (x - px) + (y - py) * (y - py) + (z - pz) * (z - pz));
 		}
+
+		double angle(vec3& b){
+			double ab = x*b.x + y*b.y + z*b.z;
+			double abs_a = this->len();
+			double abs_b = b.len();
+			return std::acos(ab/(abs_a*abs_b));
+		}
 	};
 
 	/**
@@ -123,6 +142,8 @@ namespace ICHNOS {
 	struct NPSAT_data {
 		int proc = -9;
 		int id = -9;
+		double diameter = 0;
+		double ratio = 0;
 		vec3 v;
 	};
 
@@ -145,6 +166,13 @@ namespace ICHNOS {
 	typedef std::map<cgal_point_2, coord_type, K::Less_xy_2> coord_map;
 	typedef CGAL::Data_access<coord_map>	value_access;
 
+	//dD Spatial Searching
+	typedef K::Point_3	cgal_point_3;
+	typedef boost::tuple<cgal_point_3, NPSAT_data> pnt_int;
+	typedef CGAL::Search_traits_3<K> Traits_base;
+	typedef CGAL::Search_traits_adapter<pnt_int, CGAL::Nth_of_tuple_property_map<0,pnt_int>, Traits_base> search_traits;
+	typedef CGAL::Fuzzy_iso_box<search_traits> Fuzzy_iso_box;
+	typedef CGAL::Kd_tree<search_traits> search_tree;
 
 
 
@@ -435,6 +463,14 @@ namespace ICHNOS {
 		}
 		void AddParticle(Particle p);
 		Particle getLastParticle() { return SL.back(); }
+		Particle getParticleBeforeLast(){
+			if (SL.size() > 1)
+				return SL[SL.size()-2];
+			else
+			{
+				return Particle(vec3());
+			}
+		}
 		void Close(ExitReason ER);
 		int StuckIter() { return IterationsWithoutExpansion; }
 		int getEid() { return Eid; }

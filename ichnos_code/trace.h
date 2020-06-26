@@ -205,6 +205,7 @@ namespace ICHNOS {
 	ExitReason ParticleTrace::traceInner(Streamline& S) {
 		// Reset the step size
 		adaptStepSize = popt.StepSize;
+		VF.reset();
 		vec3 v;
 		vec3 p = S.getLastParticle().getP();
 		int proc = world.rank();
@@ -234,6 +235,12 @@ namespace ICHNOS {
 		int count_iterations = 0;
 		//DEBUG::displayParticleasVex(S.getLastParticle(), true);
 		while (er == ExitReason::NO_EXIT) {
+			//if (S.size()>1){// Check if there is rapid change in the d
+			//	vec3 v_prev = S.getParticleBeforeLast().getV();
+			//	vec3 v_curr = S.getLastParticle().getV();
+			//	double angle = v_prev.angle(v_curr);
+			//}
+			VF.updateStep(adaptStepSize);
 			bool foundPoint = findNextPoint(S.getLastParticle(), p, er);
 			if (foundPoint) {
 				er = CheckNewPointAndCalcVelocity(p, v, proc);
