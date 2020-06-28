@@ -47,6 +47,11 @@ namespace ICHNOS {
 		v.insert(v.begin() + iterator, max);
 	}
 
+	// https://stackoverflow.com/questions/2390912/checking-for-an-empty-file-in-c
+	bool is_file_empty(std::ifstream& pFile){
+		return pFile.peek() == std::ifstream::traits_type::eof();
+	}
+
 	void distributeParticlesAroundWellLayered(int eid, double x, double y, double top, double bot, std::vector<Streamline>& S, WellOptions wopt){
 		std::vector<double> zval;
 		linspace(bot, top, wopt.Nlayer, zval);
@@ -366,6 +371,9 @@ namespace ICHNOS {
 				return false;
 			}
 			else {
+				if (is_file_empty(datafile)){
+					return true;
+				}
 				std::string line, er_str;
 				int eid, sid, pid, eid_prev, sid_prev;
 				gPart particle;
@@ -478,11 +486,14 @@ namespace ICHNOS {
 				sit = eit->second.begin();
 				for (; sit != eit->second.end(); ++sit) {
 					pit = sit->second.particles.begin();
-					double age = 0;
-					int i = 0;
-					vec3 p_prev, p_curr;
-					vec3 v_prev, v_curr, v_m;
+					//double age = 0;
+					//int i = 0;
+					//vec3 p_prev, p_curr;
+					//vec3 v_prev, v_curr, v_m;
 					for (; pit != sit->second.particles.end(); ++pit) {
+						/* // This is used to calculate the age
+						// However to save some space in the output files
+						// I wont print it
 						if (i == 0) {
 							p_prev = pit->second.p;
 							v_prev = pit->second.v;
@@ -496,6 +507,7 @@ namespace ICHNOS {
 							p_prev = p_curr;
 							v_prev = v_curr;
 						}
+						*/
 						out_file << eit->first << " "
 							<< sit->first << " "
 							<< std::setprecision(2) << std::fixed
@@ -503,12 +515,18 @@ namespace ICHNOS {
 							<< pit->second.p.y << " "
 							<< pit->second.p.z << " "
 							<< std::setprecision(5) << std::fixed
-							<< pit->second.v.x << " "
-							<< pit->second.v.y << " "
-							<< pit->second.v.z << " " 
-							<< age << std::endl;
-						i++;
+							<< pit->second.v.len() << " "
+							// << pit->second.v.x << " "
+							// << pit->second.v.y << " "
+							// << pit->second.v.z << " " 
+							/* << age */ << std::endl;
+						//i++;
 					}
+					out_file << "-9 " 
+							 << eit->first << " " 
+							 << sit->first << " "
+							 << castExitReasons2String(sit->second.ex)
+							 << std::endl;
 				}
 			}
 			out_file.close();

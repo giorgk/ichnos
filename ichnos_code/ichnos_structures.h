@@ -348,7 +348,7 @@ namespace ICHNOS {
 	struct ParticleOptions {
 		
 		SolutionMethods method;
-		// THe maximum number of iteratiosn that each streamline is alloweded not to expand
+		// The maximum number of iteratiosn that each streamline is alloweded not to expand
 		int StuckIterations;
 		// When the method is adaptive this is the maximum step size
 		double MaxStepSize;
@@ -367,6 +367,11 @@ namespace ICHNOS {
 		// For example if the decrease is lower that 1 but very close to one then it may be possible that
 		// the algorithm will repeat the decreasing of the step size many times by a very small amount.
 		double limitUpperDecreaseStep;
+
+		// If update step size is set to 1 then the step size is determined 
+		// by the extend of the bounding box that the particle currently is.
+		// If its zero the the StepSize is used unless the method is RK45
+		int UpdateStepSize;
 
 		// The direction of the particle tracing
 		double Direction;

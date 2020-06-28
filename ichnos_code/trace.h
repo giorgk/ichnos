@@ -40,6 +40,7 @@ namespace ICHNOS {
 		const std::vector<std::vector<double> > CF = getRK45coef();
 
 		double adaptStepSize;
+		double actualStep;
 	};
 
 	ParticleTrace::ParticleTrace(
@@ -205,6 +206,7 @@ namespace ICHNOS {
 	ExitReason ParticleTrace::traceInner(Streamline& S) {
 		// Reset the step size
 		adaptStepSize = popt.StepSize;
+		actualStep = popt.StepSize;
 		VF.reset();
 		vec3 v;
 		vec3 p = S.getLastParticle().getP();
@@ -216,7 +218,7 @@ namespace ICHNOS {
 
 		// Attempt to calculate the velocity
 		std::map<int, double> proc_map;
-		VF.calcVelocity(v, proc_map, p, adaptStepSize);
+		VF.calcVelocity(v, proc_map, p);
 		if (v.isInvalid())
 			return ExitReason::FAR_AWAY;
 		proc = VF.calcProcID(proc_map);
@@ -240,7 +242,8 @@ namespace ICHNOS {
 			//	vec3 v_curr = S.getLastParticle().getV();
 			//	double angle = v_prev.angle(v_curr);
 			//}
-			VF.updateStep(adaptStepSize);
+			if (popt.UpdateStepSize == 1 && popt.method != SolutionMethods::RK45)
+				VF.updateStep(actualStep);
 			bool foundPoint = findNextPoint(S.getLastParticle(), p, er);
 			if (foundPoint) {
 				er = CheckNewPointAndCalcVelocity(p, v, proc);
@@ -272,7 +275,7 @@ namespace ICHNOS {
 		// the velocity field allows it. However the particle tracking will be terminated
 		if (exitreason != ExitReason::NO_EXIT) {
 			if (VF.InterpolateOutsideDomain) {
-				VF.calcVelocity(v, proc_map, p, adaptStepSize);
+				VF.calcVelocity(v, proc_map, p);
 			}
 			else {
 				v = vec3();
@@ -280,7 +283,7 @@ namespace ICHNOS {
 			return exitreason;
 		}
 		else {
-			VF.calcVelocity(v, proc_map, p, adaptStepSize);
+			VF.calcVelocity(v, proc_map, p);
 			if (v.isInvalid())
 				return ExitReason::FAR_AWAY;
 
@@ -335,29 +338,29 @@ namespace ICHNOS {
 
 	bool ParticleTrace::EulerStep(const Particle& P, vec3& pnew, ExitReason& er) {
 		//DEBUG::displayParticleasVex(P, true);
-		pnew = P.getP() + P.getV().normalize() * popt.StepSize * popt.Direction;
+		pnew = P.getP() + P.getV().normalize() * actualStep * popt.Direction;
 		//DEBUG::displayVectorasVex(pnew);
 		return true;
 	}
 
 	bool ParticleTrace::RK2Step(const Particle& P, vec3& pnew, ExitReason& er) {
-		DEBUG::displayParticleasVex(P, true);
+		//DEBUG::displayParticleasVex(P, true);
 		// We set this value to the current processor however this is not actually used
 		// as it does not get out of this function
 		// The actual processor will be calculated outside this function
 		int proc = world.rank();
 		// Find the new position using the velocity of the current point
-		vec3 p1 = P.getV().normalize()*popt.StepSize * popt.Direction + P.getP();
+		vec3 p1 = P.getV().normalize() * actualStep * popt.Direction + P.getP();
 		
 		// Find the velocity on that point
 		vec3 v1;
 		er = CheckNewPointAndCalcVelocity(p1, v1, proc);
-		DEBUG::displayPVasVex(p1, v1);
+		//DEBUG::displayPVasVex(p1, v1);
 		if (v1.isZero()) return false;
 		// Take a step with the average velocity
 		vec3 v_m = v1 * 0.5 + P.getV() * 0.5;
-		pnew = v_m.normalize() * popt.StepSize* popt.Direction + P.getP();
-		DEBUG::displayVectorasVex(pnew);
+		pnew = v_m.normalize() * actualStep* popt.Direction + P.getP();
+		//DEBUG::displayVectorasVex(pnew);
 		return true;
 	}
 
@@ -367,7 +370,7 @@ namespace ICHNOS {
 		int proc = world.rank();
 		// Step 1 ----------------------------
 		// take a half step from the current point using the velocity of that point
-		vec3 p2 = P.getV().normalize() * (popt.StepSize/2) * popt.Direction + P.getP();
+		vec3 p2 = P.getV().normalize() * (actualStep/2) * popt.Direction + P.getP();
 		// Find the velocity on point p2 that point
 		vec3 v2;
 		er = CheckNewPointAndCalcVelocity(p2, v2, proc);
@@ -376,7 +379,7 @@ namespace ICHNOS {
 
 		// Step 2 ----------------------------
 		// take a half step from the current point using the v2 velocity
-		vec3 p3 = v2.normalize() * (popt.StepSize/2) * popt.Direction + P.getP();
+		vec3 p3 = v2.normalize() * (actualStep/2) * popt.Direction + P.getP();
 		// Find the velocity on point p3 that point
 		vec3 v3;
 		er = CheckNewPointAndCalcVelocity(p3, v3, proc);
@@ -385,7 +388,7 @@ namespace ICHNOS {
 
 		// Step 3 ----------------------------
 		// take a full step from the current point using the v3 velocity
-		vec3 p4 = v3.normalize() * popt.StepSize * popt.Direction + P.getP();
+		vec3 p4 = v3.normalize() * actualStep * popt.Direction + P.getP();
 		// Find the velocity on point p4 that point
 		vec3 v4;
 		er = CheckNewPointAndCalcVelocity(p4, v4, proc);
@@ -393,7 +396,7 @@ namespace ICHNOS {
 		if (v4.isZero()) return false;
 
 		vec3 v_m = (P.getV() + v2 * 2.0 + v3 * 2.0 + v4)*(1.0/6.0);
-		pnew = v_m.normalize() * popt.StepSize * popt.Direction + P.getP();
+		pnew = v_m.normalize() * actualStep * popt.Direction + P.getP();
 		//DEBUG::displayVectorasVex(pnew);
 		return true;
 	}
@@ -490,15 +493,18 @@ namespace ICHNOS {
 		else {
 			if (adaptStepSize <= popt.MinStepSize) {
 				pnew = yn;
-				std::cout << "The algorithm will continue although it cannot reach the desired accuracy of "
-					<< popt.ToleranceStepSize
-					<< "with the limit of minimum step size " << popt.MinStepSize << std::endl;
-				std::cout << "Either relax the tolerance or reduce the Minimum Step Size" << std::endl;
+				if (R > popt.ToleranceStepSize){
+					std::cout << "The algorithm will continue although it cannot reach the desired accuracy of "
+						<< popt.ToleranceStepSize
+						<< "with the limit of minimum step size " << popt.MinStepSize << std::endl;
+					std::cout << "Either relax the tolerance or reduce the Minimum Step Size" << std::endl;
+				}
 			}
 			else {
 				q = std::min(q, popt.limitUpperDecreaseStep);
 				adaptStepSize = adaptStepSize * q;
-				RK45Step(P, pnew, er);
+				if (R > popt.ToleranceStepSize)
+					RK45Step(P, pnew, er);
 			}
 		}
 		return true;

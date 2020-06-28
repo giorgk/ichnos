@@ -34,7 +34,7 @@ namespace NPSAT {
 	public:
 		npsatVel(boost::mpi::communicator& world_in);
 		void readVelocityField(std::string vf_file);
-		void calcVelocity(ic::vec3& vel, std::map<int, double>& proc_map, ic::vec3& p, double& step);
+		void calcVelocity(ic::vec3& vel, std::map<int, double>& proc_map, ic::vec3& p);
 		void reset();
 		void updateStep(double& step);
 	private:
@@ -73,9 +73,8 @@ namespace NPSAT {
 		double diameter;
 		double ratio;
 		double search_mult = 2.5;
-		double n_steps = 4;
+		double n_steps = 4.0;
 		ic::vec3 ll,uu,pp,vv;
-
 
 		void add_interpolationVertex(std::map<int, npsatVeldata>& nids, ic::vec3& lp, ic::vec3& up, ic::vertex_handle& vh, ic::vec3& p, npsatVeldata& tmp);
 		void calculate_BB(ic::vertex_handle& vh, ic::vec3& l, ic::vec3& u);
@@ -112,7 +111,7 @@ namespace NPSAT {
 			("Scale", po::value<double>()->default_value(1.0), "Scale the domain before velocity calculation")
 			("Threshold", po::value<double>()->default_value(0.001), "Threshold of distance of IDW")
 			("FrequencyStat", po::value<int>()->default_value(20), "Frequency of printing stats")
-			("Method", po::value<int>()->default_value(1), "Method to identify nearby vertices")
+			("Nsteps", po::value<double>()->default_value(4), "Number of steps")
 			;
 
 		po::store(po::parse_config_file<char>(vf_file.c_str(), velocityFieldOptions), vm_vfo);
@@ -124,7 +123,7 @@ namespace NPSAT {
 		Scale = vm_vfo["Scale"].as<double>();
 		Threshold = vm_vfo["Threshold"].as<double>();
 		FrequencyStat = vm_vfo["FrequencyStat"].as<int>();
-		//method = vm_vfo["Method"].as<int>();
+		n_steps = vm_vfo["Nsteps"].as<double>();
 
 		std::string prefix = vm_vfo["Prefix"].as<std::string>();
 		std::string suffix;
@@ -198,7 +197,7 @@ namespace NPSAT {
 
 
 
-	void npsatVel::calcVelocity(ic::vec3& vel, std::map<int, double>& proc_map, ic::vec3& p, double& step) {
+	void npsatVel::calcVelocity(ic::vec3& vel, std::map<int, double>& proc_map, ic::vec3& p) {
 		// If this is the first point of this streamline we will carry out one additional range search
 		ll.zero();
 		uu.zero();
@@ -608,6 +607,9 @@ namespace NPSAT {
 		double t_min = -1000000000;
 		double tmp_min, tmp_max;
 
+		//ic::DEBUG::displayPVasVex(p, v);
+		//ic::DEBUG::displayVectorasVex(p1);
+
 		if (std::abs(v.x) < 0.000001){
 			tmp_min = -1000000000;
 			tmp_max =  1000000000;
@@ -661,6 +663,8 @@ namespace NPSAT {
 
 		ic::vec3 pmin = p*(1-t_min) + p1 * t_min;
 		ic::vec3 pmax = p*(1-t_max) + p1 * t_max;
+		//ic::DEBUG::displayVectorasVex(pmin);
+		//ic::DEBUG::displayVectorasVex(pmax);
 		return pmin.distance(pmax.x, pmax.y, pmax.z)/n_steps;
 	}
 
@@ -679,7 +683,7 @@ namespace NPSAT {
 		if (cout_times > FrequencyStat) {
 			//std::cout << "Search time: " << std::fixed << std::setprecision(15) << search_time/static_cast<double>(cout_times) << ", ("; // std::endl;
 			//std::cout << max_search_time << "), ";
-			std::cout << "Velocity Calc time: " << std::fixed << std::setprecision(15) << calc_time/static_cast<double>(cout_times) <<  ", (";// std::endl;
+			std::cout << "||			---Velocity Calc time: " << std::fixed << std::setprecision(15) << calc_time/static_cast<double>(cout_times) <<  ", (";// std::endl;
 			std::cout << max_calc_time << "), ";
 			std::cout << std::endl << std::flush;
 			//std::cout << "max: " << max_distance << ", ";

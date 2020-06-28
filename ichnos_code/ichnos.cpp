@@ -3,6 +3,7 @@
 #include <boost/mpi.hpp>
 
 #include <iostream>
+#include <ctime>
 
 #include "ichnos_options.h"
 #include "ichnos_structures.h"
@@ -18,6 +19,9 @@ int main(int argc, char* argv[])
     boost::mpi::environment env( argc, argv );
     boost::mpi::communicator world;
 
+
+
+
     //ICHNOS::SingletonGenerator* RG = RG->getInstance();
     //int cnt = 0;
     //std::vector<int> prop(10,0);
@@ -30,6 +34,8 @@ int main(int argc, char* argv[])
     //RG->printSeed();
 
     if (world.rank() == 0) {
+        std::time_t result = std::time(nullptr);
+        std::cout << "Ichnos started at " << std::asctime(std::localtime(&result)) << std::endl;
         std::cout << "Ichnos will run using " << world.size() << " processors" << std::endl;
         std::cout << "Good luck with that!" << std::endl;
         std::cout << "Reading data..." << std::endl;
@@ -86,6 +92,12 @@ int main(int argc, char* argv[])
     }
     
     //std::cout << world.rank() << " has " << VF.getCloudSize() << " points" << std::endl;
+    world.barrier();
+    if (world.rank() == 0){
+        std::time_t result = std::time(nullptr);
+        std::cout << "Ichnos Finished at " << std::asctime(std::localtime(&result)) << std::endl;
+    }
+
     return 0;
    }
 

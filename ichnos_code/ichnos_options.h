@@ -115,7 +115,7 @@ namespace ICHNOS {
 			if (world.rank() == 0) {
 				std::cout << "|------------------|" << std::endl;
 				std::cout << "|      ICHNOS      |" << std::endl;
-				std::cout << "| Version : 0.0.50 |" << std::endl;
+				std::cout << "| Version : 0.1.00 |" << std::endl;
 				std::cout << "|    by  giorgk    |" << std::endl;
 				std::cout << "|------------------|" << std::endl;
 			}
@@ -138,6 +138,7 @@ namespace ICHNOS {
 			("WellFile", po::value<std::string >(), "A filename with the well locations")
 			("Direction", po::value<double>()->default_value(1), "Backward or forward particle tracking")
 			("StepSize", po::value<double>()->default_value(1), "Step Size in units of length")
+			("UpdateStepSize", po::value<int>()->default_value(1), "Update step size wrt bbox")
 			("MaxStepSize", po::value<double>()->default_value(2), "Maximum Step Size in units of length")
 			("increasRatechange", po::value<double>()->default_value(1.5), "Maximum Step Size in units of length")
 			("MinStepSize", po::value<double>()->default_value(0.1), "Minimum Step Size in units of length")
@@ -209,11 +210,12 @@ namespace ICHNOS {
 					Popt.minExitStepSize = 0.1;
 				}
 			}
-			Popt.minExitStepSize = Popt.StepSize * Popt.minExitStepSize;
+			Popt.minExitStepSize = Popt.minExitStepSize;
 			Popt.ToleranceStepSize = vm_cfg["ToleranceStepSize"].as<double>();
 			Popt.MaxIterationsPerStreamline = vm_cfg["MaxIterationsPerStreamline"].as<int>();
 			Popt.MaxProcessorExchanges = vm_cfg["MaxProcessorExchanges"].as<int>();
 			Popt.ParticlesInParallel = vm_cfg["ParticlesInParallel"].as<int>(); 
+			Popt.UpdateStepSize = vm_cfg["UpdateStepSize"].as<int>(); 
 			Popt.ParticleFile = vm_cfg["PartilceFile"].as<std::string>();
 			Popt.WellFile = vm_cfg["WellFile"].as<std::string>();
 			Popt.OutputFile = vm_cfg["OutputFile"].as<std::string>();
