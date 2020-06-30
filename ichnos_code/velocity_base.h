@@ -1,7 +1,6 @@
 #pragma once
 #include <boost/mpi.hpp>
 #include <boost/program_options.hpp>
-#include <nanoflann.hpp>
 
 #include <fstream>
 #include <cstdlib>

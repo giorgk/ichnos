@@ -2,7 +2,6 @@
 
 #include <boost/mpi.hpp>
 #include <boost/program_options.hpp>
-//#include <nanoflann.hpp>
 
 #include "ichnos_structures.h"
 #include "velocity_base.h"

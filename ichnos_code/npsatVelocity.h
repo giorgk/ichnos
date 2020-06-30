@@ -3,7 +3,6 @@
 #include <boost/mpi.hpp>
 #include <boost/program_options.hpp>
 #include <boost/iterator/zip_iterator.hpp>
-//#include <nanoflann.hpp>
 
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Delaunay_triangulation_3.h>
