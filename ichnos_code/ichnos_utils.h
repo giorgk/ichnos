@@ -105,25 +105,36 @@ namespace ICHNOS {
 
 	namespace READ {
 
-		void read2DscalarField(std::string filename, cgal_Delaunay_2& T, coord_map& values_map) {
+		void readTopBot(std::string filename, PointSet2& Pset, bool top, bool bot) {
 			std::ifstream datafile(filename.c_str());
 			if (!datafile.good()) {
 				std::cout << "Can't open the file" << filename << std::endl;
 			}
 			else {
+				std::vector< std::pair<cgal_point_2,elev_data> > xy_data;
+				elev_data el_data;
 				std::string line;
-				double x, y, v;
+				double x, y;
 				while (getline(datafile, line)) {
 					if (line.size() > 1) {
 						std::istringstream inp(line.c_str());
 						inp >> x;
 						inp >> y;
-						inp >> v;
+						if (top && bot){
+							inp >> el_data.top;
+							inp >> el_data.bot;
+						}
+						else if (top){
+							inp >> el_data.top;
+						}
+						else if (bot){
+							inp >> el_data.bot;
+						}
 						cgal_point_2 p(x, y);
-						T.insert(p);
-						values_map.insert(std::make_pair(p, v));
+						xy_data.push_back(std::make_pair(p, el_data));
 					}
 				}
+				Pset.insert(xy_data.begin(), xy_data.end());
 				datafile.close();
 			}
 		}
@@ -561,13 +572,13 @@ namespace ICHNOS {
 		}
 	}
 
-	double interpolateScatter2D(cgal_Delaunay_2& T, coord_map& values, double x, double y) {
-		cgal_point_2 p(x, y);
-		std::vector<std::pair<cgal_point_2, coord_type>> coords;
-		coord_type norm = CGAL::natural_neighbor_coordinates_2(T, p, std::back_inserter(coords)).second;
-		coord_type res = CGAL::linear_interpolation(coords.begin(), coords.end(), norm, value_access(values));
-		return static_cast<double>(res);
-	}
+	//double interpolateScatter2D(cgal_Delaunay_2& T, coord_map& values, double x, double y) {
+	//	cgal_point_2 p(x, y);
+	//	std::vector<std::pair<cgal_point_2, coord_type>> coords;
+	//	coord_type norm = CGAL::natural_neighbor_coordinates_2(T, p, std::back_inserter(coords)).second;
+	//	coord_type res = CGAL::linear_interpolation(coords.begin(), coords.end(), norm, value_access(values));
+	//	return static_cast<double>(res);
+	//}
 	
 	/*double interpolateScalarTree(std::unique_ptr<nano_kd_tree_scalar>& tree, vec3 p) {
 		double thres = tree->dataset.Threshold;

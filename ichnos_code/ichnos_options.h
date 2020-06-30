@@ -60,8 +60,8 @@ namespace ICHNOS {
 		ParticleOptions Popt;
 		DomainOptions Dopt;
 		bool gatherMode = false;
-		int nproc;
-		int niter;
+		int nproc = 0;
+		int niter = 0;
 
 		VelType velocityFieldType;
 		
@@ -133,7 +133,11 @@ namespace ICHNOS {
 			("Method", po::value<std::string >(), "Method for time steping")
 			("DomainPolygon", po::value<std::string >(), "A filename that containts the vertices of the outline polygon")
 			("TopElevation", po::value<std::string >(), "A filename with the point cloud of the top elevation")
+			("TopRadius", po::value<double>()->default_value(1000), "Search Radious for top elevation")
+			("TopPower", po::value<double>()->default_value(3), "Search Power for top elevation")
 			("BottomElevation", po::value<std::string >(), "A filename with the point cloud of the bottom elevation")
+			("BottomRadius", po::value<double>()->default_value(1000), "Search Radious for bottom elevation")
+			("BottomPower", po::value<double>()->default_value(3), "Search Power for bottom elevation")
 			("PartilceFile", po::value<std::string >(), "A filename with the initial positions of particles")
 			("WellFile", po::value<std::string >(), "A filename with the well locations")
 			("Direction", po::value<double>()->default_value(1), "Backward or forward particle tracking")
@@ -232,6 +236,12 @@ namespace ICHNOS {
 			Dopt.polygonFile = vm_cfg["DomainPolygon"].as<std::string>();
 			Dopt.TopElevationFile = vm_cfg["TopElevation"].as<std::string>();
 			Dopt.BottomeElevationFile = vm_cfg["BottomElevation"].as<std::string>();
+			Dopt.TopRadius = vm_cfg["TopRadius"].as<double>();
+			Dopt.TopRadius = Dopt.TopRadius*Dopt.TopRadius;
+			Dopt.TopPower = vm_cfg["TopPower"].as<double>();
+			Dopt.BotRadius = vm_cfg["BottomRadius"].as<double>();
+			Dopt.BotRadius = Dopt.BotRadius*Dopt.BotRadius;
+			Dopt.BotPower = vm_cfg["BottomPower"].as<double>();
 
 			velocityFieldType = castVelType2Enum(vm_cfg["VelocityType"].as<std::string>());
 			if (velocityFieldType == VelType::INVALID) {
@@ -253,7 +263,7 @@ namespace ICHNOS {
 			if (vm_cmd.count("iter"))
 				niter = vm_cmd["iter"].as<int>();
 			else {
-				std::cout << "In gather mode you have to specify the number of iterations (iter) used particle tracking" << std::endl;
+				std::cout << "In gather mode you have to specify the number of iterations (iter) used in particle tracking" << std::endl;
 				return false;
 			}
 			{

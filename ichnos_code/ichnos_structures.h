@@ -23,6 +23,10 @@
 #include <CGAL/Kd_tree.h>
 #include <CGAL/Orthogonal_k_neighbor_search.h>
 
+// 2D search 
+#include <CGAL/Triangulation_vertex_base_with_info_2.h>
+#include <CGAL/Point_set_2.h>
+
 
 
 #include <boost/random/mersenne_twister.hpp>
@@ -147,6 +151,11 @@ namespace ICHNOS {
 		vec3 v;
 	};
 
+	struct elev_data{
+		double top = 0;
+		double bot = 0;
+	};
+
 	// 3D Triangulation
 	typedef CGAL::Exact_predicates_inexact_constructions_kernel	K;
 	typedef CGAL::Triangulation_vertex_base_with_info_3<NPSAT_data, K>  Vb;
@@ -155,16 +164,16 @@ namespace ICHNOS {
 	typedef CGAL::Delaunay_triangulation_3<K, Tds, CGAL::Fast_location>	cgal_Delaunay;
 	typedef cgal_Delaunay::Point cgal_point;
 	typedef cgal_Delaunay::Vertex_handle vertex_handle;
-	typedef cgal_Delaunay::Cell_handle cell_handle;
+	//typedef cgal_Delaunay::Cell_handle cell_handle;
 
 	// Interpolation
-	typedef CGAL::Delaunay_triangulation_2<K> cgal_Delaunay_2;
-	typedef CGAL::Interpolation_traits_2<K>	interp_traits;
-	typedef K::FT coord_type;
-	typedef K::Point_2 cgal_point_2;
+	//typedef CGAL::Delaunay_triangulation_2<K> cgal_Delaunay_2;
+	//typedef CGAL::Interpolation_traits_2<K>	interp_traits;
+	//typedef K::FT coord_type;
+	//
 
-	typedef std::map<cgal_point_2, coord_type, K::Less_xy_2> coord_map;
-	typedef CGAL::Data_access<coord_map>	value_access;
+	//typedef std::map<cgal_point_2, coord_type, K::Less_xy_2> coord_map;
+	//typedef CGAL::Data_access<coord_map>	value_access;
 
 	//dD Spatial Searching
 	typedef K::Point_3	cgal_point_3;
@@ -173,6 +182,13 @@ namespace ICHNOS {
 	typedef CGAL::Search_traits_adapter<pnt_int, CGAL::Nth_of_tuple_property_map<0,pnt_int>, Traits_base> search_traits;
 	typedef CGAL::Fuzzy_iso_box<search_traits> Fuzzy_iso_box;
 	typedef CGAL::Kd_tree<search_traits> search_tree;
+
+	//2D searching 
+	typedef CGAL::Triangulation_vertex_base_with_info_2<elev_data, K>   Vb2D;
+	typedef CGAL::Triangulation_data_structure_2<Vb2D>  Tds2D;
+	typedef CGAL::Point_set_2<K,Tds2D>::Vertex_handle Vertex_handle2D;
+	typedef CGAL::Point_set_2<K,Tds2D>  PointSet2;
+	typedef K::Point_2 cgal_point_2;
 
 
 
@@ -395,6 +411,10 @@ namespace ICHNOS {
 		std::string polygonFile;
 		std::string TopElevationFile;
 		std::string BottomeElevationFile;
+		double TopRadius;
+		double BotRadius;
+		double TopPower;
+		double BotPower;
 	};
 
 
@@ -689,7 +709,6 @@ namespace ICHNOS {
 			//return rint;
 		}
 	};
-
 }
 
 
