@@ -402,7 +402,7 @@ namespace ICHNOS {
 	}
 
 	bool ParticleTrace::RK45Step(const Particle& P, vec3& pnew, ExitReason& er) {
-		// DEBUG::displayParitcleasVex(P, true);
+		//DEBUG::displayParticleasVex(P, true);
 		// See RK2Step
 		int proc = world.rank();
 		vec3 v_m, p2, p3, p4, p5, p6, v2, v3, v4, v5, v6, yn, zn;
@@ -415,7 +415,7 @@ namespace ICHNOS {
 		int istep = 0;
 		p2 = v1.normalize() * CF[istep][0] * ssdir + P.getP();
 		er = CheckNewPointAndCalcVelocity(p2, v2, proc);
-		// DEBUG::displayPVasVex(p2, v2);
+		//DEBUG::displayPVasVex(p2, v2);
 		if (v2.isZero()) { return false; }
 		if (adaptStepSize > popt.minExitStepSize)
 			if (er == ExitReason::EXIT_SIDE || er == ExitReason::EXIT_BOTTOM || er == ExitReason::EXIT_TOP) {
@@ -443,7 +443,7 @@ namespace ICHNOS {
 		v_m = v1 * CF[istep][1] + v2 * CF[istep][2] + v3 * CF[istep][3];
 		p4 = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
 		er = CheckNewPointAndCalcVelocity(p4, v4, proc);
-		// DEBUG::displayPVasVex(p4, v4);
+		//DEBUG::displayPVasVex(p4, v4);
 		if (v4.isZero()) return false;
 
 		// Step 4 ----------------------------
@@ -451,7 +451,7 @@ namespace ICHNOS {
 		v_m = v1 * CF[istep][1] + v2 * CF[istep][2] + v3 * CF[istep][3] + v4 * CF[istep][4];
 		p5 = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
 		er = CheckNewPointAndCalcVelocity(p5, v5, proc);
-		// DEBUG::displayPVasVex(p5, v5);
+		//DEBUG::displayPVasVex(p5, v5);
 		if (v5.isZero()) return false;
 
 		// Step 5 ----------------------------
@@ -459,7 +459,7 @@ namespace ICHNOS {
 		v_m = v1 * CF[istep][1] + v2 * CF[istep][2] + v3 * CF[istep][3] + v4 * CF[istep][4] + v5 * CF[istep][5];
 		p6 = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
 		er = CheckNewPointAndCalcVelocity(p6, v6, proc);
-		// DEBUG::displayPVasVex(p6, v6);
+		//DEBUG::displayPVasVex(p6, v6);
 		if (v6.isZero()) return false;
 		if ( adaptStepSize > popt.minExitStepSize )
 			if (er == ExitReason::EXIT_SIDE || er == ExitReason::EXIT_BOTTOM || er == ExitReason::EXIT_TOP ) {
@@ -472,11 +472,11 @@ namespace ICHNOS {
 		istep++;
 		v_m = v1 * CF[istep][1] + v3 * CF[istep][2] + v4 * CF[istep][3] + v5 * CF[istep][4];
 		yn = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
-		// DEBUG::displayVectorasVex(yn);
+		//DEBUG::displayVectorasVex(yn);
 		istep++;
 		v_m = v1 * CF[istep][1] + v3 * CF[istep][2] + v4 * CF[istep][3] + v5 * CF[istep][4] + v6 * CF[istep][5];
 		zn = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
-		// DEBUG::displayVectorasVex(zn);
+		//DEBUG::displayVectorasVex(zn);
 		double R = (yn - zn).len();
 		double q = 0.84 * pow(popt.ToleranceStepSize / R, 0.25);
 

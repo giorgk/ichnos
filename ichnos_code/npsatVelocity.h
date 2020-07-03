@@ -75,7 +75,7 @@ namespace NPSAT {
 		double n_steps = 4.0;
 		ic::vec3 ll,uu,pp,vv;
 
-		void add_interpolationVertex(std::map<int, npsatVeldata>& nids, ic::vec3& lp, ic::vec3& up, ic::vertex_handle& vh, ic::vec3& p, npsatVeldata& tmp);
+		//void add_interpolationVertex(std::map<int, npsatVeldata>& nids, ic::vec3& lp, ic::vec3& up, ic::vertex_handle& vh, ic::vec3& p, npsatVeldata& tmp);
 		void calculate_BB(ic::vertex_handle& vh, ic::vec3& l, ic::vec3& u);
 		double calculate_step(ic::vec3& p, ic::vec3& v, ic::vec3& l, ic::vec3& u);
 		void calculate_search_box(ic::vec3& p, ic::vec3& l, ic::vec3& u);
@@ -111,6 +111,8 @@ namespace NPSAT {
 			("Threshold", po::value<double>()->default_value(0.001), "Threshold of distance of IDW")
 			("FrequencyStat", po::value<int>()->default_value(20), "Frequency of printing stats")
 			("Nsteps", po::value<double>()->default_value(4), "Number of steps")
+			("InitDiameter", po::value<double>()->default_value(5000), "Initial diameter")
+			("InitRatio", po::value<double>()->default_value(1), "Initial ratio")
 			;
 
 		po::store(po::parse_config_file<char>(vf_file.c_str(), velocityFieldOptions), vm_vfo);
@@ -123,6 +125,8 @@ namespace NPSAT {
 		Threshold = vm_vfo["Threshold"].as<double>();
 		FrequencyStat = vm_vfo["FrequencyStat"].as<int>();
 		n_steps = vm_vfo["Nsteps"].as<double>();
+		initial_diameter = vm_vfo["InitDiameter"].as<double>();
+		initial_ratio = vm_vfo["InitRatio"].as<double>();
 
 		std::string prefix = vm_vfo["Prefix"].as<std::string>();
 		std::string suffix;

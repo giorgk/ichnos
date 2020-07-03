@@ -4,6 +4,7 @@
 #include <string>
 
 #include <boost/geometry/algorithms/assign.hpp>
+#include <boost/math/constants/constants.hpp>
 
 #include "ichnos_structures.h"
 
@@ -53,18 +54,19 @@ namespace ICHNOS {
 	}
 
 	void distributeParticlesAroundWellLayered(int eid, double x, double y, double top, double bot, std::vector<Streamline>& S, WellOptions wopt){
+		double pi = boost::math::constants::pi<double>();
 		std::vector<double> zval;
 		linspace(bot, top, wopt.Nlayer, zval);
 		int Nppl = wopt.Nparticles/wopt.Nlayer;
-		double rads = (2.0*M_PI)/Nppl;
+		double rads = (2.0*pi)/Nppl;
 		std::vector<double> rads1; 
-		linspace(0.0, 2.0*M_PI, wopt.Nlayer, rads1);
+		linspace(0.0, 2.0*pi, wopt.Nlayer, rads1);
 		std::vector<std::vector<double> > radpos;
 
 		for (unsigned int i = 0; i < static_cast<unsigned int>(wopt.Nlayer); ++i){
 			std::vector<double> tmp;
 			linspace(0 + rads/2.0 + rads1[i],
-								2.0*M_PI - rads/2.0 + rads1[i], Nppl, tmp);
+								2.0*pi - rads/2.0 + rads1[i], Nppl, tmp);
 			radpos.push_back(tmp);
 		}
 		
@@ -224,6 +226,7 @@ namespace ICHNOS {
 						inp >> npsat_data.v.y;
 						inp >> npsat_data.v.z;
 						inp >> npsat_data.proc;
+						npsat_data.proc = 0;
 						inp >> npsat_data.diameter;
 						inp >> npsat_data.ratio;
 						npsat_data.v = npsat_data.v * VelocityMultiplier;
@@ -473,9 +476,9 @@ namespace ICHNOS {
 			log_file << pp.getPid() << " "
 				<< S.getEid() << " "
 				<< S.getSid() << " "
-				<< std::setprecision(3) << std::fixed
+				<< std::setprecision(2) << std::fixed
 				<< pp.getP().x << " " << pp.getP().y << " " << pp.getP().z << " "
-				<< std::setprecision(4) << std::fixed
+				<< std::setprecision(6) << std::fixed
 				<< pp.getV().x << " " << pp.getV().y << " " << pp.getV().z << " "
 				/*<< pp.getAge()*/ << std::endl;
 		}
