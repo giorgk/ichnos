@@ -20,7 +20,7 @@ find_package(MPI REQUIRED)
 find_package( CGAL QUIET COMPONENTS  )
 include( ${CGAL_USE_FILE} )
 
-find_package(Boost 1.69 REQUIRED COMPONENTS mpi serialization program_options system)
+find_package(Boost 1.58 REQUIRED COMPONENTS mpi serialization program_options system)
 INCLUDE_DIRECTORIES(${MPI_INCLUDE_PATH} ${Boost_INCLUDE_DIRS})
 
 
