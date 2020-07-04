@@ -226,7 +226,7 @@ namespace ICHNOS {
 						inp >> npsat_data.v.y;
 						inp >> npsat_data.v.z;
 						inp >> npsat_data.proc;
-						npsat_data.proc = 0;
+						//npsat_data.proc = 0;
 						inp >> npsat_data.diameter;
 						inp >> npsat_data.ratio;
 						npsat_data.v = npsat_data.v * VelocityMultiplier;
