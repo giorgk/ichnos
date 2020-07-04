@@ -195,7 +195,9 @@ namespace ICHNOS {
 			trace_iter++;
 			//std::cout << trace_iter << std::endl;
 			if (trace_iter > popt.MaxProcessorExchanges) {
-				std::cout << "@%$^@&#$^@ exit after MaxProcessorExchanges was reached: trace_iter = " << trace_iter << std::endl;
+				if (my_rank == 0) {
+					std::cout << "@%$^@&#$^@ exit after MaxProcessorExchanges was reached: trace_iter = " << trace_iter << std::endl;
+				}
 				break;
 			}
 		}
