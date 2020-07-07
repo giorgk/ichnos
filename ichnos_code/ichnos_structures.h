@@ -39,10 +39,6 @@
 
 
 namespace ICHNOS {
-
-	
-
-
 	/**
 	 * @brief This is a structure to hold parameters for the distribution of 
 	 * particles around the wells
@@ -414,6 +410,8 @@ namespace ICHNOS {
 		double BotRadius;
 		double TopPower;
 		double BotPower;
+		std::string processorDomainFile;
+		int myRank;
 	};
 
 

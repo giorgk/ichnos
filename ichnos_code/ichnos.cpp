@@ -2,6 +2,8 @@
 //
 #define _CRT_SECURE_NO_WARNINGS
 
+//const int dbg_rank = 12;
+
 #include <boost/mpi.hpp>
 
 #include <iostream>

@@ -293,7 +293,7 @@ namespace ICHNOS {
 			}
 		}*/
 
-		void readPolygonDomain(std::string filename, boostPolygon& polygon) {
+		void readProcessorDomain(std::string filename, boostPolygon& polygon, int myRank) {
 			std::ifstream datafile(filename.c_str());
 			if (!datafile.good()) {
 				std::cout << "Can't open the file" << filename << std::endl;
@@ -301,19 +301,41 @@ namespace ICHNOS {
 			else {
 				std::vector<boostPoint> polygonPoints;
 				std::string line;
+				getline(datafile, line);
+				int Npoly, id, nVerts;
 				double x, y;
-				while (getline(datafile, line)) {
+				{
 					std::istringstream inp(line.c_str());
-					inp >> x;
-					inp >> y;
-					polygonPoints.push_back(boostPoint(x, y));
+					inp >> Npoly;
+				}
+				bool myPolyFound = false;
+				for (int i = 0; i < Npoly; ++i) {
+					getline(datafile, line);
+					{
+						std::istringstream inp(line.c_str());
+						inp >> id;
+						inp >> nVerts;
+					}
+					for (int j = 0; j < nVerts; ++j) {
+						getline(datafile, line);
+						if (id == myRank) {
+							myPolyFound = true;
+							std::istringstream inp(line.c_str());
+							inp >> x;
+							inp >> y;
+							polygonPoints.push_back(boostPoint(x, y));
+						}
+					}
+					if (myPolyFound) {
+						boost::geometry::assign_points(polygon, polygonPoints);
+						boost::geometry::correct(polygon);
+						break;
+					}
 				}
 				datafile.close();
-
-				boost::geometry::assign_points(polygon, polygonPoints);
-				boost::geometry::correct(polygon);
 			}
 		}
+
 
 		bool readParticleFile(std::string filename, std::vector <Streamline>& S) {
 			std::ifstream datafile(filename.c_str());
@@ -327,7 +349,7 @@ namespace ICHNOS {
 				int eid, sid;
 				vec3 pp;
 				while (getline(datafile, line)) {
-					if (line.size() > 1)
+					if (line.size() > 3 && !line.empty())
 						if (comment.compare(0, 1, line, 0, 1) == 0)
 							continue;
 

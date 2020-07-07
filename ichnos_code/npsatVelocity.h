@@ -136,7 +136,7 @@ namespace NPSAT {
 		else
 			suffix = ".ich";
 
-		std::string filename = prefix + ic::num2Padstr(world.rank(), leadZeros) + suffix;
+		std::string filename = prefix + ic::num2Padstr(/*dbg_rank*/world.rank(), leadZeros) + suffix;
 		//std::vector<std::pair<ic::cgal_point, ic::NPSAT_data>> npsat_data;
 		//ic::READ::readNPSATVelocity(filename, npsat_data, multiplier);
 		

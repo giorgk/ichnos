@@ -10,10 +10,13 @@ namespace ICHNOS {
 	public:
 		DomainBase(DomainOptions& Dopt_in);
 		virtual void bisInPolygon(vec3& p, bool& tf) {};
+		virtual void bisInProcessorPolygon(vec3 p, bool& tf) {};
 		virtual void getTopBottomElevation(vec3 p, double& top, double& bottom) {};
 	protected:
 		multiPoly domainPoly;
 		DomainOptions Dopt;
+		boostPolygon ProcessorDomain;
+		bool useProcessorDomain;
 	};
 
 	DomainBase::DomainBase(DomainOptions& Dopt_in)
@@ -27,6 +30,7 @@ namespace ICHNOS {
 		Domain2D(DomainOptions& Dopt_in);
 
 		void bisInPolygon(vec3& p, bool& tf);
+		void bisInProcessorPolygon(vec3 p, bool& tf);
 		void getTopBottomElevation(vec3 p, double& top, double& bottom);
 
 	private:
@@ -55,6 +59,13 @@ namespace ICHNOS {
 		DomainBase(Dopt_in)
 	{
 		domainPoly.readfromFile(Dopt.polygonFile);
+		if (Dopt.processorDomainFile.empty()) {
+			useProcessorDomain = false;
+		}
+		else {
+			READ::readProcessorDomain(Dopt.processorDomainFile, ProcessorDomain, /*dbg_rank*/ Dopt.myRank);
+			useProcessorDomain = true;
+		}
 		//READ::readPolygonDomain(Dopt.OutlineFile, outlinePoly);
 		bool getTopFromFile;
 		bool getBotFromFile;
@@ -115,6 +126,13 @@ namespace ICHNOS {
 		//	tf = true;
 		//else
 		//	tf = false;
+	}
+
+	void Domain2D::bisInProcessorPolygon(vec3 p, bool& tf) {
+		if (useProcessorDomain)
+			tf = boost::geometry::within(boostPoint(p.x, p.y), ProcessorDomain);
+		else
+			tf = true;
 	}
 
 	void Domain2D::getTopBottomElevation(vec3 p, double& top, double& bottom) {

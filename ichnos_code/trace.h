@@ -138,7 +138,7 @@ namespace ICHNOS {
 	}
 
 	void ParticleTrace::traceOuter(std::vector<Streamline>& S, int iter, int ireal) {
-		int my_rank = world.rank();
+		int my_rank = /*dbg_rank;*/ world.rank();
 		int n_proc = world.size();
 
 		const std::string log_file_name = (popt.OutputFile + "_ireal_" + num2Padstr(ireal, 4) + "_iter_" + num2Padstr(iter, 4) + "_proc_" + num2Padstr(my_rank, 4) + ".traj");
@@ -151,6 +151,10 @@ namespace ICHNOS {
 		while (true) {
 			Snew.clear();
 			for (unsigned int i = 0; i < S.size(); ++i) {
+				bool tf;
+				Domain.bisInProcessorPolygon(S[i].getLastParticle().getP(),tf);
+				if (!tf)
+					continue;
 					
 				ExitReason er = traceInner(S[i]);
 
@@ -223,9 +227,9 @@ namespace ICHNOS {
 		VF.calcVelocity(v, proc_map, p);
 		if (v.isInvalid())
 			return ExitReason::FAR_AWAY;
-		proc = VF.calcProcID(proc_map);
-		if (proc != world.rank())
-			return ExitReason::FIRST_POINT_GHOST;
+		//proc = VF.calcProcID(proc_map);
+		//if (proc != world.rank())
+		//	return ExitReason::FIRST_POINT_GHOST;
 
 		// If the particle id is 0 then we have to assign velocity
 		// If its not zero that means that the velocity has been calculated by the processor
@@ -254,7 +258,7 @@ namespace ICHNOS {
 				//S.getLastParticle().displayAsVEX(true);
 				// In the unlike event that the velocity of the point is indeed zero
 				// we can avoid unnessecary iterations
-				if (v.isZero() & er == ExitReason::NO_EXIT)
+				if (v.isZero() & (er == ExitReason::NO_EXIT))
 					return ExitReason::STUCK;
 			}
 

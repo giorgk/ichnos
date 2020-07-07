@@ -132,6 +132,7 @@ namespace ICHNOS {
 			("Stuckiter", po::value<int>()->default_value(10), "After Stuckiter exit particle tracking")
 			("Method", po::value<std::string >(), "Method for time steping")
 			("DomainPolygon", po::value<std::string >(), "A filename that containts the vertices of the outline polygon")
+			("ProcessorPolygon", po::value<std::string >(), "A filename that containts the coordinates of each processor polygon")
 			("TopElevation", po::value<std::string >(), "A filename with the point cloud of the top elevation")
 			("TopRadius", po::value<double>()->default_value(1000), "Search Radious for top elevation")
 			("TopPower", po::value<double>()->default_value(3), "Search Power for top elevation")
@@ -234,6 +235,7 @@ namespace ICHNOS {
 
 			// Domain options
 			Dopt.polygonFile = vm_cfg["DomainPolygon"].as<std::string>();
+			Dopt.processorDomainFile = vm_cfg["ProcessorPolygon"].as<std::string>();
 			Dopt.TopElevationFile = vm_cfg["TopElevation"].as<std::string>();
 			Dopt.BottomeElevationFile = vm_cfg["BottomElevation"].as<std::string>();
 			Dopt.TopRadius = vm_cfg["TopRadius"].as<double>();
@@ -242,6 +244,8 @@ namespace ICHNOS {
 			Dopt.BotRadius = vm_cfg["BottomRadius"].as<double>();
 			Dopt.BotRadius = Dopt.BotRadius*Dopt.BotRadius;
 			Dopt.BotPower = vm_cfg["BottomPower"].as<double>();
+			Dopt.myRank = world.rank();
+
 
 			velocityFieldType = castVelType2Enum(vm_cfg["VelocityType"].as<std::string>());
 			if (velocityFieldType == VelType::INVALID) {

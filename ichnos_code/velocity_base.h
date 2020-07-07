@@ -38,7 +38,7 @@ namespace ICHNOS {
 	{}
 
 	bool velocityField::bIsInGhostArea(std::map<int, double> proc_map) {
-		std::map<int, double>::iterator it = proc_map.find(world.rank());
+		std::map<int, double>::iterator it = proc_map.find(/*dbg_rank*/world.rank());
 		if (it != proc_map.end()) {
 			if (it->second > OwnerThreshold)
 				return false;
