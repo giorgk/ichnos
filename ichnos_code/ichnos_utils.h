@@ -1002,7 +1002,9 @@ namespace ICHNOS {
 		 }
 
 		void Send_receive_streamlines(std::vector<Streamline>& Ssend, 
-			std::vector<Streamline>& Srecv, boost::mpi::communicator& world) {
+			std::vector<Streamline>& Srecv, 
+			boostPolygon& thisdomain,
+			boost::mpi::communicator& world) {
 			int my_rank = world.rank();
 			int n_proc = world.size();
 			Srecv.clear();
@@ -1015,7 +1017,7 @@ namespace ICHNOS {
 			std::vector<std::vector<double> > vz(n_proc);
 			std::vector<std::vector<int> > E_id(n_proc);
 			std::vector<std::vector<int> > S_id(n_proc);
-			std::vector<std::vector<int> > proc_id(n_proc);
+			//std::vector<std::vector<int> > proc_id(n_proc);
 			std::vector<std::vector<int> > p_id(n_proc);
 			std::vector<std::vector<int> > Nstuck(n_proc);
 			std::vector<std::vector<double> > BBlx(n_proc);
@@ -1034,7 +1036,7 @@ namespace ICHNOS {
 				vz[my_rank].push_back(Ssend[i].getLastParticle().getV().z);
 				E_id[my_rank].push_back(Ssend[i].getEid());
 				S_id[my_rank].push_back(Ssend[i].getSid());
-				proc_id[my_rank].push_back(Ssend[i].getLastParticle().getProc());
+				//proc_id[my_rank].push_back(Ssend[i].getLastParticle().getProc());
 				p_id[my_rank].push_back(Ssend[i].getLastParticle().getPid());
 				Nstuck[my_rank].push_back(Ssend[i].StuckIter());
 				BBlx[my_rank].push_back(Ssend[i].getBBlow().x);
@@ -1068,7 +1070,7 @@ namespace ICHNOS {
 			MPI::Send_receive_data<double>(vz, data_per_proc, my_rank, world, MPI_DOUBLE);
 			MPI::Send_receive_data<int>(E_id, data_per_proc, my_rank, world, MPI_INT);
 			MPI::Send_receive_data<int>(S_id, data_per_proc, my_rank, world, MPI_INT);
-			MPI::Send_receive_data<int>(proc_id, data_per_proc, my_rank, world, MPI_INT);
+			//MPI::Send_receive_data<int>(proc_id, data_per_proc, my_rank, world, MPI_INT);
 			MPI::Send_receive_data<int>(p_id, data_per_proc, my_rank, world, MPI_INT);
 			MPI::Send_receive_data<int>(Nstuck, data_per_proc, my_rank, world, MPI_INT);
 			MPI::Send_receive_data<double>(BBlx, data_per_proc, my_rank, world, MPI_DOUBLE);
@@ -1099,13 +1101,13 @@ namespace ICHNOS {
 				if (i == my_rank)
 					continue;
 				for (unsigned int j = 0; j < px[i].size(); ++j) {
-					if (proc_id[i][j] == my_rank) {
+					if (boost::geometry::within(boostPoint(px[i][j], py[i][j]), thisdomain )) {
 						vec3 p = vec3(px[i][j], py[i][j], pz[i][j]);
 						vec3 v = vec3(vx[i][j], vy[i][j], vz[i][j]);
 						vec3 bl = vec3(BBlx[i][j], BBly[i][j], BBlz[i][j]);
 						vec3 bu = vec3(BBux[i][j], BBuy[i][j], BBuz[i][j]);
 						Streamline Stmp = Streamline(E_id[i][j], S_id[i][j],
-							Particle(p, v, p_id[i][j], proc_id[i][j]),
+							Particle(p, v, p_id[i][j] /*, proc_id[i][j]*/),
 							bl, bu, Nstuck[i][j]);
 						Srecv.push_back(Stmp);
 					}

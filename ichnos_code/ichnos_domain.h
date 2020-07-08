@@ -11,12 +11,14 @@ namespace ICHNOS {
 		DomainBase(DomainOptions& Dopt_in);
 		virtual void bisInPolygon(vec3& p, bool& tf) {};
 		virtual void bisInProcessorPolygon(vec3 p, bool& tf) {};
+		virtual void bisInExpandedPolygon(vec3 p, bool& tf) {};
 		virtual void getTopBottomElevation(vec3 p, double& top, double& bottom) {};
+		boostPolygon getProcessorDomain();
 	protected:
 		multiPoly domainPoly;
 		DomainOptions Dopt;
 		boostPolygon ProcessorDomain;
-		bool useProcessorDomain;
+		boostPolygon ExpandedDomain;
 	};
 
 	DomainBase::DomainBase(DomainOptions& Dopt_in)
@@ -24,6 +26,9 @@ namespace ICHNOS {
 		Dopt(Dopt_in)
 	{}
 
+	boostPolygon DomainBase::getProcessorDomain() {
+		return ProcessorDomain;
+	}
 
 	class Domain2D : public DomainBase {
 	public:
@@ -31,6 +36,7 @@ namespace ICHNOS {
 
 		void bisInPolygon(vec3& p, bool& tf);
 		void bisInProcessorPolygon(vec3 p, bool& tf);
+		void bisInExpandedPolygon(vec3 p, bool& tf);
 		void getTopBottomElevation(vec3 p, double& top, double& bottom);
 
 	private:
@@ -59,13 +65,11 @@ namespace ICHNOS {
 		DomainBase(Dopt_in)
 	{
 		domainPoly.readfromFile(Dopt.polygonFile);
-		if (Dopt.processorDomainFile.empty()) {
-			useProcessorDomain = false;
-		}
-		else {
-			READ::readProcessorDomain(Dopt.processorDomainFile, ProcessorDomain, /*dbg_rank*/ Dopt.myRank);
-			useProcessorDomain = true;
-		}
+		
+		READ::readProcessorDomain(Dopt.processorDomainFile, ProcessorDomain, /*dbg_rank*/ Dopt.myRank);
+		READ::readProcessorDomain(Dopt.expandedDomainFile, ExpandedDomain, Dopt.myRank);
+
+		
 		//READ::readPolygonDomain(Dopt.OutlineFile, outlinePoly);
 		bool getTopFromFile;
 		bool getBotFromFile;
@@ -129,10 +133,11 @@ namespace ICHNOS {
 	}
 
 	void Domain2D::bisInProcessorPolygon(vec3 p, bool& tf) {
-		if (useProcessorDomain)
-			tf = boost::geometry::within(boostPoint(p.x, p.y), ProcessorDomain);
-		else
-			tf = true;
+		tf = boost::geometry::within(boostPoint(p.x, p.y), ProcessorDomain);
+	}
+
+	void Domain2D::bisInExpandedPolygon(vec3 p, bool& tf) {
+		tf = boost::geometry::within(boostPoint(p.x, p.y), ExpandedDomain);
 	}
 
 	void Domain2D::getTopBottomElevation(vec3 p, double& top, double& bottom) {

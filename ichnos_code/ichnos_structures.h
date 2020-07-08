@@ -411,6 +411,7 @@ namespace ICHNOS {
 		double TopPower;
 		double BotPower;
 		std::string processorDomainFile;
+		std::string expandedDomainFile;
 		int myRank;
 	};
 
@@ -418,8 +419,8 @@ namespace ICHNOS {
 	class Particle {
 	public:
 		Particle(vec3 p);
-		Particle(vec3 p, vec3 v, int pid, int proc);
-		Particle(vec3 p, vec3 v, int proc,  Particle prev);
+		Particle(vec3 p, vec3 v, int pid/*, int proc*/);
+		Particle(vec3 p, vec3 v, /*int proc,*/  Particle prev);
 		vec3 getP() const { return p; }
 		vec3 getV() const { return v; }
 		//double getAge() const { return age; }
@@ -427,14 +428,14 @@ namespace ICHNOS {
 		void SetV(vec3 vel) { v = vel; }
 		int getPid() const { return pid; }
 		void displayAsVEX(bool printAttrib);
-		void SetProc(int procId) { proc = procId; }
-		int getProc() { return proc; }
+		//void SetProc(int procId) { proc = procId; }
+		//int getProc() { return proc; }
 	private:
 		int pid;
 		vec3 p;
 		vec3 v;
 		//double age;
-		int proc;
+		//int proc;
 	};
 
 	Particle::Particle(vec3 p)
@@ -443,24 +444,24 @@ namespace ICHNOS {
 	{
 		pid = 0;
 		//age = 0;
-		proc = -9;
+		//proc = -9;
 	}
 
-	Particle::Particle(vec3 p, vec3 v, int pid, int proc)
+	Particle::Particle(vec3 p, vec3 v, int pid/*, int proc*/)
 		:
 		pid(pid),
 		p(p),
-		v(v),
-		proc(proc)
+		v(v)
+		//proc(proc)
 	{
 		//age = 0;
 	}
 
-	Particle::Particle(vec3 p, vec3 v, int proc, Particle prev)
+	Particle::Particle(vec3 p, vec3 v, /*int proc,*/ Particle prev)
 		:
 		p(p),
-		v(v),
-		proc(proc)
+		v(v)
+		//proc(proc)
 	{
 		pid = prev.getPid() + 1;
 		//double d = (p - prev.getP()).len();
