@@ -125,6 +125,9 @@ namespace ICHNOS {
 						if (top && bot){
 							inp >> el_data.top;
 							inp >> el_data.bot;
+							if (el_data.top < el_data.bot) {
+								std::cerr << "Point:(" << x << "," << y << ") has lower top" << std::endl;
+							}
 						}
 						else if (top){
 							inp >> el_data.top;

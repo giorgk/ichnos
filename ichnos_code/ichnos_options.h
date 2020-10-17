@@ -16,6 +16,7 @@ namespace ICHNOS {
 	//	Cloud3d,
 		IWFM,
 		NPSAT,
+		STOCH,
 		INVALID
 	};
 
@@ -25,6 +26,7 @@ namespace ICHNOS {
 		//vtMap.insert(std::pair<VelType, std::string>(VelType::Cloud3d, "Cloud3d"));
 		vtMap.insert(std::pair<VelType, std::string>(VelType::IWFM, "IWFM"));
 		vtMap.insert(std::pair<VelType, std::string>(VelType::NPSAT, "NPSAT"));
+		vtMap.insert(std::pair<VelType, std::string>(VelType::STOCH, "STOCH"));
 		it = vtMap.find(vt);
 		if (it != vtMap.end())
 			return it->second;
@@ -39,6 +41,7 @@ namespace ICHNOS {
 		//vtMap.insert(std::pair<std::string, VelType>("Cloud3d", VelType::Cloud3d));
 		vtMap.insert(std::pair<std::string, VelType>("IWFM", VelType::IWFM));
 		vtMap.insert(std::pair<std::string, VelType>("NPSAT", VelType::NPSAT));
+		vtMap.insert(std::pair<std::string, VelType>("STOCH", VelType::STOCH));
 		it = vtMap.find(vt);
 		if (it != vtMap.end())
 			return it->second;

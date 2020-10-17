@@ -178,6 +178,8 @@ namespace ICHNOS {
 	typedef CGAL::Fuzzy_iso_box<search_traits> Fuzzy_iso_box;
 	typedef CGAL::Kd_tree<search_traits> search_tree;
 
+	
+
 	//2D searching 
 	typedef CGAL::Triangulation_vertex_base_with_info_2<elev_data, K>   Vb2D;
 	typedef CGAL::Triangulation_data_structure_2<Vb2D>  Tds2D;
@@ -185,6 +187,83 @@ namespace ICHNOS {
 	typedef CGAL::Point_set_2<K,Tds2D>  PointSet2;
 	typedef K::Point_2 cgal_point_2;
 
+
+	// Nstates Nmonths Nvelocities
+	typedef std::vector<std::vector<std::vector<vec3>>> stoch_vel;
+
+	class Stochastic_Velocity {
+	public:
+		Stochastic_Velocity();
+		Stochastic_Velocity(int nstates, int nperiods);
+		void initStatesPeriods(int nstates, int nperiods);
+		void initStatesPeriods();
+		void addValue(int istate, int iperiod, vec3 value);
+		int nValues(int istate, int iperiod);
+		void getValue(int istate, int iperiod, int r, vec3& value);
+
+	private:
+		int Nstates;
+		int Nperiods;
+		stoch_vel VelocityField;
+	};
+
+	Stochastic_Velocity::Stochastic_Velocity()
+		:
+		Nstates(-9),
+		Nperiods(-9)
+	{}
+
+	Stochastic_Velocity::Stochastic_Velocity(int nstates, int nperiods)
+		:
+		Nstates(nstates),
+		Nperiods(nperiods)
+	{}
+
+	void Stochastic_Velocity::initStatesPeriods() {
+		VelocityField.clear();
+		std::vector< std::vector<vec3> > mon_vec;
+		std::vector<vec3> vel_vec;
+		for (int i = 0; i < Nperiods; i++) {
+			mon_vec.push_back(vel_vec);
+		}
+		for (int i = 0; i < Nstates; i++) {
+			VelocityField.push_back(mon_vec);
+		}
+	}
+
+	void Stochastic_Velocity::initStatesPeriods(int nstates, int nperiods) {
+		Nstates = nstates;
+		Nperiods = nperiods;
+		initStatesPeriods();
+	}
+
+	void Stochastic_Velocity::addValue(int istate, int iperiod, vec3 value) {
+		VelocityField[istate][iperiod].push_back(value);
+	}
+	int Stochastic_Velocity::nValues(int istate, int iperiod) {
+		return static_cast<int>(VelocityField[istate][iperiod].size());
+	}
+
+	void Stochastic_Velocity::getValue(int istate, int iperiod, int r, vec3& value) {
+		value = VelocityField[istate][iperiod][r];
+	}
+
+
+
+	// Data structure for stochastic simulation
+	struct STOCH_data {
+		int proc = -9;
+		int id = -9;
+		double diameter = 0;
+		double ratio = 0;
+		Stochastic_Velocity v;
+	};
+
+	// Stochastic tree
+	typedef boost::tuple<cgal_point_3, STOCH_data> pnt_stoch;
+	typedef CGAL::Search_traits_adapter<pnt_stoch, CGAL::Nth_of_tuple_property_map<0, pnt_stoch>, Traits_base> search_traits_stoch;
+	typedef CGAL::Fuzzy_iso_box<search_traits_stoch> Fuzzy_iso_box_stoch;
+	typedef CGAL::Kd_tree<search_traits_stoch> search_tree_stoch;
 
 
 	///**
@@ -690,9 +769,11 @@ namespace ICHNOS {
 		float randomNumber() {
 			return uniformDistribution(generetor);
 		}
+
 		float randomNumber(float min, float max) {
 			return min + (max - min) * randomNumber();
 		}
+
 		int randomNumber(int min, int max) {
 			return static_cast<int>(randomNumber(static_cast<float>(min), static_cast<float>(max)));
 			//float r;
@@ -707,6 +788,100 @@ namespace ICHNOS {
 			//return rint;
 		}
 	};
+
+	class TransitionProbabilityMatrix {
+	public:
+		TransitionProbabilityMatrix() {};
+		bool readData(std::string filename);
+		void setNstates(int n);
+		int nextState(int previousState, vec3 p, double r);
+	private:
+		int Nstates = 0;
+		int Nmatrices = 0;
+		std::vector<boostPolygon> TPMpolygons;
+		std::vector<std::vector<std::vector<double>>> TPMatrices;
+	};
+
+	void TransitionProbabilityMatrix::setNstates(int n) {
+		Nstates = n;
+	}
+
+	int TransitionProbabilityMatrix::nextState(int previousState, vec3 p, double r) {
+		int ipoly = 0;
+		int newstate = 0;
+		for (int i = 0; i < Nmatrices; i++) {
+			bool tf = boost::geometry::within(boostPoint(p.x, p.y), TPMpolygons[i]);
+			if (tf) {
+				ipoly = i;
+				break;
+			}
+		}
+
+		for (int i = 0; i < Nstates; i++) {
+			if (r < TPMatrices[ipoly][previousState][i]){
+				newstate = i;
+				break;
+			}
+		}
+		return newstate;
+	}
+
+	bool TransitionProbabilityMatrix::readData(std::string filename) {
+		if (Nstates == 0) {
+			std::cout << "The number ofstates is zero" << std::endl;
+			return false;
+		}
+
+		std::ifstream datafile(filename.c_str());
+		if (!datafile.good()) {
+			std::cout << "Can't open the file " << filename << std::endl;
+			return false;
+		}
+		else {
+			std::string line;
+			double x, y;
+			int nverts;
+			{
+				getline(datafile, line);
+				std::istringstream inp(line.c_str());
+
+				inp >> Nmatrices;
+			}
+			for (int imat = 0; imat < Nmatrices; imat++) {
+				TPMatrices.push_back(std::vector<std::vector<double>>(Nstates, std::vector<double>(Nstates)));
+				{
+					{
+						getline(datafile, line);
+						std::istringstream inp(line.c_str());
+						inp >> nverts;
+					}
+					boostPolygon polygon;
+					std::vector<boostPoint> polygonPoints;
+					for (int j = 0; j < nverts; j++) {
+						getline(datafile, line);
+						std::istringstream inp(line.c_str());
+						inp >> x;
+						inp >> y;
+						polygonPoints.push_back(boostPoint(x, y));
+					}
+					boost::geometry::assign_points(polygon, polygonPoints);
+					boost::geometry::correct(polygon);
+					TPMpolygons.push_back(polygon);
+
+					for (int i = 0; i < Nstates; i++) {
+						getline(datafile, line);
+						std::istringstream inp(line.c_str());
+						for (int j = 0; j < Nstates; j++) {
+							inp >> x;
+							TPMatrices[imat][i][j] = x;
+						}
+					}
+				}
+			}
+			datafile.close();
+			return true;
+		}
+	}
 }
 
 

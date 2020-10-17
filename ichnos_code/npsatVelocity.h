@@ -260,6 +260,7 @@ namespace NPSAT {
 				}
 			}
 
+			// por_xyz refers to point translated to origin
 			double porx, pory, porz, scaled_dist, actual_dist, w;
 			bool calc_average = true;
 			double sumW = 0;

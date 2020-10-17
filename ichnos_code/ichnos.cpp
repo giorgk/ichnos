@@ -15,6 +15,7 @@
 #include "trace.h"
 #include "iwfmVelocity.h"
 #include "npsatVelocity.h"
+#include "stochasticVelocity.h"
 
 ICHNOS::SingletonGenerator* ICHNOS::SingletonGenerator::_instance = nullptr;
 
@@ -25,17 +26,22 @@ int main(int argc, char* argv[])
 
 
 
-
-    //ICHNOS::SingletonGenerator* RG = RG->getInstance();
-    //int cnt = 0;
-    //std::vector<int> prop(10,0);
-    //for (int i = 0; i < 100000; ++i) {
-    //    int r = RG->randomNumber(0, prop.size());
-    //    prop[r]++;
+    //{ // Random number generator
+        //ICHNOS::SingletonGenerator* RG = RG->getInstance();
+        //int cnt = 0;
+        //std::vector<int> prop(10,0);
+        //for (int i = 0; i < 100000; ++i) {
+            //int r = RG->randomNumber(0, prop.size());
+         //   float r = RG->randomNumber();
+        //    r = RG->randomNumber(0.0f, 1.0f);
+        //    int ri = RG->randomNumber(0, 4);
+        //    r = RG->randomNumber(0.f, 4.f);
+            //prop[r]++;
+        //}
+        //for (int i = 0; i < prop.size();++i)
+        //    std::cout << i << " : " << prop[i] << std::endl;
+        //RG->printSeed();
     //}
-    //for (int i = 0; i < prop.size();++i)
-    //    std::cout << i << " : " << prop[i] << std::endl;
-    //RG->printSeed();
 
     if (world.rank() == 0) {
         std::time_t result = std::time(nullptr);
@@ -85,6 +91,20 @@ int main(int argc, char* argv[])
             if (world.rank() == 0)
                 std::cout << "Tracing particles..." << std::endl;
             pt.Trace();
+            break;
+        }
+        case ICHNOS::VelType::STOCH:
+        {
+            STOCH::MarkovChainVel VF(world);
+            ICHNOS::Domain2D domain(OPT.Dopt);
+            VF.readVelocityField(OPT.getVelFname());
+            ICHNOS::ParticleTrace pt(world, VF, domain, OPT.Popt);
+            for (int i = 0; i < OPT.Popt.Nrealizations; ++i) {
+                if (world.rank() == 0)
+                    std::cout << "||======Realization " << i << "======" << std::endl;
+                pt.Trace(i);
+            }
+            break;
             break;
         }
         default:
