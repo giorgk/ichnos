@@ -229,13 +229,13 @@ namespace ICHNOS {
 			Popt.WellFile = vm_cfg["WellFile"].as<std::string>();
 			Popt.OutputFile = vm_cfg["OutputFile"].as<std::string>();
 			Popt.Nrealizations = vm_cfg["Nrealizations"].as<int>();
-			if (world.size() > 1 && Popt.Nrealizations > 1) {
-				Popt.Nrealizations = 1;
-				if (world.rank() == 0) {
-					std::cout << " You cannot run multiple realizations in multicore mode" << std::endl;
-					std::cout << "Nrealizations is set to 1" << std::endl;
-				}
-			}
+			//if (world.size() > 1 && Popt.Nrealizations > 1) {
+			//	Popt.Nrealizations = 1;
+			//	if (world.rank() == 0) {
+			//		std::cout << " You cannot run multiple realizations in multicore mode" << std::endl;
+			//		std::cout << "Nrealizations is set to 1" << std::endl;
+			//	}
+			//}
 
 			// Domain options
 			Dopt.polygonFile = vm_cfg["DomainPolygon"].as<std::string>();

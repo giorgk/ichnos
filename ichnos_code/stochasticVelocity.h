@@ -30,6 +30,9 @@ namespace STOCH {
 			std::vector<ic::cgal_point_3>& pp,
 			std::vector<ic::STOCH_data>& dd, int leadZeros);
 
+		ic::interpType porType;
+		double porocityValue = 1.0;
+
 		bool bIsInitialized = false;
 		int currentState;
 		int currentPeriod;
@@ -37,6 +40,7 @@ namespace STOCH {
 		double initial_ratio = 20;
 		int initial_state = 0;
 		int initial_period = 0;
+		int updateYearType = 0;
 		double Scale = 1.0;
 		double Threshold;
 		double diameter;
@@ -81,6 +85,7 @@ namespace STOCH {
 			("Porosity", po::value<std::string>(), "Porocity. Either a file or a single number")
 			("InitState", po::value<int>()->default_value(1), "An integer that represents the initial state [0-Nstates)")//The input must be based on 1. It is converted to zero based in code
 			("InitPeriod", po::value<int>()->default_value(1), "An integer that represents the initial period [0-NPeriods)")//The input must be based on 1. It is converted to zero based in code
+			("UpdateYearType", po::value<int>()->default_value(1), "An integer that represents Which period the water year type should be updated")//The input must be based on 1. It is converted to zero based in code
 			("StepSize", po::value<double>()->default_value(1), "Step size in time units")// If the velocity is m/day then the step is in days
 			("TimePerPeriod", po::value<double>()->default_value(30), "The time of a period.")// if the step size is days and periods months this should be 30.
 			("InitDiameter", po::value<double>()->default_value(5000), "Initial diameter")
@@ -98,6 +103,7 @@ namespace STOCH {
 			initial_state = 0;
 		Nperiods = vm_vfo["NPeriods"].as<int>();
 		initial_period = vm_vfo["InitPeriod"].as<int>() - 1;
+		updateYearType = vm_vfo["UpdateYearType"].as<int>() - 1;
 		if (initial_period >= Nperiods)
 			initial_period = 0;
 		
@@ -139,6 +145,30 @@ namespace STOCH {
 				std::cout << "Point Set Building time: " << elapsed.count() << std::endl;
 			}
 		}
+
+		if (vm_vfo.count("Porosity")) {
+			std::string porfile = vm_vfo["Porosity"].as<std::string>();
+			if (porfile.empty()) {
+				porType = ic::interpType::INGORE;
+			}
+			else {
+				if (ic::is_input_scalar(porfile)) {
+					porType = ic::interpType::SCALAR;
+					porocityValue = std::stod(porfile);
+				}
+				else {
+					// This is not implemented yet
+					std::cout << "Variable porocity not implemented yet. Setting porocity equal to 1" << std::endl;
+					porType = ic::interpType::SCALAR;
+					porocityValue = 1.0;
+				}
+			}
+		}
+		else {
+			porType = ic::interpType::INGORE;
+			porocityValue = 1.0;
+		}
+
 	}
 
 	void MarkovChainVel::calcVelocity(ic::vec3& vel, std::map<int, double>& proc_map, ic::vec3& p) {
@@ -255,14 +285,22 @@ namespace STOCH {
 			}
 			if (calc_average)
 				vel = sumWVal * (1 / sumW);
-			pp = p; // I dont understand this
-			vv = vel;
+			
 
 
 			auto finish = std::chrono::high_resolution_clock::now();
 			std::chrono::duration<double> elapsed = finish - start;
 		}
 
+		if (porType == ic::interpType::CLOUD) {
+			// not implemented yet
+		}
+		else if (porType == ic::interpType::SCALAR) {
+			vel = vel * (1 / porocityValue);
+		}
+
+		pp = p; // I dont understand this. It seems we need to use these variables in the updateStep method
+		vv = vel;
 	}
 
 	struct tempND {
@@ -425,6 +463,8 @@ namespace STOCH {
 			currentPeriod++;
 			if (currentPeriod >= Nperiods)
 				currentPeriod = 0;
+		}
+		if (currentPeriod == updateYearType) {
 			double r = RG->randomNumber();
 			currentState = TPM.nextState(currentState, pp, r);
 		}
