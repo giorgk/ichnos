@@ -168,7 +168,7 @@ namespace ICHNOS {
 
 				if (er == ExitReason::CHANGE_PROCESSOR) {
 					Snew.push_back(Streamline(
-						S[i].getEid(), S[i].getSid(), S[i].getLastParticle(), S[i].getBBlow(), S[i].getBBupp(), S[i].StuckIter()));
+						S[i].getEid(), S[i].getSid(), S[i].getLastParticle(), S[i].getBBlow(), S[i].getBBupp(), S[i].StuckIter(), S[i].getAge()));
 				}
 				else {
 					WRITE::PrintParticle2Log(log_file, S[i], S[i].size() - 1);
@@ -257,8 +257,8 @@ namespace ICHNOS {
 				//DEBUG::displayPVasVex(p, v);
 				S.AddParticle(Particle(p, v, S.getLastParticle()));
 				//S.getLastParticle().displayAsVEX(true);
-				// In the unlike event that the velocity of the point is indeed zero
-				// we can avoid unnessecary iterations
+				// In the unlike event that the velocity of the point is zero
+				// we can avoid unnessecary iterations by simply exit
 				if (v.isZero() & (er == ExitReason::NO_EXIT))
 					return ExitReason::STUCK;
 			}
@@ -268,6 +268,10 @@ namespace ICHNOS {
 				return ExitReason::MAX_INNER_ITER;
 			if (S.StuckIter() > popt.StuckIterations)
 				return ExitReason::STUCK;
+			if (popt.AgeLimit > 0) {
+				if (S.getAge() > popt.AgeLimit)
+					return ExitReason::MAX_AGE;
+			}
 		}
 		S.Close(er);
 		return er;

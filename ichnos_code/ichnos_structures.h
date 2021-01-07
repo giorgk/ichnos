@@ -387,6 +387,7 @@ namespace ICHNOS {
 		MAX_INNER_ITER,
 		FIRST_POINT_GHOST,
 		FAR_AWAY,
+		MAX_AGE,
 		NO_REASON
 	};
 
@@ -403,6 +404,7 @@ namespace ICHNOS {
 		ExitReasonsMap.insert(std::pair<ExitReason, std::string>(ExitReason::MAX_INNER_ITER, "MAX_INNER_ITER"));
 		ExitReasonsMap.insert(std::pair<ExitReason, std::string>(ExitReason::FIRST_POINT_GHOST, "FIRST_POINT_GHOST"));
 		ExitReasonsMap.insert(std::pair<ExitReason, std::string>(ExitReason::FAR_AWAY, "FAR_AWAY"));
+		ExitReasonsMap.insert(std::pair<ExitReason, std::string>(ExitReason::MAX_AGE, "MAX_AGE"));
 		ExitReasonsMap.insert(std::pair<ExitReason, std::string>(ExitReason::NO_REASON, "NO_REASON"));
 		it = ExitReasonsMap.find(er);
 		if (it != ExitReasonsMap.end())
@@ -420,6 +422,7 @@ namespace ICHNOS {
 		ExitReasonMap.insert(std::pair<std::string, ExitReason>("EXIT_SIDE", ExitReason::EXIT_SIDE));
 		ExitReasonMap.insert(std::pair<std::string, ExitReason>("EXIT_TOP", ExitReason::EXIT_TOP));
 		ExitReasonMap.insert(std::pair<std::string, ExitReason>("FAR_AWAY", ExitReason::FAR_AWAY));
+		ExitReasonMap.insert(std::pair<std::string, ExitReason>("MAX_AGE", ExitReason::MAX_AGE));
 		ExitReasonMap.insert(std::pair<std::string, ExitReason>("FIRST_POINT_GHOST", ExitReason::FIRST_POINT_GHOST));
 		ExitReasonMap.insert(std::pair<std::string, ExitReason>("INIT_OUT", ExitReason::INIT_OUT));
 		ExitReasonMap.insert(std::pair<std::string, ExitReason>("MAX_INNER_ITER", ExitReason::MAX_INNER_ITER));
@@ -469,6 +472,9 @@ namespace ICHNOS {
 		int MaxIterationsPerStreamline;
 		// The maximum number of exchanges between processors
 		int MaxProcessorExchanges;
+
+		double AgeLimit;
+
 		std::string ParticleFile;
 		std::string WellFile;
 		int ParticlesInParallel;
@@ -559,7 +565,7 @@ namespace ICHNOS {
 	class Streamline {
 	public:
 		Streamline(int Eid_in, int Sid_in, Particle particle);
-		Streamline(int Eid_in, int Sid_in, Particle particle, vec3 BL, vec3 BU, int N);
+		Streamline(int Eid_in, int Sid_in, Particle particle, vec3 BL, vec3 BU, int N, double age);
 		void InitialVelocity(vec3 v) {
 			SL.back().SetV(v);
 		}
@@ -581,6 +587,7 @@ namespace ICHNOS {
 		vec3 getBBupp() { return BU; }
 		unsigned int size() { return SL.size(); }
 		Particle getParticle(int i) { return SL.at(i); }
+		double getAge() { return age; }
 
 
 	private:
@@ -591,6 +598,8 @@ namespace ICHNOS {
 		vec3 BL;
 		vec3 BU;
 		int IterationsWithoutExpansion = 0;
+		// This is the time the particle has spend in the velocity field
+		double age = 0;
 	};
 
 	Streamline::Streamline(int Eid_in, int Sid_in, Particle particle)
@@ -603,23 +612,30 @@ namespace ICHNOS {
 		BL = particle.getP();
 		BU = particle.getP();
 		IterationsWithoutExpansion = 0;
+		age = 0;
 	}
 
-	Streamline::Streamline(int Eid_in, int Sid_in, Particle particle, vec3 BL, vec3 BU, int N)
+	Streamline::Streamline(int Eid_in, int Sid_in, Particle particle, vec3 BL, vec3 BU, int N, double age_in)
 		:
 		Eid(Eid_in),
 		Sid(Sid_in),
 		BL(BL),
 		BU(BU),
-		IterationsWithoutExpansion(N)
+		IterationsWithoutExpansion(N),
+		age(age_in)
 	{
 		SL.clear();
 		SL.push_back(particle);
 	}
 
 	void Streamline::AddParticle(Particle p) {
+		vec3 p_prev = getLastParticle().getP();
+		double vv = getLastParticle().getV().len();
 		SL.push_back(p);
 		vec3 pp = p.getP();
+		double dst = (pp - p_prev).len();
+		age += dst / vv;
+
 		bool expand = false;
 		if (pp.x < BL.x) { BL.x = pp.x; expand = true; }
 		if (pp.x > BU.x) { BU.x = pp.x; expand = true; }

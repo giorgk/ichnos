@@ -118,7 +118,7 @@ namespace ICHNOS {
 			if (world.rank() == 0) {
 				std::cout << "|------------------|" << std::endl;
 				std::cout << "|      ICHNOS      |" << std::endl;
-				std::cout << "| Version : 0.1.00 |" << std::endl;
+				std::cout << "| Version : 0.1.10 |" << std::endl;
 				std::cout << "|    by  giorgk    |" << std::endl;
 				std::cout << "|------------------|" << std::endl;
 			}
@@ -128,37 +128,55 @@ namespace ICHNOS {
 		// Configuration file options
 		po::options_description config_options("Configuration file options");
 		config_options.add_options()
-			("nThreads", po::value<int>()->default_value(1), "Number of threads")
-			("VelocityType", po::value<std::string>(), "Type of velocity. (NPSAT or IWFM)")
-			("VelocityConfig", po::value<std::string >(), "Set configuration file for the velocity field")
-			("Nrealizations", po::value<int>()->default_value(1), "NUmber of realizations")
-			("Stuckiter", po::value<int>()->default_value(10), "After Stuckiter exit particle tracking")
-			("Method", po::value<std::string >(), "Method for time steping")
-			("DomainPolygon", po::value<std::string >(), "A filename that containts the vertices of the outline polygon")
-			("ProcessorPolygon", po::value<std::string >(), "A filename that containts the coordinates of each processor polygon")
-			("ExpandedPolygon", po::value<std::string >(), "A filename that containts the coordinates of each Expanded polygon")
-			("TopElevation", po::value<std::string >(), "A filename with the point cloud of the top elevation")
-			("TopRadius", po::value<double>()->default_value(1000), "Search Radious for top elevation")
-			("TopPower", po::value<double>()->default_value(3), "Search Power for top elevation")
-			("BottomElevation", po::value<std::string >(), "A filename with the point cloud of the bottom elevation")
-			("BottomRadius", po::value<double>()->default_value(1000), "Search Radious for bottom elevation")
-			("BottomPower", po::value<double>()->default_value(3), "Search Power for bottom elevation")
-			("PartilceFile", po::value<std::string >(), "A filename with the initial positions of particles")
-			("WellFile", po::value<std::string >(), "A filename with the well locations")
-			("Direction", po::value<double>()->default_value(1), "Backward or forward particle tracking")
-			("StepSize", po::value<double>()->default_value(1), "Step Size in units of length")
-			("UpdateStepSize", po::value<int>()->default_value(1), "Update step size wrt bbox")
-			("MaxStepSize", po::value<double>()->default_value(2), "Maximum Step Size in units of length")
-			("increasRatechange", po::value<double>()->default_value(1.5), "Maximum Step Size in units of length")
-			("MinStepSize", po::value<double>()->default_value(0.1), "Minimum Step Size in units of length")
-			("minExitStepSize", po::value<double>()->default_value(0.1), "Minimum Step Size at the exit as percentage of the stepsize")
-			("limitUpperDecreaseStep", po::value<double>()->default_value(0.75), "Upper limit of decrease step size")
-			("ToleranceStepSize", po::value<double>()->default_value(0.1), "Tolerance when the RK45 is used")
-			("MaxIterationsPerStreamline", po::value<int>()->default_value(1000), "Maximum number of steps per streamline")
-			("MaxProcessorExchanges", po::value<int>()->default_value(50), "Maximum number of that a particles are allowed to change processors")
-			("OutputFile", po::value<std::string >(), "Prefix for the output file")
-			("ParticlesInParallel", po::value<int>()->default_value(1000), "Maximum number run in parallel")
-			("GatherOneFile", po::value<int>()->default_value(1), "Put all streamlines into one file")
+			// Velocity Options
+			("Velocity.Type", po::value<std::string>(), "Type of velocity. (NPSAT or IWFM)")
+			("Velocity.ConfigFile", po::value<std::string >(), "Set configuration file for the velocity field")
+
+			// Domain options
+			("Domain.Outline", po::value<std::string >(), "A filename that containts the vertices of the outline polygon")
+			("Domain.TopFile", po::value<std::string >(), "A filename with the point cloud of the top elevation")
+			("Domain.TopRadius", po::value<double>()->default_value(1000), "Search Radious for top elevation")
+			("Domain.TopPower", po::value<double>()->default_value(3), "Search Power for top elevation")
+			("Domain.BottomFile", po::value<std::string >(), "A filename with the point cloud of the bottom elevation")
+			("Domain.BottomRadius", po::value<double>()->default_value(1000), "Search Radious for bottom elevation")
+			("Domain.BottomPower", po::value<double>()->default_value(3), "Search Power for bottom elevation")
+			("Domain.ProcPolygons", po::value<std::string >(), "A filename that containts the coordinates of each processor polygon")
+			("Domain.ExpPolygon", po::value<std::string >(), "A filename that containts the coordinates of each Expanded polygon")
+
+			// Stopping criteria
+			("StoppingCriteria.MaxIterationsPerStreamline", po::value<int>()->default_value(1000), "Maximum number of steps per streamline")
+			("StoppingCriteria.MaxProcessorExchanges", po::value<int>()->default_value(50), "Maximum number of that a particles are allowed to change processors")
+			("StoppingCriteria.AgeLimit", po::value<double>()->default_value(-1), "If the particle exceed this limit stop particle tracking. Negative means no limit")
+			("StoppingCriteria.Stuckiter", po::value<int>()->default_value(10), "After Stuckiter exit particle tracking")
+
+			// Step configuration
+			("StepConfig.Method", po::value<std::string >(), "Method for steping")
+			("StepConfig.Direction", po::value<double>()->default_value(1), "Backward or forward particle tracking")
+			("StepConfig.StepSize", po::value<double>()->default_value(1), "Step Size in units of length")
+			("StepConfig.minExitStepSize", po::value<double>()->default_value(0.1), "Minimum Step Size at the exit as percentage of the stepsize")
+
+			// Adaptive Step configurations
+			("AdaptStep.UpdateStepSize", po::value<int>()->default_value(1), "Update step size wrt bbox")
+			("AdaptStep.MaxStepSize", po::value<double>()->default_value(2), "Maximum Step Size in units of length")
+			("AdaptStep.MinStepSize", po::value<double>()->default_value(0.1), "Minimum Step Size in units of length")
+			("AdaptStep.increasRatechange", po::value<double>()->default_value(1.5), "Maximum Step Size in units of length")
+			("AdaptStep.limitUpperDecreaseStep", po::value<double>()->default_value(0.75), "Upper limit of decrease step size")
+			("AdaptStep.Tolerance", po::value<double>()->default_value(0.1), "Tolerance when the RK45 is used")
+
+			// InputOutput
+			("InputOutput.PartilceFile", po::value<std::string >(), "A filename with the initial positions of particles")
+			("InputOutput.WellFile", po::value<std::string >(), "A filename with the well locations")
+			("InputOutput.OutputFile", po::value<std::string >(), "Prefix for the output file")
+			("InputOutput.ParticlesInParallel", po::value<int>()->default_value(1000), "Maximum number run in parallel")
+			("InputOutput.GatherOneFile", po::value<int>()->default_value(1), "Put all streamlines into one file")
+
+			// Other
+			("Other.Nrealizations", po::value<int>()->default_value(1), "NUmber of realizations")
+
+			// Unsued
+			("Unused.nThreads", po::value<int>()->default_value(1), "Number of threads")
+
+
 			;
 
 		if (vm_cmd.count("help")) {
@@ -179,82 +197,102 @@ namespace ICHNOS {
 
 		po::variables_map vm_cfg;
 		if (vm_cmd.count("config")) {
-			Popt.configfile = vm_cmd["config"].as<std::string>().c_str();
-			std::cout << "Configuration file: " << vm_cmd["config"].as<std::string>().c_str() << std::endl;
-			po::store(po::parse_config_file<char>(vm_cmd["config"].as<std::string>().c_str(), config_options), vm_cfg);
-			nThreads = vm_cfg["nThreads"].as<int>();
-			velocityFieldFileName = vm_cfg["VelocityConfig"].as<std::string>();
+			try {
+				Popt.configfile = vm_cmd["config"].as<std::string>().c_str();
+				std::cout << "Configuration file: " << vm_cmd["config"].as<std::string>().c_str() << std::endl;
+				po::store(po::parse_config_file<char>(vm_cmd["config"].as<std::string>().c_str(), config_options), vm_cfg);
 
-			// particle tracking options
-			Popt.StuckIterations = vm_cfg["Stuckiter"].as<int>();
-			SolutionMethods method = castMethod2Enum(vm_cfg["Method"].as<std::string>());
-			if (method == SolutionMethods::INVALID)
-				return false;
-			else {
-				Popt.method = method;
-			}
-			double tmp = vm_cfg["Direction"].as<double>();
-			if (tmp >= 0)
-				Popt.Direction = 1;
-			else
-				Popt.Direction = -1;
-
-			Popt.StepSize = vm_cfg["StepSize"].as<double>();
-			Popt.MaxStepSize = vm_cfg["MaxStepSize"].as<double>();
-			Popt.MinStepSize = vm_cfg["MinStepSize"].as<double>();
-			Popt.increasRatechange = vm_cfg["increasRatechange"].as<double>();
-			if (Popt.increasRatechange < 1) {
-				std::cout << "increasRatechange should be higher than 1. It gets the default value of 1.5" << std::endl;
-				Popt.increasRatechange = 1.5;
-			}
-			Popt.limitUpperDecreaseStep = vm_cfg["limitUpperDecreaseStep"].as<double>();
-			if (Popt.limitUpperDecreaseStep < 0 || Popt.limitUpperDecreaseStep > 1) {
-				std::cout << "limitUpperDecreaseStep should be between 0 and 1. It gets the default value of 0.75" << std::endl;
-				Popt.limitUpperDecreaseStep = 0.75;
-			}
-			Popt.minExitStepSize = vm_cfg["minExitStepSize"].as<double>();
-			if (Popt.minExitStepSize < 0 || Popt.minExitStepSize > 1) {
-				if (Popt.minExitStepSize < 0 || Popt.minExitStepSize > 1) {
-					std::cout << "minExitStepSize should be between 0 and 1. It gets the default value of 0.1" << std::endl;
-					Popt.minExitStepSize = 0.1;
+				{// Velocity Options
+					velocityFieldType = castVelType2Enum(vm_cfg["Velocity.Type"].as<std::string>());
+					if (velocityFieldType == VelType::INVALID) {
+						std::cout << vm_cfg["Velocity.Type"].as<std::string>() << " is an invalid velocity type" << std::endl;
+						return false;
+					}
+					velocityFieldFileName = vm_cfg["Velocity.ConfigFile"].as<std::string>();
 				}
+
+				{// Domain options
+					Dopt.polygonFile = vm_cfg["Domain.Outline"].as<std::string>();
+					// Top elevation parameters
+					Dopt.TopElevationFile = vm_cfg["Domain.TopFile"].as<std::string>();
+					Dopt.TopRadius = vm_cfg["Domain.TopRadius"].as<double>();
+					Dopt.TopRadius = Dopt.TopRadius*Dopt.TopRadius;
+					Dopt.TopPower = vm_cfg["Domain.TopPower"].as<double>();
+					// Bottom elevation parameters
+					Dopt.BottomeElevationFile = vm_cfg["Domain.BottomFile"].as<std::string>();
+					Dopt.BotRadius = vm_cfg["Domain.BottomRadius"].as<double>();
+					Dopt.BotRadius = Dopt.BotRadius*Dopt.BotRadius;
+					Dopt.BotPower = vm_cfg["Domain.BottomPower"].as<double>();
+					Dopt.processorDomainFile = vm_cfg["Domain.ProcPolygons"].as<std::string>();
+					Dopt.expandedDomainFile = vm_cfg["Domain.ExpPolygon"].as<std::string>();
+					Dopt.myRank = world.rank();
+				}
+
+				{// Stopping criteria
+					Popt.MaxIterationsPerStreamline = vm_cfg["StoppingCriteria.MaxIterationsPerStreamline"].as<int>();
+					Popt.MaxProcessorExchanges = vm_cfg["StoppingCriteria.MaxProcessorExchanges"].as<int>();
+					Popt.AgeLimit = vm_cfg["StoppingCriteria.AgeLimit"].as<double>();
+					Popt.StuckIterations = vm_cfg["StoppingCriteria.Stuckiter"].as<int>();
+				}
+
+				{// Step configuration
+					SolutionMethods method = castMethod2Enum(vm_cfg["StepConfig.Method"].as<std::string>());
+					if (method == SolutionMethods::INVALID)
+						return false;
+					else {
+						Popt.method = method;
+					}
+					double tmp = vm_cfg["StepConfig.Direction"].as<double>();
+					if (tmp >= 0)
+						Popt.Direction = 1;
+					else
+						Popt.Direction = -1;
+					
+					Popt.StepSize = vm_cfg["StepConfig.StepSize"].as<double>();
+
+					Popt.minExitStepSize = vm_cfg["StepConfig.minExitStepSize"].as<double>();
+					if (Popt.minExitStepSize < 0 || Popt.minExitStepSize > 1) {
+						std::cout << "minExitStepSize should be between 0 and 1. It gets the default value of 0.1" << std::endl;
+						Popt.minExitStepSize = 0.1;
+					}
+				}
+
+				{// Adaptive Step configurations
+					Popt.UpdateStepSize = vm_cfg["AdaptStep.UpdateStepSize"].as<int>();
+					Popt.MaxStepSize = vm_cfg["AdaptStep.MaxStepSize"].as<double>();
+					Popt.MinStepSize = vm_cfg["AdaptStep.MinStepSize"].as<double>();
+					Popt.increasRatechange = vm_cfg["AdaptStep.increasRatechange"].as<double>();
+					if (Popt.increasRatechange < 1) {
+						std::cout << "increasRatechange should be higher than 1. It gets the default value of 1.5" << std::endl;
+						Popt.increasRatechange = 1.5;
+					}
+					Popt.limitUpperDecreaseStep = vm_cfg["AdaptStep.limitUpperDecreaseStep"].as<double>();
+					if (Popt.limitUpperDecreaseStep < 0 || Popt.limitUpperDecreaseStep > 1) {
+						std::cout << "limitUpperDecreaseStep should be between 0 and 1. It gets the default value of 0.75" << std::endl;
+						Popt.limitUpperDecreaseStep = 0.75;
+					}
+					Popt.ToleranceStepSize = vm_cfg["AdaptStep.Tolerance"].as<double>();
+				}
+
+				{// InputOutput
+					Popt.ParticleFile = vm_cfg["InputOutput.PartilceFile"].as<std::string>();
+					Popt.WellFile = vm_cfg["InputOutput.WellFile"].as<std::string>();
+					Popt.OutputFile = vm_cfg["InputOutput.OutputFile"].as<std::string>();
+					Popt.ParticlesInParallel = vm_cfg["InputOutput.ParticlesInParallel"].as<int>(); 
+				}
+
+				{// Other
+					Popt.Nrealizations = vm_cfg["Other.Nrealizations"].as<int>();
+				}
+
+				{// Unsued
+					nThreads = vm_cfg["Unused.nThreads"].as<int>();
+				}
+			
 			}
-			Popt.minExitStepSize = Popt.minExitStepSize;
-			Popt.ToleranceStepSize = vm_cfg["ToleranceStepSize"].as<double>();
-			Popt.MaxIterationsPerStreamline = vm_cfg["MaxIterationsPerStreamline"].as<int>();
-			Popt.MaxProcessorExchanges = vm_cfg["MaxProcessorExchanges"].as<int>();
-			Popt.ParticlesInParallel = vm_cfg["ParticlesInParallel"].as<int>(); 
-			Popt.UpdateStepSize = vm_cfg["UpdateStepSize"].as<int>(); 
-			Popt.ParticleFile = vm_cfg["PartilceFile"].as<std::string>();
-			Popt.WellFile = vm_cfg["WellFile"].as<std::string>();
-			Popt.OutputFile = vm_cfg["OutputFile"].as<std::string>();
-			Popt.Nrealizations = vm_cfg["Nrealizations"].as<int>();
-			//if (world.size() > 1 && Popt.Nrealizations > 1) {
-			//	Popt.Nrealizations = 1;
-			//	if (world.rank() == 0) {
-			//		std::cout << " You cannot run multiple realizations in multicore mode" << std::endl;
-			//		std::cout << "Nrealizations is set to 1" << std::endl;
-			//	}
-			//}
-
-			// Domain options
-			Dopt.polygonFile = vm_cfg["DomainPolygon"].as<std::string>();
-			Dopt.processorDomainFile = vm_cfg["ProcessorPolygon"].as<std::string>();
-			Dopt.expandedDomainFile = vm_cfg["ExpandedPolygon"].as<std::string>();
-			Dopt.TopElevationFile = vm_cfg["TopElevation"].as<std::string>();
-			Dopt.BottomeElevationFile = vm_cfg["BottomElevation"].as<std::string>();
-			Dopt.TopRadius = vm_cfg["TopRadius"].as<double>();
-			Dopt.TopRadius = Dopt.TopRadius*Dopt.TopRadius;
-			Dopt.TopPower = vm_cfg["TopPower"].as<double>();
-			Dopt.BotRadius = vm_cfg["BottomRadius"].as<double>();
-			Dopt.BotRadius = Dopt.BotRadius*Dopt.BotRadius;
-			Dopt.BotPower = vm_cfg["BottomPower"].as<double>();
-			Dopt.myRank = world.rank();
-
-
-			velocityFieldType = castVelType2Enum(vm_cfg["VelocityType"].as<std::string>());
-			if (velocityFieldType == VelType::INVALID) {
-				std::cout << vm_cfg["VelocityType"].as<std::string>() << " is an invalid velocity type" << std::endl;
+			catch (std::exception& E)
+			{
+				std::cout << E.what() << std::endl;
 				return false;
 			}
 		}
@@ -276,7 +314,7 @@ namespace ICHNOS {
 				return false;
 			}
 			{
-				int tmp = vm_cfg["GatherOneFile"].as<int>();
+				int tmp = vm_cfg["InputOutput.GatherOneFile"].as<int>();
 				if (tmp == 0)
 					Popt.gatherOneFile = false;
 				else

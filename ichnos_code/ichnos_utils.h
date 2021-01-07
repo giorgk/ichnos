@@ -13,6 +13,12 @@
 namespace ICHNOS {
 
 	namespace DEBUG {
+		/**
+		 * .
+		 * 
+		 * \param P
+		 * \param prinAttr
+		 */
 		void displayParticleasVex(const Particle& P, bool prinAttr) {
 			vec3 vn = P.getV().normalize();
 			std::cout << std::setprecision(5) << std::fixed << "p = addpoint(0,{" << P.getP().x << "," << P.getP().z << "," << P.getP().y << "});";
@@ -1029,6 +1035,7 @@ namespace ICHNOS {
 			std::vector<std::vector<double> > BBux(n_proc);
 			std::vector<std::vector<double> > BBuy(n_proc);
 			std::vector<std::vector<double> > BBuz(n_proc);
+			std::vector<std::vector<double> > age(n_proc);
 			world.barrier();
 			for (unsigned int i = 0; i < Ssend.size(); ++i) {
 				px[my_rank].push_back(Ssend[i].getLastParticle().getP().x);
@@ -1048,6 +1055,7 @@ namespace ICHNOS {
 				BBux[my_rank].push_back(Ssend[i].getBBupp().x);
 				BBuy[my_rank].push_back(Ssend[i].getBBupp().y);
 				BBuz[my_rank].push_back(Ssend[i].getBBupp().z);
+				age[my_rank].push_back(Ssend[i].getAge());
 				
 				
 				//if (my_rank == 1) {
@@ -1082,6 +1090,7 @@ namespace ICHNOS {
 			MPI::Send_receive_data<double>(BBux, data_per_proc, my_rank, world, MPI_DOUBLE);
 			MPI::Send_receive_data<double>(BBuy, data_per_proc, my_rank, world, MPI_DOUBLE);
 			MPI::Send_receive_data<double>(BBuz, data_per_proc, my_rank, world, MPI_DOUBLE);
+			MPI::Send_receive_data<double>(age, data_per_proc, my_rank, world, MPI_DOUBLE);
 
 			/*
 			if (my_rank == 0) {
@@ -1111,7 +1120,7 @@ namespace ICHNOS {
 						vec3 bu = vec3(BBux[i][j], BBuy[i][j], BBuz[i][j]);
 						Streamline Stmp = Streamline(E_id[i][j], S_id[i][j],
 							Particle(p, v, p_id[i][j] /*, proc_id[i][j]*/),
-							bl, bu, Nstuck[i][j]);
+							bl, bu, Nstuck[i][j], age[i][j]);
 						Srecv.push_back(Stmp);
 					}
 				}
