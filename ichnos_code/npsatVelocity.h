@@ -100,22 +100,24 @@ namespace NPSAT {
 		po::options_description velocityFieldOptions("Velocity field options");
 		po::variables_map vm_vfo;
 		velocityFieldOptions.add_options()
-			// filename parameters
-			("Filename.Prefix", po::value<std::string>(), "Prefix for the filename") 
-			("Filename.LeadingZeros", po::value<int>()->default_value(4), "e.g 0002->4, 000->3")
-			("Filename.Suffix", po::value<std::string>(), "ending of file after procid")
+			// Velocity parameters
+			("Velocity.Prefix", po::value<std::string>(), "Prefix for the filename") 
+			("Velocity.LeadingZeros", po::value<int>()->default_value(4), "e.g 0002->4, 000->3")
+			("Velocity.Suffix", po::value<std::string>(), "ending of file after procid")
+			("Velocity.Multiplier", po::value<double>()->default_value(1), "This is a multiplier to scale velocity")
+			("Velocity.Scale", po::value<double>()->default_value(1.0), "Scale the domain before velocity calculation")
+			("Velocity.Power", po::value<double>()->default_value(3.0), "Power of the IDW interpolation")
+			("Velocity.InitDiameter", po::value<double>()->default_value(5000), "Initial diameter")
+			("Velocity.InitRatio", po::value<double>()->default_value(1), "Initial ratio")
+
+			// Porosity parameters
+			("Porosity.Value", po::value<std::string>(), "Porocity. Either a file or a single number")
 
 			//General
 			("General.OwnerThreshold", po::value<double>()->default_value(0.75), "Threshold for the processor ownership")
-			("General.VelocityMultiplier", po::value<double>()->default_value(1), "This is a multiplier to scale velocity")
-			("General.Porosity", po::value<std::string>(), "Porocity. Either a file or a single number")
-			("General.Power", po::value<double>()->default_value(3.0), "Power of the IDW interpolation")
-			("General.Scale", po::value<double>()->default_value(1.0), "Scale the domain before velocity calculation")
 			("General.Threshold", po::value<double>()->default_value(0.001), "Threshold of distance of IDW")
 			("General.FrequencyStat", po::value<int>()->default_value(20), "Frequency of printing stats")
 			("General.Nsteps", po::value<double>()->default_value(4), "Number of steps")
-			("General.InitDiameter", po::value<double>()->default_value(5000), "Initial diameter")
-			("General.InitRatio", po::value<double>()->default_value(1), "Initial ratio")
 			;
 
 		po::store(po::parse_config_file<char>(vf_file.c_str(), velocityFieldOptions), vm_vfo);
@@ -125,46 +127,30 @@ namespace NPSAT {
 
 		{// General
 			OwnerThreshold = vm_vfo["General.OwnerThreshold"].as<double>();
-			multiplier = vm_vfo["General.VelocityMultiplier"].as<double>();
-			Power = vm_vfo["General.Power"].as<double>();
-			Scale = vm_vfo["General.Scale"].as<double>();
 			Threshold = vm_vfo["General.Threshold"].as<double>();
 			FrequencyStat = vm_vfo["General.FrequencyStat"].as<int>();
 			n_steps = vm_vfo["General.Nsteps"].as<double>();
-			initial_diameter = vm_vfo["General.InitDiameter"].as<double>();
-			initial_ratio = vm_vfo["General.InitRatio"].as<double>();
 		}
 
 
-		{// filename parameters
-			std::string prefix = vm_vfo["Filename.Prefix"].as<std::string>();
+		{// Velocity parameters
+			multiplier = vm_vfo["Velocity.Multiplier"].as<double>();
+			Scale = vm_vfo["Velocity.Scale"].as<double>();
+			Power = vm_vfo["Velocity.Power"].as<double>();
+			initial_diameter = vm_vfo["Velocity.InitDiameter"].as<double>();
+			initial_ratio = vm_vfo["Velocity.InitRatio"].as<double>();
+
+			std::string prefix = vm_vfo["Velocity.Prefix"].as<std::string>();
 			std::string suffix;
-			if (vm_vfo.count("Filename.Suffix")) {
-				suffix = vm_vfo["Filename.Suffix"].as<std::string>();
+			if (vm_vfo.count("Velocity.Suffix")) {
+				suffix = vm_vfo["Velocity.Suffix"].as<std::string>();
 			}
 			else
 				suffix = ".ich";
-			int leadZeros = vm_vfo["Filename.LeadingZeros"].as<int>();
+			int leadZeros = vm_vfo["Velocity.LeadingZeros"].as<int>();
 			std::string filename = prefix + ic::num2Padstr(/*dbg_rank*/world.rank(), leadZeros) + suffix;
 			ic::READ::readNPSATVelocity(filename, pp, dd, multiplier);
 		}
-
-
-
-		//std::vector<std::pair<ic::cgal_point, ic::NPSAT_data>> npsat_data;
-		//ic::READ::readNPSATVelocity(filename, npsat_data, multiplier);
-		
-		//std::vector<std::pair<ic::cgal_point_3, ic::NPSAT_data>> dd;
-
-		/*{//Build Triangulation
-			auto start = std::chrono::high_resolution_clock::now();
-			T.insert(npsat_data.begin(), npsat_data.end());
-			auto finish = std::chrono::high_resolution_clock::now();
-			std::chrono::duration<double> elapsed = finish - start;
-			std::cout << "Triangulation Building time: " << elapsed.count() << std::endl;
-			std::cout << "Number of vertices: " << T.number_of_vertices() << std::endl;
-			std::cout << "Number of cells: " << T.number_of_cells() << std::endl;
-		}*/
 
 		{//Build tree
 			auto start = std::chrono::high_resolution_clock::now();
@@ -177,17 +163,8 @@ namespace NPSAT {
 
 		}
 
-
-
-
-
-		//ic::READ::readVelocityFieldFile(filename, VelocityCloud);
-		//this->InterpolateOutsideDomain = VelocityCloud.InterpolateOutside;
-		//this->VelocityTree = std::unique_ptr<nano_kd_tree_vector>(new nano_kd_tree_vector(3, VelocityCloud, nanoflann::KDTreeSingleIndexAdaptorParams(10)));
-		//VelocityTree->buildIndex();
-
-		if (vm_vfo.count("General.Porosity")) {
-			std::string porfile = vm_vfo["Porosity"].as<std::string>();
+		if (vm_vfo.count("Porosity.Value")) {
+			std::string porfile = vm_vfo["Porosity.Value"].as<std::string>();
 			if (porfile.empty()) {
 				porType = ic::interpType::INGORE;
 			}

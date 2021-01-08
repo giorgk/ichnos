@@ -71,8 +71,8 @@ namespace ICHNOS {
 
 		
 		//READ::readPolygonDomain(Dopt.OutlineFile, outlinePoly);
-		bool getTopFromFile;
-		bool getBotFromFile;
+		bool getTopFromFile = false;
+		bool getBotFromFile = false;
 		
 		if (is_input_scalar(Dopt.TopElevationFile)) {
 			isTopConst = true;

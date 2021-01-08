@@ -140,8 +140,8 @@ namespace ICHNOS {
 			("Domain.BottomFile", po::value<std::string >(), "A filename with the point cloud of the bottom elevation")
 			("Domain.BottomRadius", po::value<double>()->default_value(1000), "Search Radious for bottom elevation")
 			("Domain.BottomPower", po::value<double>()->default_value(3), "Search Power for bottom elevation")
-			("Domain.ProcPolygons", po::value<std::string >(), "A filename that containts the coordinates of each processor polygon")
-			("Domain.ExpPolygon", po::value<std::string >(), "A filename that containts the coordinates of each Expanded polygon")
+			("Domain.ProcessorPolys", po::value<std::string >(), "A filename that containts the coordinates of each processor polygon")
+			("Domain.ExpandedPolys", po::value<std::string >(), "A filename that containts the coordinates of each Expanded polygon")
 
 			// Stopping criteria
 			("StoppingCriteria.MaxIterationsPerStreamline", po::value<int>()->default_value(1000), "Maximum number of steps per streamline")
@@ -223,8 +223,8 @@ namespace ICHNOS {
 					Dopt.BotRadius = vm_cfg["Domain.BottomRadius"].as<double>();
 					Dopt.BotRadius = Dopt.BotRadius*Dopt.BotRadius;
 					Dopt.BotPower = vm_cfg["Domain.BottomPower"].as<double>();
-					Dopt.processorDomainFile = vm_cfg["Domain.ProcPolygons"].as<std::string>();
-					Dopt.expandedDomainFile = vm_cfg["Domain.ExpPolygon"].as<std::string>();
+					Dopt.processorDomainFile = vm_cfg["Domain.ProcessorPolys"].as<std::string>();
+					Dopt.expandedDomainFile = vm_cfg["Domain.ExpandedPolys"].as<std::string>();
 					Dopt.myRank = world.rank();
 				}
 

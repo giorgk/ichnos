@@ -221,7 +221,7 @@ namespace ICHNOS {
 			}
 			else {
 				std::string line;
-				int ii;// , iproc;
+				int ii, oldproc;// , iproc;
 				double x, y, z; // , vx, vy, vz;
 				NPSAT_data npsat_data;
 				ii = 0;
@@ -231,10 +231,11 @@ namespace ICHNOS {
 						inp >> x;
 						inp >> y;
 						inp >> z;
+						inp >> npsat_data.proc;
 						inp >> npsat_data.v.x;
 						inp >> npsat_data.v.y;
 						inp >> npsat_data.v.z;
-						inp >> npsat_data.proc;
+						inp >> oldproc;
 						//npsat_data.proc = 0;
 						inp >> npsat_data.diameter;
 						inp >> npsat_data.ratio;
