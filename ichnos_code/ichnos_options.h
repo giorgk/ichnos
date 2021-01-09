@@ -142,6 +142,8 @@ namespace ICHNOS {
 			("Domain.BottomPower", po::value<double>()->default_value(3), "Search Power for bottom elevation")
 			("Domain.ProcessorPolys", po::value<std::string >(), "A filename that containts the coordinates of each processor polygon")
 			("Domain.ExpandedPolys", po::value<std::string >(), "A filename that containts the coordinates of each Expanded polygon")
+			("Domain.AttractFile", po::value<std::string >(), "A filename that containts the particle attractors")
+			("Domain.AttractRadius", po::value<double>()->default_value(50), "Particles closer to this distance will be captured from attractors")
 
 			// Stopping criteria
 			("StoppingCriteria.MaxIterationsPerStreamline", po::value<int>()->default_value(1000), "Maximum number of steps per streamline")
@@ -175,9 +177,7 @@ namespace ICHNOS {
 
 			// Unsued
 			("Unused.nThreads", po::value<int>()->default_value(1), "Number of threads")
-
-
-			;
+		;
 
 		if (vm_cmd.count("help")) {
 			if (world.rank() == 0) {
@@ -226,6 +226,9 @@ namespace ICHNOS {
 					Dopt.processorDomainFile = vm_cfg["Domain.ProcessorPolys"].as<std::string>();
 					Dopt.expandedDomainFile = vm_cfg["Domain.ExpandedPolys"].as<std::string>();
 					Dopt.myRank = world.rank();
+					Dopt.AttractorsFile = vm_cfg["Domain.AttractFile"].as<std::string>();
+					Dopt.AttractRadius = vm_cfg["Domain.AttractRadius"].as<double>();
+					Dopt.AttractRadius = Dopt.AttractRadius * Dopt.AttractRadius;
 				}
 
 				{// Stopping criteria

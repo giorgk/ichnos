@@ -261,6 +261,11 @@ namespace ICHNOS {
 				// we can avoid unnessecary iterations by simply exit
 				if (v.isZero() & (er == ExitReason::NO_EXIT))
 					return ExitReason::STUCK;
+
+				bool isNearAttractor = false;
+				Domain.bisInNearAttractor(p, isNearAttractor);
+				if (isNearAttractor)
+					return ExitReason::ATTRACT;
 			}
 
 			count_iterations++;

@@ -388,6 +388,7 @@ namespace ICHNOS {
 		FIRST_POINT_GHOST,
 		FAR_AWAY,
 		MAX_AGE,
+		ATTRACT,
 		NO_REASON
 	};
 
@@ -405,6 +406,7 @@ namespace ICHNOS {
 		ExitReasonsMap.insert(std::pair<ExitReason, std::string>(ExitReason::FIRST_POINT_GHOST, "FIRST_POINT_GHOST"));
 		ExitReasonsMap.insert(std::pair<ExitReason, std::string>(ExitReason::FAR_AWAY, "FAR_AWAY"));
 		ExitReasonsMap.insert(std::pair<ExitReason, std::string>(ExitReason::MAX_AGE, "MAX_AGE"));
+		ExitReasonsMap.insert(std::pair<ExitReason, std::string>(ExitReason::ATTRACT, "ATTRACT"));
 		ExitReasonsMap.insert(std::pair<ExitReason, std::string>(ExitReason::NO_REASON, "NO_REASON"));
 		it = ExitReasonsMap.find(er);
 		if (it != ExitReasonsMap.end())
@@ -423,6 +425,7 @@ namespace ICHNOS {
 		ExitReasonMap.insert(std::pair<std::string, ExitReason>("EXIT_TOP", ExitReason::EXIT_TOP));
 		ExitReasonMap.insert(std::pair<std::string, ExitReason>("FAR_AWAY", ExitReason::FAR_AWAY));
 		ExitReasonMap.insert(std::pair<std::string, ExitReason>("MAX_AGE", ExitReason::MAX_AGE));
+		ExitReasonMap.insert(std::pair<std::string, ExitReason>("ATTRACT", ExitReason::ATTRACT));
 		ExitReasonMap.insert(std::pair<std::string, ExitReason>("FIRST_POINT_GHOST", ExitReason::FIRST_POINT_GHOST));
 		ExitReasonMap.insert(std::pair<std::string, ExitReason>("INIT_OUT", ExitReason::INIT_OUT));
 		ExitReasonMap.insert(std::pair<std::string, ExitReason>("MAX_INNER_ITER", ExitReason::MAX_INNER_ITER));
@@ -491,10 +494,12 @@ namespace ICHNOS {
 		std::string polygonFile;
 		std::string TopElevationFile;
 		std::string BottomeElevationFile;
+		std::string AttractorsFile;
 		double TopRadius;
 		double BotRadius;
 		double TopPower;
 		double BotPower;
+		double AttractRadius;
 		std::string processorDomainFile;
 		std::string expandedDomainFile;
 		int myRank;

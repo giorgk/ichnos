@@ -12,6 +12,7 @@ namespace ICHNOS {
 		virtual void bisInPolygon(vec3& p, bool& tf) {};
 		virtual void bisInProcessorPolygon(vec3 p, bool& tf) {};
 		virtual void bisInExpandedPolygon(vec3 p, bool& tf) {};
+		virtual void bisInNearAttractor(vec3 p, bool& tf) {};
 		virtual void getTopBottomElevation(vec3 p, double& top, double& bottom) {};
 		boostPolygon getProcessorDomain();
 	protected:
@@ -37,11 +38,13 @@ namespace ICHNOS {
 		void bisInPolygon(vec3& p, bool& tf);
 		void bisInProcessorPolygon(vec3 p, bool& tf);
 		void bisInExpandedPolygon(vec3 p, bool& tf);
+		void bisInNearAttractor(vec3 p, bool& tf);
 		void getTopBottomElevation(vec3 p, double& top, double& bottom);
 
 	private:
 		PointSet2 TopSet;
 		PointSet2 BotSet;
+		PointSet2 AttrctSet;
 		//cgal_Delaunay_2	Top_tria;
 		//cgal_Delaunay_2 Bot_tria;
 		//coord_map top_values;
@@ -56,6 +59,8 @@ namespace ICHNOS {
 		double BotRadius = 1000;
 		double TopPower = 3;
 		double BotPower = 3;
+		bool useAttractors = false;
+		double AttractRadius = 10;
 
 		void interpolateSets(vec3& p, double& top, double& bot);
 	};
@@ -121,6 +126,12 @@ namespace ICHNOS {
 		if (getBotFromFile){
 			READ::readTopBot(Dopt.BottomeElevationFile, BotSet,  false, true);
 		}
+
+		if (!Dopt.AttractorsFile.empty()) {
+			useAttractors = true;
+			READ::readTopBot(Dopt.AttractorsFile, AttrctSet, true, true);
+			AttractRadius = Dopt.AttractRadius;
+		}
 	}
 
 	void Domain2D::bisInPolygon(vec3& p, bool& tf) {
@@ -142,6 +153,28 @@ namespace ICHNOS {
 
 	void Domain2D::getTopBottomElevation(vec3 p, double& top, double& bottom) {
 		interpolateSets(p, top, bottom);
+	}
+
+	void Domain2D::bisInNearAttractor(vec3 p, bool& tf) {
+		tf = false;
+		if (!useAttractors) {
+			return;
+		}
+		std::list<Vertex_handle2D> LV;
+		cgal_point_2 cntr(p.x, p.y);
+		CGAL::Circle_2<K> rc(cntr, AttractRadius);
+		AttrctSet.range_search(rc, std::back_inserter(LV));
+		if (!LV.empty()) {
+			std::list<Vertex_handle2D>::const_iterator it = LV.begin();
+			for (; it != LV.end(); ++it) {
+				double bot_attract = (*it)->info().bot - AttractRadius;
+				double top_attract = (*it)->info().top + AttractRadius;
+				if (p.z > bot_attract && p.z < top_attract) {
+					tf = true;
+					break;
+				}
+			}
+		}
 	}
 
 	void Domain2D::interpolateSets(vec3& p, double& top, double& bot){
