@@ -24,8 +24,6 @@ int main(int argc, char* argv[])
     boost::mpi::environment env( argc, argv );
     boost::mpi::communicator world;
 
-
-
     //{ // Random number generator
         //ICHNOS::SingletonGenerator* RG = RG->getInstance();
         //int cnt = 0;
