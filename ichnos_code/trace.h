@@ -95,11 +95,22 @@ namespace ICHNOS {
 		ICHNOS::SingletonGenerator* RG = RG->getInstance();
 
 		int outer_iter = 0;
+		int particle_index_start = 0;
+        int particle_index_end = 0;
 		while (true) {
 			Part_Streamlines.clear();
 			world.barrier();
 			if (my_rank == 0) {
-				
+			    particle_index_end = particle_index_start + popt.ParticlesInParallel;
+			    if (particle_index_end + 1000 > ALL_Streamlines.size()){
+                    particle_index_end = ALL_Streamlines.size();
+			    }
+			    for (int i = particle_index_start; i < particle_index_end; ++i){
+                    Part_Streamlines.push_back(ALL_Streamlines[i]);
+			    }
+
+
+				/*
 				int N = popt.ParticlesInParallel;
 				int minPartinparallel = 1000;
 				//std::cout << "@#&%$&# Dont forget to harcode the minPartinparallel back to 1000. Currently is " << minPartinparallel << std::endl;
@@ -113,7 +124,9 @@ namespace ICHNOS {
 					Part_Streamlines.push_back(ALL_Streamlines[ii]);
 					ALL_Streamlines.erase(ALL_Streamlines.begin() + ii);
 				}
-				std::cout << "||	Simulating " << Part_Streamlines.size() << " Streamlines. # streamlines to trace: "  << ALL_Streamlines.size() << std::endl;
+				 std::cout << "||	Simulating " << Part_Streamlines.size() << " Streamlines. # streamlines to trace: "  << ALL_Streamlines.size() << std::endl;
+				*/
+				std::cout << "||    Simulating from " << particle_index_start << " - " << particle_index_end-1 <<" out of " << ALL_Streamlines.size() << std::endl;
 			}
 			world.barrier();
 			//std::cout << my_rank << " Before: " << Part_Streamlines.size() << std::endl;
@@ -122,7 +135,13 @@ namespace ICHNOS {
 
 			traceOuter(Part_Streamlines, outer_iter, ireal);
 
-			int nRemainingstreamlines = ALL_Streamlines.size();
+            int nRemainingstreamlines = 0;
+			if (my_rank == 0){
+                nRemainingstreamlines = ALL_Streamlines.size() - particle_index_end;
+                particle_index_start = particle_index_end;
+			}
+
+			//int nRemainingstreamlines = ALL_Streamlines.size();
 			//std::cout << "Proc " << my_rank << " N_part2send = " << N_part2send << std::endl;
 			MPI::sumScalar<int>(nRemainingstreamlines, nproc, world, MPI_INT);
 			outer_iter++;
