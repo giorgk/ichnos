@@ -20,7 +20,7 @@ namespace ICHNOS {
 		IWFM, /// This is no longer used
 		STEADY, /// This is a velocity type where a single value for the velocity is defined
 		TRANS, /// This is a velocity type where for its point the velocity is defined as a time series
-		STOCH, /// (Experimental) This is a velocity type where the velocity is defined in some stochastic manner (
+		STOCH, /// (Experimental) This is a velocity type where the velocity is defined in some stochastic manner
 		INVALID /// This is used for any velocity type that does not make any sense
 	};
 
@@ -200,7 +200,7 @@ namespace ICHNOS {
 			("AdaptStep.Tolerance", po::value<double>()->default_value(0.1), "Tolerance when the RK45 is used")
 
 			// InputOutput
-			("InputOutput.PartilceFile", po::value<std::string >(), "A filename with the initial positions of particles")
+			("InputOutput.ParticleFile", po::value<std::string >(), "A filename with the initial positions of particles")
 			("InputOutput.WellFile", po::value<std::string >(), "A filename with the well locations")
 			("InputOutput.OutputFile", po::value<std::string >(), "Prefix for the output file")
 			("InputOutput.ParticlesInParallel", po::value<int>()->default_value(1000), "Maximum number run in parallel")
@@ -312,7 +312,7 @@ namespace ICHNOS {
 				}
 
 				{// InputOutput
-					Popt.ParticleFile = vm_cfg["InputOutput.PartilceFile"].as<std::string>();
+					Popt.ParticleFile = vm_cfg["InputOutput.ParticleFile"].as<std::string>();
 					Popt.WellFile = vm_cfg["InputOutput.WellFile"].as<std::string>();
 					Popt.OutputFile = vm_cfg["InputOutput.OutputFile"].as<std::string>();
 					Popt.ParticlesInParallel = vm_cfg["InputOutput.ParticlesInParallel"].as<int>(); 
