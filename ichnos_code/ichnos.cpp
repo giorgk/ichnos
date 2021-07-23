@@ -80,7 +80,7 @@ int main(int argc, char* argv[])
             }
             break;
         }
-        case ICHNOS::VelType::NPSAT:
+        case ICHNOS::VelType::STEADY:
         {
             NPSAT::npsatVel VF(world);
             VF.readVelocityField(OPT.getVelFname());

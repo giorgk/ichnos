@@ -12,20 +12,29 @@ namespace po = boost::program_options;
 
 
 namespace ICHNOS {
+    /*!
+     * VelType is a list of velocity field types
+     */
 	enum class VelType {
 	//	Cloud3d,
-		IWFM,
-		NPSAT,
-		STOCH,
-		INVALID
+		IWFM, /// This is no longer used
+		STEADY, /// This is a velocity type where a single value for the velocity is defined
+		TRANS, /// This is a velocity type where for its point the velocity is defined as a time series
+		STOCH, /// (Experimental) This is a velocity type where the velocity is defined in some stochastic manner (
+		INVALID /// This is used for any velocity type that does not make any sense
 	};
 
+	/*!
+	 * A utility function that converts the enumeration to string type
+	 * @param vt The enumeration to convert
+	 * @return The string representation of the enumeration
+	 */
 	std::string castVelType2String(VelType vt) {
 		std::map <VelType, std::string> vtMap;
 		std::map <VelType, std::string>::iterator it;
 		//vtMap.insert(std::pair<VelType, std::string>(VelType::Cloud3d, "Cloud3d"));
-		vtMap.insert(std::pair<VelType, std::string>(VelType::IWFM, "IWFM"));
-		vtMap.insert(std::pair<VelType, std::string>(VelType::NPSAT, "NPSAT"));
+		vtMap.insert(std::pair<VelType, std::string>(VelType::TRANS, "TRANS"));
+		vtMap.insert(std::pair<VelType, std::string>(VelType::STEADY, "STEADY"));
 		vtMap.insert(std::pair<VelType, std::string>(VelType::STOCH, "STOCH"));
 		it = vtMap.find(vt);
 		if (it != vtMap.end())
@@ -34,13 +43,17 @@ namespace ICHNOS {
 			return "INVALID";
 		}
 	}
-
+    /*!
+     * A utility function that converts a string to VelType enumeration
+     * @param vt the string to convert
+     * @return The corresponing enumeration. Retunds VelType::INVALID if the input is not recognized
+     */
 	VelType castVelType2Enum(std::string vt) {
 		std::map < std::string, VelType> vtMap;
 		std::map < std::string, VelType>::iterator it;
 		//vtMap.insert(std::pair<std::string, VelType>("Cloud3d", VelType::Cloud3d));
 		vtMap.insert(std::pair<std::string, VelType>("IWFM", VelType::IWFM));
-		vtMap.insert(std::pair<std::string, VelType>("NPSAT", VelType::NPSAT));
+		vtMap.insert(std::pair<std::string, VelType>("STEADY", VelType::STEADY));
 		vtMap.insert(std::pair<std::string, VelType>("STOCH", VelType::STOCH));
 		it = vtMap.find(vt);
 		if (it != vtMap.end())
@@ -50,32 +63,53 @@ namespace ICHNOS {
 		}
 	}
 
+	/*! \brief The main class that defines all the options
+	 *
+	 */
 	class options {
 	public:
+	    /*!
+	     * The constructor of the option class
+	     * @param world_in is the mpi communicator
+	     */
 		options(boost::mpi::communicator& world_in);
 
+		/*!
+		 * Reads the input arguments to the main program.
+		 *
+		 * See details explanation about the inputs [here](https://docs.microsoft.com/en-us/cpp/cpp/main-function-command-line-args?view=msvc-160)
+		 *
+		 * @param argc The number of input arguments
+		 * @param argv The input arguments themselves
+		 * @return true if the reading was successful
+		 */
 		bool readInput(int argc, char* argv[]);
 
+		/*!
+		 *  A getter function to the name of velocity configuration file
+		 * @return the velocity configuration file name
+		 */
 		std::string getVelFname() {
 			return velocityFieldFileName;
 		}
 
-		ParticleOptions Popt;
-		DomainOptions Dopt;
-		bool gatherMode = false;
-		int nproc = 0;
-		int niter = 0;
 
-		VelType velocityFieldType;
+		ParticleOptions Popt; /// A container of the particle tracking related options
+		DomainOptions Dopt; /// A container of the domain related options
+		bool gatherMode = false; /// Indicates whether the program should rather particles from files or do particle tracking
+		int nproc = 0; /// Number of processors. This should set automatically.
+		int niter = 0; /// The number of iterations during the gather mode. This is set also from the input files
+
+		VelType velocityFieldType; /// The velocity field type
 		
 
 		
 
 		
 	private:
-		boost::mpi::communicator world;
-		bool bIsMultiThreaded = true;
-		int nThreads = 1;
+		boost::mpi::communicator world; /// A reference to the mpi communicator
+		// bool bIsMultiThreaded = true;
+		//int nThreads = 1;
 		std::string velocityFieldFileName;
 	};
 
@@ -83,9 +117,9 @@ namespace ICHNOS {
 		:
 		world(world_in)
 	{
-		if (world.size() > 1) {
-			bIsMultiThreaded = false;
-		}
+		//if (world.size() > 1) {
+		//	bIsMultiThreaded = false;
+		//}
 	}
 
 	bool options::readInput(int argc, char* argv[]) {
@@ -129,7 +163,7 @@ namespace ICHNOS {
 		po::options_description config_options("Configuration file options");
 		config_options.add_options()
 			// Velocity Options
-			("Velocity.Type", po::value<std::string>(), "Type of velocity. (NPSAT or IWFM)")
+			("Velocity.Type", po::value<std::string>(), "Type of velocity. (STEADY or IWFM)")
 			("Velocity.ConfigFile", po::value<std::string >(), "Set configuration file for the velocity field")
 
 			// Domain options
@@ -288,9 +322,9 @@ namespace ICHNOS {
 					Popt.Nrealizations = vm_cfg["Other.Nrealizations"].as<int>();
 				}
 
-				{// Unsued
-					nThreads = vm_cfg["Unused.nThreads"].as<int>();
-				}
+				//{// Unsued
+					//nThreads = vm_cfg["Unused.nThreads"].as<int>();
+				//}
 			
 			}
 			catch (std::exception& E)
