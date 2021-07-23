@@ -3,6 +3,7 @@
 !LICENSE
 !*.md
 !*.dat
+!*.codedocs
 
 # Code folder 
 !/ichnos_code
@@ -12,6 +13,7 @@
 !/ichnos_code/*.sln
 !/ichnos_code/*.vcxproj
 !/ichnos_code/*.txt
+!/ichnos_code/*.dox
 
 # Houdini folder
 !/ichnos_hou
