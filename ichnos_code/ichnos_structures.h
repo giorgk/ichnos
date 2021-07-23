@@ -135,9 +135,7 @@ namespace ICHNOS {
 		}
 	};
 
-	/**
 
-	*/
 	struct NPSAT_data {
 		int proc = -9;
 		int id = -9;
@@ -159,18 +157,18 @@ namespace ICHNOS {
 	typedef CGAL::Delaunay_triangulation_3<K, Tds, CGAL::Fast_location>	cgal_Delaunay;
 	typedef cgal_Delaunay::Point cgal_point;
 	typedef cgal_Delaunay::Vertex_handle vertex_handle;
-	//typedef cgal_Delaunay::Cell_handle cell_handle;
+	// typedef cgal_Delaunay::Cell_handle cell_handle;
 
 	// Interpolation
-	//typedef CGAL::Delaunay_triangulation_2<K> cgal_Delaunay_2;
-	//typedef CGAL::Interpolation_traits_2<K>	interp_traits;
-	//typedef K::FT coord_type;
+	// typedef CGAL::Delaunay_triangulation_2<K> cgal_Delaunay_2;
+	// typedef CGAL::Interpolation_traits_2<K>	interp_traits;
+	// typedef K::FT coord_type;
 	//
 
-	//typedef std::map<cgal_point_2, coord_type, K::Less_xy_2> coord_map;
-	//typedef CGAL::Data_access<coord_map>	value_access;
+	// typedef std::map<cgal_point_2, coord_type, K::Less_xy_2> coord_map;
+	// typedef CGAL::Data_access<coord_map>	value_access;
 
-	//dD Spatial Searching
+	// dD Spatial Searching
 	typedef K::Point_3	cgal_point_3;
 	typedef boost::tuple<cgal_point_3, NPSAT_data> pnt_int;
 	typedef CGAL::Search_traits_3<K> Traits_base;
@@ -180,7 +178,7 @@ namespace ICHNOS {
 
 	
 
-	//2D searching 
+	// 2D searching
 	typedef CGAL::Triangulation_vertex_base_with_info_2<elev_data, K>   Vb2D;
 	typedef CGAL::Triangulation_data_structure_2<Vb2D>  Tds2D;
 	typedef CGAL::Point_set_2<K,Tds2D>::Vertex_handle Vertex_handle2D;
@@ -265,73 +263,6 @@ namespace ICHNOS {
 	typedef CGAL::Fuzzy_iso_box<search_traits_stoch> Fuzzy_iso_box_stoch;
 	typedef CGAL::Kd_tree<search_traits_stoch> search_tree_stoch;
 
-
-	//**
-	// * @brief This is a point could structure that is required by nanoflann to build the trees
-	// * 
-	// * @tparam S The template parameter #S correspond to the type of parameter that it is return by the interpolation method.
-	// * At the moment we employ double, vec3 and int
-	// */
-	//template <typename S>
-	//struct pointCloud {
-	//	//! This holds the coordinates of the point cloud. If the point could is 2D set the z dimention to 0
-	//	std::vector<vec3> pts;
-	//	//! Although this is named as vel it is actuall the vector that holds the values that correspond to the #pts vector.
-	//	std::vector<S> vel;
-	//	//! This is a vector that holds the ids of the processor that actually onws the point. 
-	//	//! For example pts[0] is owned by the proc[0]. The data are supplied by the user
-	//	std::vector<int> proc;
-
-	//	//! This hold the interpolation search radius
-	//	double Radious;
-	//	//! THis hold the Power of the interpolation
-	//	double Power;
-	//	//! This is the threshold. if the distance from a point in the cloud is smaller than the 
-	//	//! threshold then value is assigned directly from this point
-	//	double Threshold;
-	//	//! This is a flag whether the point cloud is allowed to interpolate if the point in question maybe slightly outside the domain
-	//	bool InterpolateOutside;
-	//	//! If more than #NmaxPnts points are whithin the #Radius only #NmaxPnts will be used
-	//	int NmaxPnts;
-	//	//! If less than #NminPnts are within the #Radius the radius will be doubled until at least #NminPnts found
-	//	int NminPnts;
-
-
-	//	//! methods required by nanoflann ------
-	//	//! Must return the number of data points
-	//	inline size_t kdtree_get_point_count() const { return pts.size(); }
-
-	//	//! Returns the dim'th component of the idx'th point in the class:
-	//	//! Since this is inlined and the "dim" argument is typically an immediate value, the
-	//	//!  "if/else's" are actually solved at compile time.
-	//	inline double kdtree_get_pt(const size_t idx, const size_t dim) const
-	//	{
-	//		if (dim == 0) return pts[idx].x;
-	//		else if (dim == 1) return pts[idx].y;
-	//		else return pts[idx].z;
-	//	}
-
-	//	//! This returns the #idx th point
-	//	inline vec3 kdtree_get_pnt_vec(const size_t idx) const {
-	//		return pts[idx];
-	//	}
-
-	//	//! This returns the #idx th interpolation value of type #S
-	//	inline S kdtree_get_vel_vec(const size_t idx) const {
-	//		return vel[idx];
-	//	}
-
-	//	//! THis returns the processor id of the #idx th point
-	//	inline int kdtree_get_proc(const size_t idx) const {
-	//		return proc[idx];
-	//	}
-
-	//	//! Optional bounding-box computation: return false to default to a standard bbox computation loop.
-	//	//!   Return true if the BBOX was already computed by the class and returned in "bb" so it can be avoided to redo it again.
-	//	//!   Look at bb.size() to find out the expected dimensionality (e.g. 2 or 3 for point clouds)
-	//	template <class BBOX>
-	//	bool kdtree_get_bbox(BBOX& /* bb */) const { return false; }
-	//};
 
 	enum class interpType { INGORE, SCALAR, CLOUD};
 

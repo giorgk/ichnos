@@ -9,8 +9,6 @@
 #include "ichnos_utils.h"
 
 
-namespace po = boost::program_options;
-
 namespace ICHNOS {
 	
 	class velocityField {
