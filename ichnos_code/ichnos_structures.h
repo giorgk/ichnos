@@ -266,7 +266,7 @@ namespace ICHNOS {
 	typedef CGAL::Kd_tree<search_traits_stoch> search_tree_stoch;
 
 
-	///**
+	//**
 	// * @brief This is a point could structure that is required by nanoflann to build the trees
 	// * 
 	// * @tparam S The template parameter #S correspond to the type of parameter that it is return by the interpolation method.
