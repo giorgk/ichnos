@@ -15,6 +15,9 @@
 !/ichnos_code/*.txt
 !/ichnos_code/*.dox
 
+# docs folder 
+!/docs
+
 # Houdini folder
 !/ichnos_hou
 /ichnos_hou/*
