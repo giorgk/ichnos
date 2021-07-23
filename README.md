@@ -146,7 +146,8 @@ At the time of writing, aqua cluster has boost verion 1.58 while the cmake requi
 
 
 # Running Ichnos
-Ichnos reads the inputs from ascii files and writes the outputs to ascii files as well. </br>
+Ichnos reads the inputs from ascii files and writes the outputs to ascii files as well. 
+
 To run Ichnos one need to prepare two configuration files as well as a number of other input files that descibe the velocity fields and the domain.
 You can run the code with the following options:
 
