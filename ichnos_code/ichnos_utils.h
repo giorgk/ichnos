@@ -14,7 +14,6 @@ namespace ICHNOS {
 
 	namespace DEBUG {
 		/**
-		 * .
 		 * 
 		 * \param P
 		 * \param prinAttr
