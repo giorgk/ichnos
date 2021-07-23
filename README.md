@@ -88,7 +88,7 @@ packages:
  ```
  
  ### Nanoflann (Skip this nanoflann is no longer needed)
- The last required library is the nanoflann. THis is just a header that has no dependancies so all is needed is
+ The last required library is the nanoflann. This is just a header that has no dependancies so all is needed is
  ```
  spack install nanoflann target=x86_64
  ```
