@@ -4,6 +4,7 @@
 !*.md
 !*.dat
 !*.codedocs
+!*.dox
 
 # Code folder 
 !/ichnos_code
