@@ -174,6 +174,7 @@ namespace NPSAT {
 					porosityValue = std::stod(porfile);
 				}
 				else {
+				    // TODO
 					//porType = ic::interpType::CLOUD;
 					//ic::READ::read2DscalarField(porfile, PorosityCloud);
 					//this->PorosityTree = std::unique_ptr<nano_kd_tree_scalar>(new nano_kd_tree_scalar(3, PorosityCloud, nanoflann::KDTreeSingleIndexAdaptorParams(10)));
