@@ -39,6 +39,18 @@
 !/IchnosRwrkspc/*.Rproj
 !/IchnosRwrkspc/*.R
 
+# wiki files
+!/WikiExamples
+/WikiExamples/*
+!/WikiExamples/*.m
+!/WikiExamples/*.ini
+
+# Bin
+!/Bin
+/Bin/*
+!/Bin/*.exe
+!/Bin/*.dll
+
 
 
 

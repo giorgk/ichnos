@@ -10,9 +10,18 @@ At the moment we provide one type of velocity field i.e. point cloud type and th
   3. Stochastic flow fields (This is experimental)
 
 # Getting the code
-For Windows there are executable available here. However those executables may not contain the latest updates, fixes and new bugs.
-For linux or getting the latest version under windows one need to build the project    
+## Windons
+Windows executables are available under the [Bin](Bin/) folder. However those executables may not contain the latest updates, fixes and new bugs.
 
+Put under the same folder the exe and all the dlls. Make sure the antivirus is not blocking the execution. To veryfy that the code can run try the following under a powershell or command prompt.
+```
+ichnos.exe -v
+```
+## Linux
+For linux you have to compile the code. See the section below.    
+
+# Get started
+The [wiki](https://github.com/giorgk/ichnos/wiki) is the best source to get you started.
 
 # Building Ichnos
 To build ichnos we use [cmake](https://cmake.org/). The code contains the required [CMakeList.txt](https://github.com/giorgk/ichnos/blob/master/ichnos_code/CMakeLists.txt). However it is possible that it may need adjustments for each system.
@@ -165,3 +174,8 @@ ichnos.exe -h
 ichnos.exe -c config.ini
 ```
 
+# Cooming soon
+- [ ] Finish the transient state case
+- [ ] Instead of point cloud use a cloud graph
+- [ ] Do not require processor polygon files for single processor runs
+- [ ] Add option to print only the final positions of the particles instead the entire streamline (maybe Age and streamline length). 
