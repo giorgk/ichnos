@@ -167,23 +167,23 @@ namespace ICHNOS {
 			("Velocity.ConfigFile", po::value<std::string >(), "Set configuration file for the velocity field")
 
 			// Domain options
-			("Domain.Outline", po::value<std::string >(), "A filename that containts the vertices of the outline polygon")
+			("Domain.Outline", po::value<std::string >(), "A filename that contains the vertices of the outline polygon")
 			("Domain.TopFile", po::value<std::string >(), "A filename with the point cloud of the top elevation")
-			("Domain.TopRadius", po::value<double>()->default_value(1000), "Search Radious for top elevation")
+			("Domain.TopRadius", po::value<double>()->default_value(1000), "Search Radius for top elevation")
 			("Domain.TopPower", po::value<double>()->default_value(3), "Search Power for top elevation")
 			("Domain.BottomFile", po::value<std::string >(), "A filename with the point cloud of the bottom elevation")
-			("Domain.BottomRadius", po::value<double>()->default_value(1000), "Search Radious for bottom elevation")
+			("Domain.BottomRadius", po::value<double>()->default_value(1000), "Search Radius for bottom elevation")
 			("Domain.BottomPower", po::value<double>()->default_value(3), "Search Power for bottom elevation")
-			("Domain.ProcessorPolys", po::value<std::string >(), "A filename that containts the coordinates of each processor polygon")
-			("Domain.ExpandedPolys", po::value<std::string >(), "A filename that containts the coordinates of each Expanded polygon")
-			("Domain.AttractFile", po::value<std::string >(), "A filename that containts the particle attractors")
-			("Domain.AttractRadius", po::value<double>()->default_value(50), "Particles closer to this distance will be captured from attractors")
+			("Domain.ProcessorPolys", po::value<std::string >(), "A filename that contains the coordinates of each processor polygon")
+			("Domain.ExpandedPolys", po::value<std::string >(), "A filename that contains the coordinates of each Expanded polygon")
 
 			// Stopping criteria
 			("StoppingCriteria.MaxIterationsPerStreamline", po::value<int>()->default_value(1000), "Maximum number of steps per streamline")
 			("StoppingCriteria.MaxProcessorExchanges", po::value<int>()->default_value(50), "Maximum number of that a particles are allowed to change processors")
 			("StoppingCriteria.AgeLimit", po::value<double>()->default_value(-1), "If the particle exceed this limit stop particle tracking. Negative means no limit")
 			("StoppingCriteria.Stuckiter", po::value<int>()->default_value(10), "After Stuckiter exit particle tracking")
+            ("StoppingCriteria.AttractFile", po::value<std::string >(), "A filename that contains the particle attractors")
+            ("StoppingCriteria.AttractRadius", po::value<double>()->default_value(50), "Particles closer to this distance will be captured from attractors")
 
 			// Step configuration
 			("StepConfig.Method", po::value<std::string >(), "Method for steping")
@@ -210,7 +210,7 @@ namespace ICHNOS {
 			("Other.Nrealizations", po::value<int>()->default_value(1), "NUmber of realizations")
 
 			// Unsued
-			("Unused.nThreads", po::value<int>()->default_value(1), "Number of threads")
+			//("Unused.nThreads", po::value<int>()->default_value(1), "Number of threads")
 		;
 
 		if (vm_cmd.count("help")) {
@@ -260,9 +260,6 @@ namespace ICHNOS {
 					Dopt.processorDomainFile = vm_cfg["Domain.ProcessorPolys"].as<std::string>();
 					Dopt.expandedDomainFile = vm_cfg["Domain.ExpandedPolys"].as<std::string>();
 					Dopt.myRank = world.rank();
-					Dopt.AttractorsFile = vm_cfg["Domain.AttractFile"].as<std::string>();
-					Dopt.AttractRadius = vm_cfg["Domain.AttractRadius"].as<double>();
-					Dopt.AttractRadius = Dopt.AttractRadius * Dopt.AttractRadius;
 				}
 
 				{// Stopping criteria
@@ -270,6 +267,9 @@ namespace ICHNOS {
 					Popt.MaxProcessorExchanges = vm_cfg["StoppingCriteria.MaxProcessorExchanges"].as<int>();
 					Popt.AgeLimit = vm_cfg["StoppingCriteria.AgeLimit"].as<double>();
 					Popt.StuckIterations = vm_cfg["StoppingCriteria.Stuckiter"].as<int>();
+                    Dopt.AttractorsFile = vm_cfg["StoppingCriteria.AttractFile"].as<std::string>();
+                    Dopt.AttractRadius = vm_cfg["StoppingCriteria.AttractRadius"].as<double>();
+                    Dopt.AttractRadius = Dopt.AttractRadius * Dopt.AttractRadius;
 				}
 
 				{// Step configuration

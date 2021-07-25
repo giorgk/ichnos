@@ -324,11 +324,13 @@ namespace ICHNOS {
 						std::istringstream inp(line.c_str());
 						inp >> id;
 						inp >> nVerts;
+						if (id == myRank){
+                            myPolyFound = true;
+						}
 					}
 					for (int j = 0; j < nVerts; ++j) {
 						getline(datafile, line);
-						if (id == myRank) {
-							myPolyFound = true;
+						if (myPolyFound) {
 							std::istringstream inp(line.c_str());
 							inp >> x;
 							inp >> y;
@@ -358,9 +360,11 @@ namespace ICHNOS {
 				int eid, sid;
 				vec3 pp;
 				while (getline(datafile, line)) {
-					if (line.size() > 3 && !line.empty())
+					if (line.size() >= 1 && !line.empty())
 						if (comment.compare(0, 1, line, 0, 1) == 0)
 							continue;
+                    if (line.empty())
+                        continue;
 
 					std::istringstream inp(line.c_str());
 					inp >> eid;

@@ -45,8 +45,8 @@ int main(int argc, char* argv[])
         std::time_t result = std::time(nullptr);
         std::cout << "Ichnos started at " << std::asctime(std::localtime(&result)) << std::endl;
         std::cout << "Ichnos will run using " << world.size() << " processors" << std::endl;
-        std::cout << "Good luck with that!" << std::endl;
-        std::cout << "Reading data..." << std::endl;
+        //std::cout << "Good luck with that!" << std::endl;
+        std::cout << "Reading input data..." << std::endl;
     }
 
     ICHNOS::options OPT(world);
