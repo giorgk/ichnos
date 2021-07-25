@@ -36,8 +36,8 @@ Ichnos depends on a few libraries
 Gettting the dependencies right sometimes can be quite tricky. To build Ichnos we have used three options for different systems.
 
 * [vcpkg](https://github.com/microsoft/vcpkg) is probably the easiset method to build the dependencies. It has always worked under windows without issues. Under linux can work but not without issues.
-* [Spack](https://spack.io/) Using spack is probably the best option for linux, yet is a bit more involved compared th vcpkg. There are more steps about spack in the following
-* **Build everything** Thats requires some experience and is recommnded on system without administration provilages, e.g clusters
+* [Spack](https://spack.io/) Using spack is probably the best option for linux, yet is a bit more involved compared to the vcpkg. There is more info about spack in the next section
+* **Build everything** That requires some experience and it is recommnded on systems without administration provilages, e.g clusters
 
 ## Building with vcpkg
 All that is needed is to pass the following argument
@@ -46,6 +46,8 @@ All that is needed is to pass the following argument
 ```
 
 ## Building with Spack
+The following guide is not bug free.
+
 ### Prepare the environment
 First create an environment that we name it ichnos
 ```
@@ -119,7 +121,10 @@ cmake -DBoost_NO_BOOST_CMAKE=TRUE \
 
 
  ### Building in aqua cluster
- This guide has not been updated but contains usefull information
+ This guide is old and in future will either be removed or updates. 
+ 
+ I keep it for now because it contains usefull information.
+
  First clean the modules and load the openmpi
  ```
 module purge
@@ -174,8 +179,13 @@ ichnos.exe -h
 ichnos.exe -c config.ini
 ```
 
-# Cooming soon
+# Coming soon
 - [ ] Finish the transient state case
 - [ ] Instead of point cloud use a cloud graph
 - [ ] Do not require processor polygon files for single processor runs
-- [ ] Add option to print only the final positions of the particles instead the entire streamline (maybe Age and streamline length). 
+- [ ] Add option to print only the final positions of the particles instead the entire streamline (maybe Age and streamline length).
+
+# Who do I talk to
+- gkourakos@ucdavis.edu
+- hdahlke@ucdavis.edu 
+- thharter@ucdavis.edu
