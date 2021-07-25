@@ -13,7 +13,7 @@ At the moment we provide one type of velocity field i.e. point cloud type and th
 ## Windons
 Windows executables are available under the [Bin](Bin/) folder. However those executables may not contain the latest updates, fixes and new bugs.
 
-Put under the same folder the exe and all the dlls. Make sure the antivirus is not blocking the execution. To veryfy that the code can run try the following under a powershell or command prompt.
+Put under the same folder the exe and all the dlls. Make sure the antivirus is not blocking the execution. To verify that the code can run try the following under a powershell or command prompt.
 ```
 ichnos.exe -v
 ```
