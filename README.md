@@ -1,13 +1,17 @@
 # Ichnos
-Ichnos is a kind of general purpose particle tracking code. As such Ichnos can trace virtual particles in simulated velocity fields. However the development of the code is heavily influenced by the projects that Ichnos developed for which is particle tracking in groundwater fields. In particular in groundwater fields that derived from finite element groundwater models. Nevertheless groundwater velocity fields from finite difference and finite volume codes can alos be used. A key consideration during the development of the code is to handle simulations multi-million velocity nodes. Therefore the code can be used with velocitiy fields that are split accross many processors.
+Ichnos is a kind of general purpose particle tracking code. As such, Ichnos can trace virtual particles in simulated velocity fields. However the development of the code is heavily influenced by the projects that Ichnos was developed for, which is primarily particle tracking in groundwater flow fields. In particular, in groundwater flow fields calculated from finite element groundwater models. Yet, groundwater velocity fields from finite difference and finite volume codes can also be used. A key consideration during the development of the code is to handle simulations with multi-million velocity nodes. Therefore the code can be used with velocitiy fields that are split accross many processors.
 
-In particle tracking codes there are essentially two main functionalities. i) Tracing the particles in a velocity field. ii) Interpolating a velocity field. The code has been designed so that tracing functions are unaware of the details of the velocity field. To achieve that there is one velocity base class that tracing function is aware. Then each different type of field has to derive from the base velocity class and overwrite few functions. 
+A brief demonstration of the capabilities of this code can be found at our [AGU 2020 poster](https://agu2020fallmeeting-agu.ipostersessions.com/?s=0C-96-C6-05-F8-AB-22-9D-63-C2-37-9D-96-2E-CD-B8).
+
+Note that this is a continuation of a previous project [IWFMtrack](https://gwt.ucdavis.edu/research-tools-and-applications/iwfm-track).
+
+In particle tracking codes there are essentially two main functionalities. i) Tracing the particles in a velocity field. ii) Interpolating a velocity field. The code has been designed so that tracing functions are unaware of the details of the velocity field. To do so the code contains a velocity base class that communicates with the tracing class. Then each different type of field has to derive from the base velocity class and overwrite a few functions. 
 
 At the moment we provide one type of velocity field i.e. point cloud type and three modes
 
   1. Steady State flow fields
   2. Transient State flow fields (Coming soon...)
-  3. Stochastic flow fields (This is experimental)
+  3. Stochastic flow fields (This is available but in an experimental stage)
 
 # Getting the code
 ## Windons
