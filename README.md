@@ -62,18 +62,18 @@ and make it active
 spack env activate ichnos
 ```
 ### CMake
-First we are going to install cmake. Any version should work however I'm specifing here 3.9.4 because this has already been built in other spack environments
+Next we are going to install cmake. Any version should work however I'm specifing here 3.9.4 because this has already been built in other spack environments
  ```
  spack install cmake@3.9.4 target=x86_64
  ```
- Now the command `spack find` should find that the cmake is installed anc the `cmake --version` should return the version information.
+ Now the command `spack find` should find that the cmake is installed and the `cmake --version` should return the version information.
  
  ### MPI
  Next we will install openmpi. The `spack info openmpi` will return the available openmpi versions, while at the top specifies which one is the prefered. At the time of writing this that was the 3.1.4 so we build it as
  ```
  spack install openmpi@3.1.4 target=x86_64
  ```
- Usually clusters provide mpi frameworks and it is always a good practise to use these. To instruct spack to use an external package ones has to create a `packages.yaml` file with the content similar to the following
+ Usually clusters provide mpi frameworks and it is always a good practise to use these. To instruct spack to use an external package ones has to create a `packages.yaml` file with content similar to the following:
  ```
 packages:
   mpi:
@@ -102,7 +102,7 @@ packages:
  spack install cgal@4.13 ^boost@1.69.0+mpi ^openmpi@3.1.4 ^mpfr@4.0.0
  ```
  
- ### Nanoflann (Skip this nanoflann is no longer needed)
+ ### Nanoflann (Skip this, nanoflann is no longer needed)
  The last required library is the nanoflann. This is just a header that has no dependancies so all is needed is
  ```
  spack install nanoflann target=x86_64
@@ -125,9 +125,9 @@ cmake -DBoost_NO_BOOST_CMAKE=TRUE \
 
 
  ### Building in aqua cluster
- This guide is old and in future will either be removed or updates. 
+ This guide is old and in future will either be removed or updated. 
  
- I keep it for now because it contains usefull information.
+ I keep it for now because it contains usefull information for similar tasks.
 
  First clean the modules and load the openmpi
  ```
@@ -137,7 +137,7 @@ module load system-gcc/openmpi-2.1.5
 ## Dependencies 
 The code depends on three libraries boost, nanoflann and CGAL.
 ### Boost 
-At the moment of writing aqua cluster has boost 1.58 available. However the default CMakeLists.txt file requests for 1.69. Therefore we have to edit the file adn downdgrade the requested version
+At the moment of writing aqua cluster has boost 1.58 available. However the default CMakeLists.txt file requests for 1.69. Therefore we have to edit the file and downdgrade the requested version.
 ### nanoflann
 Although this is a header only library its a good practice to built it so that we can use the find_package function of cmake. To get build and install nanoflann do the following:
 ```
