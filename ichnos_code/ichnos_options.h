@@ -33,8 +33,8 @@ namespace ICHNOS {
 		std::map <VelType, std::string> vtMap;
 		std::map <VelType, std::string>::iterator it;
 		//vtMap.insert(std::pair<VelType, std::string>(VelType::Cloud3d, "Cloud3d"));
+        vtMap.insert(std::pair<VelType, std::string>(VelType::STEADY, "STEADY"));
 		vtMap.insert(std::pair<VelType, std::string>(VelType::TRANS, "TRANS"));
-		vtMap.insert(std::pair<VelType, std::string>(VelType::STEADY, "STEADY"));
 		vtMap.insert(std::pair<VelType, std::string>(VelType::STOCH, "STOCH"));
 		it = vtMap.find(vt);
 		if (it != vtMap.end())
@@ -52,8 +52,8 @@ namespace ICHNOS {
 		std::map < std::string, VelType> vtMap;
 		std::map < std::string, VelType>::iterator it;
 		//vtMap.insert(std::pair<std::string, VelType>("Cloud3d", VelType::Cloud3d));
-		vtMap.insert(std::pair<std::string, VelType>("IWFM", VelType::IWFM));
 		vtMap.insert(std::pair<std::string, VelType>("STEADY", VelType::STEADY));
+        vtMap.insert(std::pair<std::string, VelType>("TRANS", VelType::TRANS));
 		vtMap.insert(std::pair<std::string, VelType>("STOCH", VelType::STOCH));
 		it = vtMap.find(vt);
 		if (it != vtMap.end())

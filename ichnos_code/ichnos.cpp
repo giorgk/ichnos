@@ -16,6 +16,8 @@
 #include "iwfmVelocity.h"
 #include "npsatVelocity.h"
 #include "stochasticVelocity.h"
+#include "TransientVelocity.h"
+
 
 ICHNOS::SingletonGenerator* ICHNOS::SingletonGenerator::_instance = nullptr;
 
@@ -89,6 +91,17 @@ int main(int argc, char* argv[])
             if (world.rank() == 0)
                 std::cout << "Tracing particles..." << std::endl;
             pt.Trace();
+            break;
+        }
+        case ICHNOS::VelType::TRANS:
+        {
+            TRANS::transVel VF(world);
+            VF.readVelocityField(OPT.getVelFname());
+            //ICHNOS::Domain2D domain(OPT.Dopt);
+            //ICHNOS::ParticleTrace pt(world, VF, domain, OPT.Popt);
+            //if (world.rank() == 0)
+            //    std::cout << "Tracing particles..." << std::endl;
+            //pt.Trace();
             break;
         }
         case ICHNOS::VelType::STOCH:

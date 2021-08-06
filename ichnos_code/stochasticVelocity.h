@@ -70,7 +70,8 @@ namespace STOCH {
 	}
 
 	void MarkovChainVel::readVelocityField(std::string vf_file) {
-		std::cout << "Velocity configuration file: " << vf_file << std::endl;
+        if (world.rank() == 0)
+		    std::cout << "Velocity configuration file: " << vf_file << std::endl;
 		po::options_description velocityFieldOptions("Velocity field options");
 		po::variables_map vm_vfo;
 		velocityFieldOptions.add_options()

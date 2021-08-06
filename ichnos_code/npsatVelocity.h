@@ -22,12 +22,12 @@ namespace ic = ICHNOS;
 
 namespace NPSAT {
 
-	struct npsatVeldata {
+	/*struct npsatVeldata {
 		int proc = -9;
 		//double dist;
 		ic::vec3 p;
 		ic::vec3 vel;
-	};
+	};*/
 
 	class npsatVel : public ic::velocityField {
 	public:
@@ -111,7 +111,7 @@ namespace NPSAT {
 			("Velocity.InitRatio", po::value<double>()->default_value(1), "Initial ratio")
 
 			// Porosity parameters
-			("Porosity.Value", po::value<std::string>(), "Porocity. Either a file or a single number")
+			("Porosity.Value", po::value<std::string>(), "Porosity. Either a file or a single number")
 
 			//General
 			("General.OwnerThreshold", po::value<double>()->default_value(0.75), "Threshold for the processor ownership")
@@ -145,8 +145,9 @@ namespace NPSAT {
 			if (vm_vfo.count("Velocity.Suffix")) {
 				suffix = vm_vfo["Velocity.Suffix"].as<std::string>();
 			}
-			else
-				suffix = ".ich";
+			else {
+                suffix = ".ich";
+            }
 			int leadZeros = vm_vfo["Velocity.LeadingZeros"].as<int>();
 			std::string filename = prefix + ic::num2Padstr(/*dbg_rank*/world.rank(), leadZeros) + suffix;
 			ic::READ::readNPSATVelocity(filename, pp, dd, multiplier);

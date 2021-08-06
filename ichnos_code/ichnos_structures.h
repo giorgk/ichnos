@@ -264,6 +264,83 @@ namespace ICHNOS {
 	typedef CGAL::Kd_tree<search_traits_stoch> search_tree_stoch;
 
 
+    enum class coordDim {vx, vy, vz};
+
+    struct TRANS_data{
+        int proc = -9;
+        int id = -9;
+        double diameter = 0;
+        double ratio = 0;
+    };
+
+    // Stochastic tree
+    typedef boost::tuple<cgal_point_3, TRANS_data> pnt_trans;
+    typedef CGAL::Search_traits_adapter<pnt_trans, CGAL::Nth_of_tuple_property_map<0, pnt_trans>, Traits_base> search_traits_trans;
+    typedef CGAL::Fuzzy_iso_box<search_traits_trans> Fuzzy_iso_box_trans;
+    typedef CGAL::Kd_tree<search_traits_trans> search_tree_trans;
+
+    class VelTR{
+    public:
+        VelTR();
+        void init(int np, int nt);
+        void setVELvalue(double v, int pnt, int step, coordDim dim);
+        void setTSvalue(double v, int step);
+        void setTSvalue(std::vector<double>& TS_in);
+    private:
+        std::vector<std::vector<double>> VX;
+        std::vector<std::vector<double>> VY;
+        std::vector<std::vector<double>> VZ;
+
+        std::vector<double> TS;
+
+        int nPoints;
+        int nSteps;
+    };
+
+    VelTR::VelTR()
+        :
+        nPoints(-9),
+        nSteps(-9)
+    {}
+
+    void VelTR::init(int np, int nt) {
+        nPoints = np;
+        nSteps = nt;
+        VX.clear();
+        VY.clear();
+        VZ.clear();
+        VX.resize(nPoints, std::vector<double>(nSteps, 0));
+        VY.resize(nPoints, std::vector<double>(nSteps, 0));
+        VZ.resize(nPoints, std::vector<double>(nSteps, 0));
+        TS.clear();
+        TS.resize(nSteps, 0);
+    }
+
+    void VelTR::setVELvalue(double v, int pnt, int step, coordDim dim){
+        if (pnt >= nPoints || step >= nSteps || pnt < 0  || step < 0)
+            return;
+
+        if (dim == coordDim::vx){
+            VX[pnt][step] = v;
+        }
+        else if (dim == coordDim::vy){
+            VY[pnt][step] = v;
+        }
+        else if (dim == coordDim::vz){
+            VZ[pnt][step] = v;
+        }
+    }
+
+    void VelTR::setTSvalue(double v, int step){
+        if (step >= nSteps || step < 0)
+            return;
+        TS[step] = v;
+    }
+    void VelTR::setTSvalue(std::vector<double> &TS_in) {
+        TS = TS_in;
+    }
+
+
 	enum class interpType { INGORE, SCALAR, CLOUD};
 
 	enum class SolutionMethods

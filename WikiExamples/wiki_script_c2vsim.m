@@ -163,3 +163,98 @@ end
 plot(c2vsim_outline.X, c2vsim_outline.Y, 'linewidth',2)
 axis equal
 axis off
+%% Prepare input files for Transient State velocity
+VelOut = readIWFM_Velocity(fullfile(c2vsim_path,'Results','C2VSimFG_GW_VELOUTFL.out'), 32537, 4);
+%% Convert the velocity units from AC-FT/month to m^3/day
+days_per_month = eomday(VelOut.YMD(:,1), VelOut.YMD(:,2));
+Vx_m3_day = VelOut.VX;
+Vy_m3_day = VelOut.VY;
+Vz_m3_day = VelOut.VZ;
+for ii = 1:length(days_per_month)
+    ii
+    Vx_m3_day(:,ii,:) = 1233.48 .* Vx_m3_day(:,ii,:) ./ days_per_month(ii);
+    Vy_m3_day(:,ii,:) = 1233.48 .* Vy_m3_day(:,ii,:) ./ days_per_month(ii);
+    Vz_m3_day(:,ii,:) = 1233.48 .* Vz_m3_day(:,ii,:) ./ days_per_month(ii);
+end
+%% Convert the velocity to m/day
+Vx_m_day = Vx_m3_day;
+Vy_m_day = Vy_m3_day;
+Vz_m_day = Vz_m3_day;
+for ii = 1:size(Vx_m_day,2)
+    for jj = 1:size(Vx_m_day,3)
+        Vx_m_day(:,ii,jj) = Vx_m_day(:,ii,jj) ./ (2.*av_dist.*av_thick(:,jj));
+        Vy_m_day(:,ii,jj) = Vx_m_day(:,ii,jj) ./ (2.*av_dist.*av_thick(:,jj));
+        Vz_m_day(:,ii,jj) = Vx_m_day(:,ii,jj) ./ elem_area;
+    end
+end
+%% Split velocity data
+% The velocity files will be printed into multiple files for easier
+% manipulation and debug
+%% XYZ files
+nvel_p = size(MSH_ELEV,1)*size(MSH_ELEV,2);
+XYZ_DATA = [...
+    repmat(BCX_3310,4,1) ... % X
+    repmat(BCY_3310,4,1) ... % X
+    reshape(MSH_ELEV, nvel_p, 1) ... % Z
+    zeros(nvel_p,1) ... % Proc ID
+    repmat(DIAM,4,1) ... % DIAM 
+    reshape(bsxfun(@rdivide, DIAM, av_thick), nvel_p, 1) ... % RATIO
+];
+%% write the XYZ file
+prefix = 'c2vsim_TR_DBG_';
+fid = fopen([prefix 'XYZ_000.ich'],'w');
+fprintf(fid, '%.3f %.3f %.3f %d %.2f %.2f\n', XYZ_DATA');
+fclose(fid);
+%% prepare the velocity files
+VX_DATA = [];
+VY_DATA = [];
+VZ_DATA = [];
+for ii = 1:size(Vx_m_day,3)
+    VX_DATA = [VX_DATA; Vx_m_day(:,:,ii)];
+    VY_DATA = [VY_DATA; Vy_m_day(:,:,ii)];
+    VZ_DATA = [VZ_DATA; Vz_m_day(:,:,ii)];
+end
+%% extract a small subset of the data for debugging
+plot(XYZ_DATA(:,1),XYZ_DATA(:,2),'.')
+dbg_domain = ginput;
+hold on
+plot(dbg_domain(:,1), dbg_domain(:,2))
+%% create domain outline for debug area
+simplify_threshold = 1000;
+[xx,yy] = reducem(Xs{1,1}', Ys{1,1}', simplify_threshold);
+poly1 = polyshape(xx, yy);
+poly2 = polyshape(dbg_domain(:,1), dbg_domain(:,2));
+polyout = intersect(poly1,poly2);
+%% Print dbg domain outline
+fid = fopen('c2vsimFG_outlineDBG.ich' ,'w');
+fprintf(fid, '%d %d\n',[size(polyout.Vertices,1) 1]);
+fprintf(fid, '%.3f %.3f\n', polyout.Vertices');
+fclose(fid);
+%% extract the indices of the point inside the dbg domain
+idx = find(inpolygon(XYZ_DATA(:,1),XYZ_DATA(:,2),dbg_domain(:,1), dbg_domain(:,2)));
+plot(XYZ_DATA(idx,1),XYZ_DATA(idx,2),'o')
+XYZ_DATA = XYZ_DATA(idx,:);
+VX_DATA = VX_DATA(idx,:);
+VY_DATA = VY_DATA(idx,:);
+VZ_DATA = VZ_DATA(idx,:);
+
+%% write the VEL files
+mult = 1000000;
+frmt = ['%.5f' repmat(' %.5f',1,size(VX_DATA,2)-1) '\n'];
+
+% VX
+fid = fopen([prefix 'VX_000.ich'],'w');
+fprintf(fid, frmt, mult*VX_DATA');
+fclose(fid);
+% VY
+fid = fopen([prefix 'VY_000.ich'],'w');
+fprintf(fid, frmt, mult*VY_DATA');
+fclose(fid);
+% VZ
+fid = fopen([prefix 'VZ_000.ich'],'w');
+fprintf(fid, frmt, mult*VZ_DATA');
+fclose(fid);
+%% Time stamp
+fid = fopen('c2vsim_STEP_monthly.ich','w');
+fprintf(fid, '%.0f\n', [0; cumsum(days_per_month(1:length(days_per_month)-1))]);
+fclose(fid);
