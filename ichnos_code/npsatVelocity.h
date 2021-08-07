@@ -31,9 +31,9 @@ namespace NPSAT {
 
 	class npsatVel : public ic::velocityField {
 	public:
-		npsatVel(boost::mpi::communicator& world_in);
+		npsatVel(boost::mpi::communicator& world_in, ic::VelType Vtype_in);
 		void readVelocityField(std::string vf_file);
-		void calcVelocity(ic::vec3& vel, std::map<int, double>& proc_map, ic::vec3& p);
+		void calcVelocity(ic::vec3& vel, std::map<int, double>& proc_map, ic::vec3& p, double tm = 0);
 		void reset();
 		void updateStep(double& step);
 	private:
@@ -81,9 +81,9 @@ namespace NPSAT {
 		void calculate_search_box(ic::vec3& p, ic::vec3& l, ic::vec3& u);
 	};
 
-	npsatVel::npsatVel(boost::mpi::communicator& world_in)
+	npsatVel::npsatVel(boost::mpi::communicator& world_in, ic::VelType Vtype_in)
 		:
-		velocityField(world_in)
+		velocityField(world_in, Vtype_in)
 	{
 		InterpolateOutsideDomain = true;
 	}
@@ -190,7 +190,7 @@ namespace NPSAT {
 
 
 
-	void npsatVel::calcVelocity(ic::vec3& vel, std::map<int, double>& proc_map, ic::vec3& p) {
+	void npsatVel::calcVelocity(ic::vec3& vel, std::map<int, double>& proc_map, ic::vec3& p, double tm) {
 		// If this is the first point of this streamline we will carry out one additional range search
 		ll.zero();
 		uu.zero();
@@ -304,8 +304,7 @@ namespace NPSAT {
 
 			if (calc_average)
 				vel = sumWVal * (1 / sumW);
-			pp = p;
-			vv = vel;
+
 			auto finish = std::chrono::high_resolution_clock::now();
 
 			std::chrono::duration<double> elapsed = finish - start;
@@ -516,12 +515,15 @@ namespace NPSAT {
 */
 		double porosity = 1.0;
 		if (porType == ic::interpType::CLOUD) {
-			//porosity = ic::interpolateScalarTree(PorosityTree, p);
+			// TODO porosity = ic::interpolateScalarTree(PorosityTree, p);
 		}
 		else if (porType == ic::interpType::SCALAR)
 			porosity = porosityValue;
 		vel = vel * (1/porosity);
-		
+
+        pp = p;
+        vv = vel;
+
 		//if (method == 4){
 		//	step = calculate_step(p, vel, lbb, ubb);
 		//}

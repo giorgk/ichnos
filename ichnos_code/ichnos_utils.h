@@ -58,7 +58,7 @@ namespace ICHNOS {
 		return pFile.peek() == std::ifstream::traits_type::eof();
 	}
 
-	void distributeParticlesAroundWellLayered(int eid, double x, double y, double top, double bot, std::vector<Streamline>& S, WellOptions wopt){
+	void distributeParticlesAroundWellLayered(int eid, double x, double y, double top, double bot, std::vector<Streamline>& S, WellOptions wopt, double releaseTime){
 		double pi = boost::math::constants::pi<double>();
 		std::vector<double> zval;
 		linspace(bot, top, wopt.Nlayer, zval);
@@ -82,7 +82,7 @@ namespace ICHNOS {
 				temp.x = cos(radpos[i][j])*wopt.Radius + x;
 				temp.y = sin(radpos[i][j])*wopt.Radius + y;
 				temp.z = zval[i];
-				S.push_back(Streamline(eid, sid, Particle(temp)));
+				S.push_back(Streamline(eid, sid, Particle(temp, releaseTime)));
 				//DEBUG::displayVectorasVex(temp);
 				sid++;
 			}
@@ -348,7 +348,7 @@ namespace ICHNOS {
 		}
 
 
-		bool readParticleFile(std::string filename, std::vector <Streamline>& S) {
+		bool readParticleFile(std::string filename, std::vector <Streamline>& S, VelType vt) {
 			std::ifstream datafile(filename.c_str());
 			if (!datafile.good()) {
 				std::cout << "Can't open the file" << filename << std::endl;
@@ -358,6 +358,7 @@ namespace ICHNOS {
 				std::string comment("#");
 				std::string line;
 				int eid, sid;
+				double rt = 0;
 				vec3 pp;
 				while (getline(datafile, line)) {
 					if (line.size() >= 1 && !line.empty())
@@ -372,15 +373,17 @@ namespace ICHNOS {
 					inp >> pp.x;
 					inp >> pp.y;
 					inp >> pp.z;
+					if (vt == VelType::TRANS)
+					    inp >> rt;
 					//P.push_back(Particle<T>(pp));
-					S.push_back(Streamline(eid, sid, Particle(pp)));
+					S.push_back(Streamline(eid, sid, Particle(pp, rt)));
 				}
 				datafile.close();
 				return true;
 			}
 		}
 
-		bool readWellFile(std::string filename, std::vector <Streamline>& S) {
+		bool readWellFile(std::string filename, std::vector <Streamline>& S, VelType vt) {
 			std::ifstream datafile(filename.c_str());
 			if (!datafile.good()) {
 				std::cout << "Can't open the file" << filename << std::endl;
@@ -390,6 +393,7 @@ namespace ICHNOS {
 				WellOptions wopt;
 				std::string line;
 				int eid;
+				double rt = 0;
 				double x, y, top, bot;
 				getline(datafile, line);
 				{
@@ -405,7 +409,9 @@ namespace ICHNOS {
 					inp >> y;
 					inp >> top;
 					inp >> bot;
-					distributeParticlesAroundWellLayered(eid, x, y, top, bot, S, wopt);
+                    if (vt == VelType::TRANS)
+                        inp >> rt;
+					distributeParticlesAroundWellLayered(eid, x, y, top, bot, S, wopt, rt);
 					//distributeParticlesAroundWell(eid, x, y, top, bot, S, wopt);
 				}
 				datafile.close();
@@ -983,7 +989,8 @@ namespace ICHNOS {
 			std::vector<std::vector<double> > pz(n_proc);
 			std::vector<std::vector<int> > E_id(n_proc);
 			std::vector<std::vector<int> > S_id(n_proc);
-			std::vector<std::vector<int> > proc_id(n_proc);
+            std::vector<std::vector<double> > pt(n_proc);
+			//std::vector<std::vector<int> > proc_id(n_proc);
 
 			// copy the data
 			for (unsigned int i = 0; i < S.size(); ++i) {
@@ -992,6 +999,7 @@ namespace ICHNOS {
 				pz[my_rank].push_back(S[i].getLastParticle().getP().z);
 				E_id[my_rank].push_back(S[i].getEid());
 				S_id[my_rank].push_back(S[i].getSid());
+				pt[my_rank].push_back(S[i].getLastParticle().getTime());
 			}
 			world.barrier();
 			// Send everything to every processor
@@ -1005,12 +1013,13 @@ namespace ICHNOS {
 
 			Send_receive_data<int>(E_id, data_per_proc, my_rank, world, MPI_INT);
 			Send_receive_data<int>(S_id, data_per_proc, my_rank, world, MPI_INT);
+            Send_receive_data<double>(pt, data_per_proc, my_rank, world, MPI_DOUBLE);
 			//DEBUG::PrintVectorData<int>(S_id, my_rank, "E_id");
 			S.clear();
 
 			for (unsigned int i = 0; i < px.size(); ++i) 
 				for (unsigned int j = 0; j < px[i].size(); ++j) 
-					S.push_back(Streamline(E_id[i][j], S_id[i][j], Particle(vec3(px[i][j], py[i][j], pz[i][j]))));
+					S.push_back(Streamline(E_id[i][j], S_id[i][j], Particle(vec3(px[i][j], py[i][j], pz[i][j]), pt[i][j])));
 			world.barrier();
 		 }
 
@@ -1028,8 +1037,10 @@ namespace ICHNOS {
 			std::vector<std::vector<double> > vx(n_proc);
 			std::vector<std::vector<double> > vy(n_proc);
 			std::vector<std::vector<double> > vz(n_proc);
+            std::vector<std::vector<double> > pt(n_proc);
 			std::vector<std::vector<int> > E_id(n_proc);
 			std::vector<std::vector<int> > S_id(n_proc);
+
 			//std::vector<std::vector<int> > proc_id(n_proc);
 			std::vector<std::vector<int> > p_id(n_proc);
 			std::vector<std::vector<int> > Nstuck(n_proc);
@@ -1048,6 +1059,7 @@ namespace ICHNOS {
 				vx[my_rank].push_back(Ssend[i].getLastParticle().getV().x);
 				vy[my_rank].push_back(Ssend[i].getLastParticle().getV().y);
 				vz[my_rank].push_back(Ssend[i].getLastParticle().getV().z);
+                pt[my_rank].push_back(Ssend[i].getLastParticle().getTime());
 				E_id[my_rank].push_back(Ssend[i].getEid());
 				S_id[my_rank].push_back(Ssend[i].getSid());
 				//proc_id[my_rank].push_back(Ssend[i].getLastParticle().getProc());
@@ -1083,6 +1095,7 @@ namespace ICHNOS {
 			MPI::Send_receive_data<double>(vx, data_per_proc, my_rank, world, MPI_DOUBLE);
 			MPI::Send_receive_data<double>(vy, data_per_proc, my_rank, world, MPI_DOUBLE);
 			MPI::Send_receive_data<double>(vz, data_per_proc, my_rank, world, MPI_DOUBLE);
+            MPI::Send_receive_data<double>(pt, data_per_proc, my_rank, world, MPI_DOUBLE);
 			MPI::Send_receive_data<int>(E_id, data_per_proc, my_rank, world, MPI_INT);
 			MPI::Send_receive_data<int>(S_id, data_per_proc, my_rank, world, MPI_INT);
 			//MPI::Send_receive_data<int>(proc_id, data_per_proc, my_rank, world, MPI_INT);
@@ -1123,7 +1136,7 @@ namespace ICHNOS {
 						vec3 bl = vec3(BBlx[i][j], BBly[i][j], BBlz[i][j]);
 						vec3 bu = vec3(BBux[i][j], BBuy[i][j], BBuz[i][j]);
 						Streamline Stmp = Streamline(E_id[i][j], S_id[i][j],
-							Particle(p, v, p_id[i][j] /*, proc_id[i][j]*/),
+							Particle(p, v, p_id[i][j] /*, proc_id[i][j]*/, pt[i][j]),
 							bl, bu, Nstuck[i][j], age[i][j]);
 						Srecv.push_back(Stmp);
 					}

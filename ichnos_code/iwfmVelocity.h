@@ -71,9 +71,9 @@ namespace IWFM {
 
 	class iwfmVel : public ICHNOS::velocityField {
 	public:
-		iwfmVel(boost::mpi::communicator& world_in);
+		iwfmVel(boost::mpi::communicator& world_in, ic::VelType Vtype_in);
 		void readVelocityField(std::string vf_file);
-		void calcVelocity(ic::vec3& vel, std::map<int, double>& proc_map, ic::vec3& p);
+		void calcVelocity(ic::vec3& vel, std::map<int, double>& proc_map, ic::vec3& p, double time = 0);
 	private:
 		//ic::pointCloud<int> xyid;
 		//std::unique_ptr<nano_kd_tree_int> xy_tree;
@@ -86,9 +86,9 @@ namespace IWFM {
 		ICHNOS::SingletonGenerator* RG = RG->getInstance();
 	};
 
-	iwfmVel::iwfmVel(boost::mpi::communicator& world_in)
+	iwfmVel::iwfmVel(boost::mpi::communicator& world_in, ic::VelType Vtype_in)
 		:
-		velocityField(world_in)
+		velocityField(world_in, Vtype_in)
 	{}
 
 	void iwfmVel::readVelocityField(std::string vf_file) {
@@ -266,7 +266,7 @@ namespace IWFM {
 		return true;
 	}
 
-	void iwfmVel::calcVelocity(ic::vec3& vel, std::map<int, double>& proc_map, ic::vec3& p) {
+	void iwfmVel::calcVelocity(ic::vec3& vel, std::map<int, double>& proc_map, ic::vec3& p, double tm) {
 		std::map<int, double> id_dst;
 		//ICHNOS::interpolateIntTree(id_dst, proc_map, xy_tree, p);
 

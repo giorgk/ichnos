@@ -12,9 +12,9 @@ namespace STOCH {
 
 	class MarkovChainVel : public ICHNOS::velocityField {
 	public:
-		MarkovChainVel(boost::mpi::communicator& world_in);
+		MarkovChainVel(boost::mpi::communicator& world_in, ic::VelType Vtype_in);
 		void readVelocityField(std::string vf_file);
-		void calcVelocity(ic::vec3& vel, std::map<int, double>& proc_map, ic::vec3& p);
+		void calcVelocity(ic::vec3& vel, std::map<int, double>& proc_map, ic::vec3& p, double time = 0);
 		void reset();
 		void updateStep(double& step);
 	private:
@@ -31,7 +31,7 @@ namespace STOCH {
 			std::vector<ic::STOCH_data>& dd, int leadZeros);
 
 		ic::interpType porType;
-		double porocityValue = 1.0;
+		double porosityValue = 1.0;
 
 		bool bIsInitialized = false;
 		int currentState;
@@ -55,9 +55,9 @@ namespace STOCH {
 		void calculate_search_box(ic::vec3& p, ic::vec3& l, ic::vec3& u);
 	};
 
-	MarkovChainVel::MarkovChainVel(boost::mpi::communicator& world_in)
+	MarkovChainVel::MarkovChainVel(boost::mpi::communicator& world_in, ic::VelType Vtype_in)
 		:
-		velocityField(world_in)
+		velocityField(world_in, Vtype_in)
 	{}
 
 	void MarkovChainVel::reset() {
@@ -155,24 +155,24 @@ namespace STOCH {
 			else {
 				if (ic::is_input_scalar(porfile)) {
 					porType = ic::interpType::SCALAR;
-					porocityValue = std::stod(porfile);
+                    porosityValue = std::stod(porfile);
 				}
 				else {
 					// This is not implemented yet
 					std::cout << "Variable porocity not implemented yet. Setting porocity equal to 1" << std::endl;
 					porType = ic::interpType::SCALAR;
-					porocityValue = 1.0;
+                    porosityValue = 1.0;
 				}
 			}
 		}
 		else {
 			porType = ic::interpType::INGORE;
-			porocityValue = 1.0;
+            porosityValue = 1.0;
 		}
 
 	}
 
-	void MarkovChainVel::calcVelocity(ic::vec3& vel, std::map<int, double>& proc_map, ic::vec3& p) {
+	void MarkovChainVel::calcVelocity(ic::vec3& vel, std::map<int, double>& proc_map, ic::vec3& p, double tm) {
 		// If this is the first point of this streamline we will carry out one additional range search
 		ll.zero();
 		uu.zero();
@@ -294,12 +294,13 @@ namespace STOCH {
 		}
 
 		if (porType == ic::interpType::CLOUD) {
-			// not implemented yet
+			// TODO not implemented yet
 		}
 		else if (porType == ic::interpType::SCALAR) {
-			vel = vel * (1 / porocityValue);
+			vel = vel * (1 / porosityValue);
 		}
 
+        // TODO Understand why this is needed
 		pp = p; // I dont understand this. It seems we need to use these variables in the updateStep method
 		vv = vel;
 	}

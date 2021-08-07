@@ -27,9 +27,9 @@ namespace TRANS{
 
     class transVel : public ic::velocityField{
     public:
-        transVel(boost::mpi::communicator& world_in);
+        transVel(boost::mpi::communicator& world_in, ic::VelType Vtype_in);
         void readVelocityField(std::string vf_file);
-        void calcVelocity(ic::vec3& vel, std::map<int, double>& proc_map, ic::vec3& p);
+        void calcVelocity(ic::vec3& vel, std::map<int, double>& proc_map, ic::vec3& p, double time = 0);
         void reset();
         void updateStep(double& step);
 
@@ -41,6 +41,9 @@ namespace TRANS{
 
         ic::VelTR VEL;
         ic::search_tree_trans Tree;
+
+        ic::interpType porType;
+        double porosityValue = 1.0;
 
 
         int nPoints;
@@ -56,20 +59,26 @@ namespace TRANS{
 
         double Threshold;
         int FrequencyStat;
+        double calc_time = 0.0;
+        double max_calc_time = 0.0;
+        int cout_times = 0;
+
+        void PrintStat();
 
         double currentTime;
 
         bool bIsInitialized = false;
         double search_mult = 2.5;
         ic::vec3 ll, uu, pp, vv;
+        ic::TimeInterpType timeInterp = ic::TimeInterpType::NEAREST;
 
         void calculate_search_box(ic::vec3& p, ic::vec3& l, ic::vec3& u);
 
     };
 
-    transVel::transVel(boost::mpi::communicator &world_in)
+    transVel::transVel(boost::mpi::communicator &world_in, ic::VelType Vtype_in)
         :
-        velocityField(world_in)
+        velocityField(world_in, Vtype_in)
     {
         InterpolateOutsideDomain = true;
     }
@@ -86,12 +95,13 @@ namespace TRANS{
             ("Velocity.LeadingZeros", po::value<int>()->default_value(4), "e.g 0002->4, 000->3")
             ("Velocity.Suffix", po::value<std::string>(), "ending of file after procid")
             ("Velocity.TimeStepFile", po::value<std::string>(), "This filename with the time steps")
-
+            ("Velocity.TimeInterp", po::value<std::string>(), "Interpolation type between timesteps")
             ("Velocity.Multiplier", po::value<double>()->default_value(1), "This is a multiplier to scale velocity")
             ("Velocity.Scale", po::value<double>()->default_value(1.0), "Scale the domain before velocity calculation")
             ("Velocity.Power", po::value<double>()->default_value(3.0), "Power of the IDW interpolation")
             ("Velocity.InitDiameter", po::value<double>()->default_value(5000), "Initial diameter")
             ("Velocity.InitRatio", po::value<double>()->default_value(1), "Initial ratio")
+
 
 
             // Porosity parameters
@@ -123,6 +133,13 @@ namespace TRANS{
             std::vector<double> TimeSteps;
             bool tf = readTimeSteps(TSfile, TimeSteps);
             if (!tf) return;
+
+            {
+                std::string TimeInterpType = vm_vfo["Velocity.TimeInterp"].as<std::string>();
+                if (TimeInterpType.compare("LINEAR") == 0) {
+                    timeInterp = ic::TimeInterpType::LINEAR;
+                }
+            }
 
             std::string prefix = vm_vfo["Velocity.Prefix"].as<std::string>();
             std::string suffix;
@@ -261,7 +278,7 @@ namespace TRANS{
         return true;
     }
 
-    void transVel::calcVelocity(ic::vec3& vel, std::map<int, double>& proc_map, ic::vec3& p){
+    void transVel::calcVelocity(ic::vec3& vel, std::map<int, double>& proc_map, ic::vec3& p, double tm){
         // If this is the first point of this streamline we will carry out one additional range search
         ll.zero();
         uu.zero();
@@ -295,6 +312,11 @@ namespace TRANS{
             ratio = tmp_ratio;
             bIsInitialized = true;
         }
+
+        // Find the time step
+        int i1, i2;
+        double t;
+        VEL.findIIT(tm, i1, i2, t);
 
         {
             auto start = std::chrono::high_resolution_clock::now();
@@ -342,13 +364,65 @@ namespace TRANS{
                 porz = porz * ratio * Scale + porz*(1 - Scale);
 
                 scaled_dist = std::sqrt(porx * porx + pory * pory + porz * porz);
+
+                if (actual_dist < Threshold){
+                    vel = VEL.getVelocity(tmp[i].get<1>().id, i1, i2, t, timeInterp);
+                    calc_average = false;
+                }
+                else{
+                    w = 1 / std::pow(scaled_dist, Power);
+                    itd = proc_map.find(tmp[i].get<1>().proc);
+                    if (itd == proc_map.end()) {
+                        proc_map.insert(std::pair<int, double>(tmp[i].get<1>().proc, w));
+                    }
+                    else{
+                        itd->second += w;
+                    }
+                    sumW += w;
+                    sumWVal = sumWVal + VEL.getVelocity(tmp[i].get<1>().id, i1, i2, t, timeInterp) * w;
+                }
+            }
+            if (tmp.size() > 50){
+                diameter = tmp_diam;
+                ratio = tmp_ratio;
             }
 
+            itd = proc_map.begin();
+            for (; itd != proc_map.end(); ++itd) {
+                itd->second = itd->second / sumW;
+            }
+
+            if (calc_average)
+                vel = sumWVal * (1 / sumW);
+
+            auto finish = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double> elapsed = finish - start;
+            calc_time += elapsed.count();
+            if (elapsed.count() > max_calc_time)
+                max_calc_time = elapsed.count();
         }
+
+        double porosity = 1.0;
+        if (porType == ic::interpType::CLOUD) {
+            // TODO porosity = ic::interpolateScalarTree(PorosityTree, p);
+        }
+        else if (porType == ic::interpType::SCALAR)
+            porosity = porosityValue;
+        vel = vel * (1/porosity);
+
+        // TODO Understand why this is needed
+        pp = p; // I dont understand this. It seems we need to use these variables in the updateStep method
+        vv = vel;
+
+        cout_times++;
+        PrintStat();
+
     }
 
     void transVel::reset() {
-
+        bIsInitialized = false;
+        diameter = initial_diameter;
+        ratio = initial_ratio;
     }
 
     void transVel::updateStep(double &step) {
@@ -364,6 +438,17 @@ namespace TRANS{
         u.x = p.x + xy_dir;
         u.y = p.y + xy_dir;
         u.z = p.z + z_dir;
+    }
+
+    void transVel::PrintStat() {
+        if (cout_times > FrequencyStat){
+            std::cout << "||			---Velocity Calc time: " << std::fixed << std::setprecision(15) << calc_time/static_cast<double>(cout_times) <<  ", (";// std::endl;
+            std::cout << max_calc_time << "), ";
+            std::cout << std::endl << std::flush;
+            cout_times = 0;
+            calc_time = 0.0;
+            max_calc_time = 0.0;
+        }
     }
 }
 

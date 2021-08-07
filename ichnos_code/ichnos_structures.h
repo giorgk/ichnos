@@ -265,6 +265,7 @@ namespace ICHNOS {
 
 
     enum class coordDim {vx, vy, vz};
+    enum class TimeInterpType {NEAREST, LINEAR};
 
     struct TRANS_data{
         int proc = -9;
@@ -286,6 +287,8 @@ namespace ICHNOS {
         void setVELvalue(double v, int pnt, int step, coordDim dim);
         void setTSvalue(double v, int step);
         void setTSvalue(std::vector<double>& TS_in);
+        void findIIT(double x, int &i1, int &i2, double &t);
+        vec3 getVelocity(int pnt, int i1, int i2, double t, TimeInterpType tp);
     private:
         std::vector<std::vector<double>> VX;
         std::vector<std::vector<double>> VY;
@@ -295,6 +298,8 @@ namespace ICHNOS {
 
         int nPoints;
         int nSteps;
+        void findTimeStepIndex(int &i, int &ii, double x);
+
     };
 
     VelTR::VelTR()
@@ -338,6 +343,50 @@ namespace ICHNOS {
     }
     void VelTR::setTSvalue(std::vector<double> &TS_in) {
         TS = TS_in;
+    }
+
+    void VelTR::findTimeStepIndex(int &i, int &ii, double x){
+        int mid = (i + ii)/2;
+        if (x <= TS[mid])
+            ii = mid;
+        else
+            i = mid;
+
+        if (ii - i <= 1)
+            return;
+        else
+            findTimeStepIndex(i, ii, x);
+    }
+
+    void VelTR::findIIT(double x, int &i1, int &i2, double &t){
+        if (x <= TS[0]){
+            i1 = 0;
+            i2 = 0;
+            t = 0.0;
+            return;
+        }
+        if (x >= TS[TS.size()-1]){
+            i1 = TS.size()-1;
+            i2 = TS.size()-1;
+            t = 1.0;
+            return;
+        }
+        i1 = 0;
+        i2 = TS.size()-1;
+        findTimeStepIndex(i1, i2, x);
+        t = (x - TS[i1]) / (TS[i2] - TS[i1]);
+    }
+
+    vec3 VelTR::getVelocity(int pnt, int i1, int i2, double t, TimeInterpType tp){
+        if (tp == TimeInterpType::LINEAR){
+            vec3 v1(VX[pnt][i1], VY[pnt][i1], VZ[pnt][i1]);
+            vec3 v2(VX[pnt][i2], VY[pnt][i2], VZ[pnt][i2]);
+            return v1*(1-t) + v2*t;
+
+        }
+        else{
+            return vec3(VX[pnt][i1], VY[pnt][i1], VZ[pnt][i1]);
+        }
     }
 
 
@@ -496,6 +545,8 @@ namespace ICHNOS {
 		std::string configfile;
 		// Number of realizations
 		int Nrealizations;
+
+		bool bIsTransient = false;
 	};
 
 	struct DomainOptions {
@@ -516,11 +567,12 @@ namespace ICHNOS {
 
 	class Particle {
 	public:
-		Particle(vec3 p);
-		Particle(vec3 p, vec3 v, int pid/*, int proc*/);
-		Particle(vec3 p, vec3 v, /*int proc,*/  Particle prev);
+		Particle(vec3 p, double rt = 0);
+		Particle(vec3 p, vec3 v, int pid/*, int proc*/, double rt = 0);
+		Particle(vec3 p, vec3 v, /*int proc,*/  Particle prev, double rt = 0);
 		vec3 getP() const { return p; }
 		vec3 getV() const { return v; }
+		double getTime() const {return ptime; }
 		//double getAge() const { return age; }
 		//void SetAge(double a) { age = a; }
 		void SetV(vec3 vel) { v = vel; }
@@ -532,33 +584,37 @@ namespace ICHNOS {
 		int pid;
 		vec3 p;
 		vec3 v;
+		double ptime;
 		//double age;
 		//int proc;
 	};
 
-	Particle::Particle(vec3 p)
+	Particle::Particle(vec3 p, double rt)
 		:
-		p(p)
+            p(p),
+            ptime(rt)
 	{
 		pid = 0;
 		//age = 0;
 		//proc = -9;
 	}
 
-	Particle::Particle(vec3 p, vec3 v, int pid/*, int proc*/)
+	Particle::Particle(vec3 p, vec3 v, int pid/*, int proc*/, double rt)
 		:
 		pid(pid),
 		p(p),
-		v(v)
+		v(v),
+		ptime(rt)
 		//proc(proc)
 	{
 		//age = 0;
 	}
 
-	Particle::Particle(vec3 p, vec3 v, /*int proc,*/ Particle prev)
+	Particle::Particle(vec3 p, vec3 v, /*int proc,*/ Particle prev, double rt)
 		:
 		p(p),
-		v(v)
+		v(v),
+        ptime(rt)
 		//proc(proc)
 	{
 		pid = prev.getPid() + 1;

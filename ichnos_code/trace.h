@@ -30,7 +30,7 @@ namespace ICHNOS {
 		ExitReason traceInner(Streamline& S);
 		void traceOuter(std::vector<Streamline>& S, int iter, int ireal);
 		ExitReason CheckNewPoint(vec3& p);
-		ExitReason CheckNewPointAndCalcVelocity(vec3& p, vec3& v/*, int &proc*/);
+		ExitReason CheckNewPointAndCalcVelocity(vec3& p, vec3& v/*, int &proc*/, double tm = 0);
 
 		bool EulerStep(const Particle& P, vec3& pnew, ExitReason& er);
 		bool RK2Step(const Particle& P, vec3& pnew, ExitReason& er);
@@ -61,11 +61,11 @@ namespace ICHNOS {
 		bool tfw = false;
 		bool tfp = false;
 		if (!popt.WellFile.empty()) {
-			tfw = READ::readWellFile(popt.WellFile, S);
+			tfw = READ::readWellFile(popt.WellFile, S, VF.getVelType());
 		}
 
 		if (!popt.ParticleFile.empty()) {
-			tfp = READ::readParticleFile(popt.ParticleFile, S);
+			tfp = READ::readParticleFile(popt.ParticleFile, S, VF.getVelType());
 		}
 
 		if (tfw || tfp)
@@ -236,6 +236,7 @@ namespace ICHNOS {
 		VF.reset();
 		vec3 v;
 		vec3 p = S.getLastParticle().getP();
+		double tm = S.getLastParticle().getTime();
 		int proc = world.rank();
 		// Check if the particle is in the domain and exit imediately if not
 		ExitReason er = CheckNewPoint(p);
@@ -244,7 +245,7 @@ namespace ICHNOS {
 
 		// Attempt to calculate the velocity
 		std::map<int, double> proc_map;
-		VF.calcVelocity(v, proc_map, p);
+		VF.calcVelocity(v, proc_map, p, tm);
 		if (v.isInvalid())
 			return ExitReason::FAR_AWAY;
 		//proc = VF.calcProcID(proc_map);
@@ -253,7 +254,7 @@ namespace ICHNOS {
 
 		// If the particle id is 0 then we have to assign velocity
 		// If its not zero that means that the velocity has been calculated by the processor
-		// that was tracking this streamline before end up in the currect processor
+		// that was tracking this streamline before end up in the current processor
 		if (S.getLastParticle().getPid() == 0)
 			S.InitialVelocity(v);
 
@@ -272,9 +273,15 @@ namespace ICHNOS {
 				VF.updateStep(actualStep);
 			bool foundPoint = findNextPoint(S.getLastParticle(), p, er);
 			if (foundPoint) {
-				er = CheckNewPointAndCalcVelocity(p, v/*, proc*/);
+			    if (popt.bIsTransient){
+			        tm = S.getLastParticle().getTime() + popt.Direction * (p - S.getLastParticle().getP()).len()/S.getLastParticle().getV().len();
+			    }
+			    else{
+			        tm = 0.0;
+			    }
+				er = CheckNewPointAndCalcVelocity(p, v/*, proc*/, tm);
 				//DEBUG::displayPVasVex(p, v);
-				S.AddParticle(Particle(p, v, S.getLastParticle()));
+				S.AddParticle(Particle(p, v, S.getLastParticle(), tm));
 				//S.getLastParticle().displayAsVEX(true);
 				// In the unlike event that the velocity of the point is zero
 				// we can avoid unnessecary iterations by simply exit
@@ -301,7 +308,7 @@ namespace ICHNOS {
 		return er;
 	}
 
-	ExitReason ParticleTrace::CheckNewPointAndCalcVelocity(vec3& p, vec3& v/*, int& proc*/) {
+	ExitReason ParticleTrace::CheckNewPointAndCalcVelocity(vec3& p, vec3& v/*, int& proc*/, double tm) {
 		// This function checks only if the point is still inside the domain
 		// It does not check if its in the velocity field owned by this processor
 		ExitReason exitreason = CheckNewPoint(p);
@@ -310,7 +317,7 @@ namespace ICHNOS {
 		// the velocity field allows it. However the particle tracking will be terminated
 		if (exitreason != ExitReason::NO_EXIT) {
 			if (VF.InterpolateOutsideDomain) {
-				VF.calcVelocity(v, proc_map, p);
+				VF.calcVelocity(v, proc_map, p, tm);
 			}
 			else {
 				v = vec3();
@@ -318,7 +325,7 @@ namespace ICHNOS {
 			return exitreason;
 		}
 		else {
-			VF.calcVelocity(v, proc_map, p);
+			VF.calcVelocity(v, proc_map, p, tm);
 			if (v.isInvalid())
 				return ExitReason::FAR_AWAY;
 			bool tf;
@@ -403,7 +410,7 @@ namespace ICHNOS {
 		
 		// Find the velocity on that point
 		vec3 v1;
-		er = CheckNewPointAndCalcVelocity(p1, v1/*, proc*/);
+		er = CheckNewPointAndCalcVelocity(p1, v1/*, proc*/, P.getTime());
 		//DEBUG::displayPVasVex(p1, v1);
 		if (v1.isZero()) return false;
 		// Take a step with the average velocity
@@ -422,7 +429,7 @@ namespace ICHNOS {
 		vec3 p2 = P.getV().normalize() * (actualStep/2) * popt.Direction + P.getP();
 		// Find the velocity on point p2 that point
 		vec3 v2;
-		er = CheckNewPointAndCalcVelocity(p2, v2/*, proc*/);
+		er = CheckNewPointAndCalcVelocity(p2, v2/*, proc*/, P.getTime());
 		//DEBUG::displayPVasVex(p2, v2);
 		if (v2.isZero()) return false;
 
@@ -431,7 +438,7 @@ namespace ICHNOS {
 		vec3 p3 = v2.normalize() * (actualStep/2) * popt.Direction + P.getP();
 		// Find the velocity on point p3 that point
 		vec3 v3;
-		er = CheckNewPointAndCalcVelocity(p3, v3/*, proc*/);
+		er = CheckNewPointAndCalcVelocity(p3, v3/*, proc*/, P.getTime());
 		//DEBUG::displayPVasVex(p3, v3);
 		if (v3.isZero()) return false;
 
@@ -440,7 +447,7 @@ namespace ICHNOS {
 		vec3 p4 = v3.normalize() * actualStep * popt.Direction + P.getP();
 		// Find the velocity on point p4 that point
 		vec3 v4;
-		er = CheckNewPointAndCalcVelocity(p4, v4/*, proc*/);
+		er = CheckNewPointAndCalcVelocity(p4, v4/*, proc*/, P.getTime());
 		//DEBUG::displayPVasVex(p4, v4);
 		if (v4.isZero()) return false;
 
@@ -463,7 +470,7 @@ namespace ICHNOS {
 		// Step 1 ----------------------------
 		int istep = 0;
 		p2 = v1.normalize() * CF[istep][0] * ssdir + P.getP();
-		er = CheckNewPointAndCalcVelocity(p2, v2/*, proc*/);
+		er = CheckNewPointAndCalcVelocity(p2, v2/*, proc*/, P.getTime());
 		//DEBUG::displayPVasVex(p2, v2);
 		if (v2.isZero()) { return false; }
 		if (adaptStepSize > popt.minExitStepSize)
@@ -477,7 +484,7 @@ namespace ICHNOS {
 		istep++;
 		v_m = v1 * CF[istep][1] + v2 * CF[istep][2];
 		p3 = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
-		er = CheckNewPointAndCalcVelocity(p3, v3/*, proc*/);
+		er = CheckNewPointAndCalcVelocity(p3, v3/*, proc*/, P.getTime());
 		//DEBUG::displayPVasVex(p3, v3);
 		if (v3.isZero()) return false;
 		if (adaptStepSize > popt.minExitStepSize)
@@ -491,7 +498,7 @@ namespace ICHNOS {
 		istep++;
 		v_m = v1 * CF[istep][1] + v2 * CF[istep][2] + v3 * CF[istep][3];
 		p4 = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
-		er = CheckNewPointAndCalcVelocity(p4, v4/*, proc*/);
+		er = CheckNewPointAndCalcVelocity(p4, v4/*, proc*/, P.getTime());
 		//DEBUG::displayPVasVex(p4, v4);
 		if (v4.isZero()) return false;
 
@@ -499,7 +506,7 @@ namespace ICHNOS {
 		istep++;
 		v_m = v1 * CF[istep][1] + v2 * CF[istep][2] + v3 * CF[istep][3] + v4 * CF[istep][4];
 		p5 = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
-		er = CheckNewPointAndCalcVelocity(p5, v5/*, proc*/);
+		er = CheckNewPointAndCalcVelocity(p5, v5/*, proc*/, P.getTime());
 		//DEBUG::displayPVasVex(p5, v5);
 		if (v5.isZero()) return false;
 
@@ -507,7 +514,7 @@ namespace ICHNOS {
 		istep++;
 		v_m = v1 * CF[istep][1] + v2 * CF[istep][2] + v3 * CF[istep][3] + v4 * CF[istep][4] + v5 * CF[istep][5];
 		p6 = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
-		er = CheckNewPointAndCalcVelocity(p6, v6/*, proc*/);
+		er = CheckNewPointAndCalcVelocity(p6, v6/*, proc*/, P.getTime());
 		//DEBUG::displayPVasVex(p6, v6);
 		if (v6.isZero()) return false;
 		if ( adaptStepSize > popt.minExitStepSize )
