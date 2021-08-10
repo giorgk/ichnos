@@ -60,61 +60,96 @@ int main(int argc, char* argv[])
         ICHNOS::gather_particles(OPT);
     }
     else {
+        ICHNOS::Domain2D domain(OPT.Dopt);
         switch (OPT.xyztype){
             case ICHNOS::XYZType::CLOUD:
             {
+                ICHNOS::XYZ_cloud XYZ(world);
+                XYZ.readXYZdata(OPT.getVelFname());
+
+                switch (OPT.velocityFieldType) {
+                    case ICHNOS::VelType::TRANS:
+                    {
+                        TRANS::transVel VF(world);
+                        VF.readVelocityField(OPT.getVelFname());
+
+                        ICHNOS::ParticleTrace pt(world, XYZ, VF, domain, OPT.Popt);
+                        break;
+                    }
+                    case ICHNOS::VelType::STOCH:
+                    {
+                        break;
+                    }
+
+                }
+
+
                 break;
             }
             case ICHNOS::XYZType::IWFM:
             {
+                ICHNOS::XYZ_IWFM XYZ(world);
+                XYZ.readXYZdata(OPT.getVelFname());
+
+                switch (OPT.velocityFieldType) {
+                    case ICHNOS::VelType::TRANS:
+                    {
+
+                        break;
+                    }
+                    case ICHNOS::VelType::STOCH:
+                    {
+                        break;
+                    }
+
+
                 break;
             }
         }
 
-        switch (OPT.velocityFieldType) {
-        case ICHNOS::VelType::STEADY:
-        {
-            NPSAT::npsatVel VF(world, ICHNOS::VelType::STEADY);
-            VF.readVelocityField(OPT.getVelFname());
-            ICHNOS::Domain2D domain(OPT.Dopt);
-            ICHNOS::ParticleTrace pt(world, VF, domain, OPT.Popt);
-            if (world.rank() == 0)
-                std::cout << "Tracing particles..." << std::endl;
-            pt.Trace();
-            break;
-        }
-        case ICHNOS::VelType::TRANS:
-        {
-            TRANS::transVel VF(world, ICHNOS::VelType::TRANS);
-            VF.readVelocityField(OPT.getVelFname());
-            ICHNOS::Domain2D domain(OPT.Dopt);
-            OPT.Popt.bIsTransient = true;
-            ICHNOS::ParticleTrace pt(world, VF, domain, OPT.Popt);
-            if (world.rank() == 0)
-                std::cout << "Tracing particles..." << std::endl;
-            pt.Trace();
-            break;
-        }
-        case ICHNOS::VelType::STOCH:
-        {
-            STOCH::MarkovChainVel VF(world, ICHNOS::VelType::STOCH);
-            ICHNOS::Domain2D domain(OPT.Dopt);
-            VF.readVelocityField(OPT.getVelFname());
-            ICHNOS::ParticleTrace pt(world, VF, domain, OPT.Popt);
-            for (int i = 0; i < OPT.Popt.Nrealizations; ++i) {
-                if (world.rank() == 0)
-                    std::cout << "||======Realization " << i << "======" << std::endl;
-                pt.Trace(i);
-            }
-            break;
-            break;
-        }
-        default:
-        {
-            std::cout << "Invalid velocity type" << std::endl;
-            break;
-        }
-        }
+//        switch (OPT.velocityFieldType) {
+//        case ICHNOS::VelType::STEADY:
+//        {
+//            NPSAT::npsatVel VF(world, ICHNOS::VelType::STEADY);
+//            VF.readVelocityField(OPT.getVelFname());
+//            ICHNOS::Domain2D domain(OPT.Dopt);
+//            ICHNOS::ParticleTrace pt(world, VF, domain, OPT.Popt);
+//            if (world.rank() == 0)
+//                std::cout << "Tracing particles..." << std::endl;
+//            pt.Trace();
+//            break;
+//        }
+//        case ICHNOS::VelType::TRANS:
+//        {
+//            TRANS::transVel VF(world, ICHNOS::VelType::TRANS);
+//            VF.readVelocityField(OPT.getVelFname());
+//            ICHNOS::Domain2D domain(OPT.Dopt);
+//            OPT.Popt.bIsTransient = true;
+//            ICHNOS::ParticleTrace pt(world, VF, domain, OPT.Popt);
+//            if (world.rank() == 0)
+//                std::cout << "Tracing particles..." << std::endl;
+//            pt.Trace();
+//            break;
+//        }
+//        case ICHNOS::VelType::STOCH:
+//        {
+//            STOCH::MarkovChainVel VF(world, ICHNOS::VelType::STOCH);
+//            ICHNOS::Domain2D domain(OPT.Dopt);
+//            VF.readVelocityField(OPT.getVelFname());
+//            ICHNOS::ParticleTrace pt(world, VF, domain, OPT.Popt);
+//            for (int i = 0; i < OPT.Popt.Nrealizations; ++i) {
+//                if (world.rank() == 0)
+//                    std::cout << "||======Realization " << i << "======" << std::endl;
+//                pt.Trace(i);
+//            }
+//            break;
+//        }
+//        default:
+//        {
+//            std::cout << "Invalid velocity type" << std::endl;
+//            break;
+//        }
+       }
     }
     
     //std::cout << world.rank() << " has " << VF.getCloudSize() << " points" << std::endl;

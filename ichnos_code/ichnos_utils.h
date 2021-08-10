@@ -170,6 +170,40 @@ namespace ICHNOS {
 				datafile.close();
 			}
 		}
+
+		bool readXYZfile(std::string fileXYZ, std::vector<cgal_point_3>& pp, std::vector<Pnt_info>& dd) {
+            std::cout << "Reading file " + fileXYZ << std::endl;
+            std::ifstream datafile(fileXYZ.c_str());
+            if (!datafile.good()) {
+                std::cout << "Can't open the file " << fileXYZ << std::endl;
+                return false;
+            } else {
+                std::string line;
+                double x, y, z;
+                Pnt_info td;
+                int cnt = 0;
+                while (getline(datafile, line)) {
+                    if (line.size() > 1) {
+                        std::istringstream inp(line.c_str());
+                        inp >> x;
+                        inp >> y;
+                        inp >> z;
+                        inp >> td.proc;
+                        inp >> td.diameter;
+                        inp >> td.ratio;
+                        td.id = cnt;
+                        cnt++;
+
+                        pp.push_back(cgal_point_3(x, y, z));
+                        dd.push_back(td);
+                    }
+                }
+
+                return true;
+            }
+        }
+
+        
 		
 		/*void read2DscalarField(std::string filename, pointCloud<double>& pntCld) {
 			std::ifstream datafile(filename.c_str());

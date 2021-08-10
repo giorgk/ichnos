@@ -31,9 +31,12 @@ namespace NPSAT {
 
 	class npsatVel : public ic::velocityField {
 	public:
-		npsatVel(boost::mpi::communicator& world_in, ic::VelType Vtype_in);
+		npsatVel(boost::mpi::communicator& world_in);
 		void readVelocityField(std::string vf_file);
-		void calcVelocity(ic::vec3& vel, std::map<int, double>& proc_map, ic::vec3& p, double tm = 0);
+		void calcVelocity(ic::vec3& vel,
+                          std::vector<int>& ids,
+                          std::vector<double>& weights,
+                          double tm = 0);
 		void reset();
 		void updateStep(double& step);
 	private:
@@ -79,9 +82,9 @@ namespace NPSAT {
 		double calculate_step(ic::vec3& p, ic::vec3& v, ic::vec3& l, ic::vec3& u);
 	};
 
-	npsatVel::npsatVel(boost::mpi::communicator& world_in, ic::VelType Vtype_in)
+	npsatVel::npsatVel(boost::mpi::communicator& world_in)
 		:
-		velocityField(world_in, Vtype_in)
+		velocityField(world_in)
 	{
 		InterpolateOutsideDomain = true;
 	}
@@ -188,13 +191,17 @@ namespace NPSAT {
 
 
 
-	void npsatVel::calcVelocity(ic::vec3& vel, std::map<int, double>& proc_map, ic::vec3& p, double tm) {
+	void npsatVel::calcVelocity(ic::vec3& vel,
+                                std::vector<int>& ids,
+                                std::vector<double>& weights,
+                                double time) {
+	    ic::vec3 p;
 		// If this is the first point of this streamline we will carry out one additional range search
 		ll.zero();
 		uu.zero();
 		pp.zero();
 		vv.zero();
-		if (!bIsInitialized){ 
+		if (!bIsInitialized){
 			ic::calculate_search_box(p,ll,uu,diameter,ratio,search_mult);
 			ic::cgal_point_3 llp(ll.x, ll.y, ll.z);
 			ic::cgal_point_3 uup(uu.x, uu.y, uu.z);
@@ -279,26 +286,26 @@ namespace NPSAT {
 				}
 				else{
 					w = 1 / std::pow(scaled_dist, Power);
-					itd = proc_map.find(tmp[i].get<1>().proc);
-					if (itd == proc_map.end()) {
-						proc_map.insert(std::pair<int, double>(tmp[i].get<1>().proc, w));
-					}
-					else{
-						itd->second += w;
-					}
+//					itd = proc_map.find(tmp[i].get<1>().proc);
+//					if (itd == proc_map.end()) {
+//						proc_map.insert(std::pair<int, double>(tmp[i].get<1>().proc, w));
+//					}
+//					else{
+//						itd->second += w;
+//					}
 					sumW += w;
 					sumWVal = sumWVal + tmp[i].get<1>().v*w;
-				} 
+				}
 			}
 			if (tmp.size() > 50){
 				diameter = tmp_diam;
 				ratio = tmp_ratio;
 			}
 
-			itd = proc_map.begin();
-			for (; itd != proc_map.end(); ++itd) {
-				itd->second = itd->second / sumW;
-			}
+//			itd = proc_map.begin();
+//			for (; itd != proc_map.end(); ++itd) {
+//				itd->second = itd->second / sumW;
+//			}
 
 			if (calc_average)
 				vel = sumWVal * (1 / sumW);
@@ -530,7 +537,7 @@ namespace NPSAT {
 		//std::chrono::duration<double> elapsed = finish - start;
 		//std::cout << "Calc time Tria: " << elapsed.count() << std::endl;
 		//calc_time += elapsed.count();
-		
+
 		count_times++;
 		//nids_size = nids.size();
         ic::PrintStat(count_times, FrequencyStat, calc_time, max_calc_time);

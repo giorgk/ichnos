@@ -267,18 +267,18 @@ namespace ICHNOS {
     enum class coordDim {vx, vy, vz};
     enum class TimeInterpType {NEAREST, LINEAR};
 
-    struct TRANS_data{
+    struct Pnt_info{
         int proc = -9;
         int id = -9;
         double diameter = 0;
         double ratio = 0;
     };
 
-    // Stochastic tree
-    typedef boost::tuple<cgal_point_3, TRANS_data> pnt_trans;
-    typedef CGAL::Search_traits_adapter<pnt_trans, CGAL::Nth_of_tuple_property_map<0, pnt_trans>, Traits_base> search_traits_trans;
-    typedef CGAL::Fuzzy_iso_box<search_traits_trans> Fuzzy_iso_box_trans;
-    typedef CGAL::Kd_tree<search_traits_trans> search_tree_trans;
+    // Transient tree
+    typedef boost::tuple<cgal_point_3, Pnt_info> pnt_with_info;
+    typedef CGAL::Search_traits_adapter<pnt_with_info, CGAL::Nth_of_tuple_property_map<0, pnt_with_info>, Traits_base> search_traits_pnt_info;
+    typedef CGAL::Fuzzy_iso_box<search_traits_pnt_info> Fuzzy_iso_box_info;
+    typedef CGAL::Kd_tree<search_traits_pnt_info> search_tree_info;
 
     class VelTR{
     public:

@@ -71,9 +71,12 @@ namespace IWFM {
 
 	class iwfmVel : public ICHNOS::velocityField {
 	public:
-		iwfmVel(boost::mpi::communicator& world_in, ic::VelType Vtype_in);
+		iwfmVel(boost::mpi::communicator& world_in);
 		void readVelocityField(std::string vf_file);
-		void calcVelocity(ic::vec3& vel, std::map<int, double>& proc_map, ic::vec3& p, double time = 0);
+		void calcVelocity(ic::vec3& vel,
+                          std::vector<int>& ids,
+                          std::vector<double>& weights,
+                          double tm = 0);
 	private:
 		//ic::pointCloud<int> xyid;
 		//std::unique_ptr<nano_kd_tree_int> xy_tree;
@@ -86,9 +89,9 @@ namespace IWFM {
 		ICHNOS::SingletonGenerator* RG = RG->getInstance();
 	};
 
-	iwfmVel::iwfmVel(boost::mpi::communicator& world_in, ic::VelType Vtype_in)
+	iwfmVel::iwfmVel(boost::mpi::communicator& world_in)
 		:
-		velocityField(world_in, Vtype_in)
+		velocityField(world_in)
 	{}
 
 	void iwfmVel::readVelocityField(std::string vf_file) {
@@ -266,91 +269,94 @@ namespace IWFM {
 		return true;
 	}
 
-	void iwfmVel::calcVelocity(ic::vec3& vel, std::map<int, double>& proc_map, ic::vec3& p, double tm) {
+	void iwfmVel::calcVelocity(ic::vec3& vel,
+                               std::vector<int>& ids,
+                               std::vector<double>& weights,
+                               double tm) {
 		std::map<int, double> id_dst;
 		//ICHNOS::interpolateIntTree(id_dst, proc_map, xy_tree, p);
 
-		// Find the layer that the point is in
-		std::map<int, double>::iterator it;
-		std::map<int, xynode>::iterator itnd;
-		std::vector< std::map<int, xynode>::iterator> itvec;
-		std::vector<double> weights;
-		double zLayUp = 0.0;
-		double zLayDown = 0.0;
-		double zvel, zvelup;
-
-		double w1, w2;
-		int l1, l2;
-		bool usew2 = false;
-		for (it = id_dst.begin(); it != id_dst.end(); ++it) {
-			itnd = ND.find(it->first);
-			if (itnd != ND.end()) {
-				itvec.push_back(itnd);
-				weights.push_back(it->second);
-			}
-		}
-
-		for (int lay = 0; lay < Nlayers; ++lay) {
-			for (unsigned int i = 0; i < itvec.size(); ++i) {
-				if (lay == 0)
-					zLayUp += itvec[i]->second.getElev(lay)* weights[i];
-				zLayDown += itvec[i]->second.getElev(lay+1) * weights[i];
-			}
-			
-			zvel = (zLayUp + zLayDown) / 2;
-			if (lay == 0) {
-				if (p.z > zvel) {
-					l1 = 0; w1 = 1.0;
-					l2 = 1; w2 = 0.0;
-					break;
-				}
-				else {
-					zvelup = zvel;
-				}
-			}
-			else {
-				if (p.z < zvelup && p.z > zvel) {
-					l1 = lay-1; 
-					w1 = (p.z - zvel) / (zvelup - zvel);
-					l2 = lay;
-					w2 = 1.0 - w1;
-					usew2 = true;
-					break;
-				}
-				else {
-					if (lay == Nlayers - 1) {
-						if (p.z < zvel) {
-							l1 = lay; w1 = 1.0;
-							l2 = 1; w2 = 0.0;
-							break;
-						}
-						else {
-							std::cout << " The interpolation of (" << p.x << "," << p.y << "," << p.z << ") does not seem to fit into the elevation datas" << std::endl;
-						}
-					}
-					else {
-						zvelup = zvel;
-					}
-				}
-			}
-			zLayUp = zLayDown;
-			zLayDown = 0.0;
-		}
-
-		//std::cout << "we landed here safely" << std::endl;
-		vel.zero();
-		int r = -9;
-		while (r < 0 || r > Ntsteps - 1)
-			r = RG->randomNumber(0, Ntsteps);
-		for (unsigned int i = 0; i < itvec.size(); ++i) {
-			vel.x += itvec[i]->second.getV(0, l1, r) * weights[i] * w1;
-			vel.y += itvec[i]->second.getV(1, l1, r) * weights[i] * w1;
-			vel.z += itvec[i]->second.getV(2, l1, r) * weights[i] * w1;
-			if (usew2) {
-				vel.x += itvec[i]->second.getV(0, l2, r) * weights[i] * w2;
-				vel.y += itvec[i]->second.getV(1, l2, r) * weights[i] * w2;
-				vel.z += itvec[i]->second.getV(2, l2, r) * weights[i] * w2;
-			}
-		}
+//		// Find the layer that the point is in
+//		std::map<int, double>::iterator it;
+//		std::map<int, xynode>::iterator itnd;
+//		std::vector< std::map<int, xynode>::iterator> itvec;
+//		std::vector<double> weights;
+//		double zLayUp = 0.0;
+//		double zLayDown = 0.0;
+//		double zvel, zvelup;
+//
+//		double w1, w2;
+//		int l1, l2;
+//		bool usew2 = false;
+//		for (it = id_dst.begin(); it != id_dst.end(); ++it) {
+//			itnd = ND.find(it->first);
+//			if (itnd != ND.end()) {
+//				itvec.push_back(itnd);
+//				weights.push_back(it->second);
+//			}
+//		}
+//
+//		for (int lay = 0; lay < Nlayers; ++lay) {
+//			for (unsigned int i = 0; i < itvec.size(); ++i) {
+//				if (lay == 0)
+//					zLayUp += itvec[i]->second.getElev(lay)* weights[i];
+//				zLayDown += itvec[i]->second.getElev(lay+1) * weights[i];
+//			}
+//
+//			zvel = (zLayUp + zLayDown) / 2;
+//			if (lay == 0) {
+//				if (p.z > zvel) {
+//					l1 = 0; w1 = 1.0;
+//					l2 = 1; w2 = 0.0;
+//					break;
+//				}
+//				else {
+//					zvelup = zvel;
+//				}
+//			}
+//			else {
+//				if (p.z < zvelup && p.z > zvel) {
+//					l1 = lay-1;
+//					w1 = (p.z - zvel) / (zvelup - zvel);
+//					l2 = lay;
+//					w2 = 1.0 - w1;
+//					usew2 = true;
+//					break;
+//				}
+//				else {
+//					if (lay == Nlayers - 1) {
+//						if (p.z < zvel) {
+//							l1 = lay; w1 = 1.0;
+//							l2 = 1; w2 = 0.0;
+//							break;
+//						}
+//						else {
+//							std::cout << " The interpolation of (" << p.x << "," << p.y << "," << p.z << ") does not seem to fit into the elevation datas" << std::endl;
+//						}
+//					}
+//					else {
+//						zvelup = zvel;
+//					}
+//				}
+//			}
+//			zLayUp = zLayDown;
+//			zLayDown = 0.0;
+//		}
+//
+//		//std::cout << "we landed here safely" << std::endl;
+//		vel.zero();
+//		int r = -9;
+//		while (r < 0 || r > Ntsteps - 1)
+//			r = RG->randomNumber(0, Ntsteps);
+//		for (unsigned int i = 0; i < itvec.size(); ++i) {
+//			vel.x += itvec[i]->second.getV(0, l1, r) * weights[i] * w1;
+//			vel.y += itvec[i]->second.getV(1, l1, r) * weights[i] * w1;
+//			vel.z += itvec[i]->second.getV(2, l1, r) * weights[i] * w1;
+//			if (usew2) {
+//				vel.x += itvec[i]->second.getV(0, l2, r) * weights[i] * w2;
+//				vel.y += itvec[i]->second.getV(1, l2, r) * weights[i] * w2;
+//				vel.z += itvec[i]->second.getV(2, l2, r) * weights[i] * w2;
+//			}
+//		}
 	}
 }

@@ -85,8 +85,8 @@ namespace ICHNOS {
 	    std::map < std::string, XYZType> xyztMap;
 	    std::map < std::string, XYZType>::iterator it;
 	    //vtMap.insert(std::pair<std::string, VelType>("Cloud3d", VelType::Cloud3d));
-	    xyztMap.insert(std::pair<std::string, XYZType>("STEADY", XYZType::CLOUD));
-	    xyztMap.insert(std::pair<std::string, XYZType>("TRANS", XYZType::IWFM));
+	    xyztMap.insert(std::pair<std::string, XYZType>("CLOUD", XYZType::CLOUD));
+	    xyztMap.insert(std::pair<std::string, XYZType>("IWFM", XYZType::IWFM));
 	    it = xyztMap.find(xyzt);
 	    if (it != xyztMap.end())
 	        return it->second;
@@ -215,12 +215,12 @@ namespace ICHNOS {
 			("StoppingCriteria.MaxIterationsPerStreamline", po::value<int>()->default_value(1000), "Maximum number of steps per streamline")
 			("StoppingCriteria.MaxProcessorExchanges", po::value<int>()->default_value(50), "Maximum number of that a particles are allowed to change processors")
 			("StoppingCriteria.AgeLimit", po::value<double>()->default_value(-1), "If the particle exceed this limit stop particle tracking. Negative means no limit")
-			("StoppingCriteria.Stuckiter", po::value<int>()->default_value(10), "After Stuckiter exit particle tracking")
+			("StoppingCriteria.StuckIter", po::value<int>()->default_value(10), "After StuckIter exit particle tracking")
             ("StoppingCriteria.AttractFile", po::value<std::string >(), "A filename that contains the particle attractors")
             ("StoppingCriteria.AttractRadius", po::value<double>()->default_value(50), "Particles closer to this distance will be captured from attractors")
 
 			// Step configuration
-			("StepConfig.Method", po::value<std::string >(), "Method for steping")
+			("StepConfig.Method", po::value<std::string >(), "Method for stepping")
 			("StepConfig.Direction", po::value<double>()->default_value(1), "Backward or forward particle tracking")
 			("StepConfig.StepSize", po::value<double>()->default_value(1), "Step Size in units of length")
             ("StepConfig.StepSizeTime", po::value<double>()->default_value(1), "Step Size in units of time")
@@ -277,6 +277,9 @@ namespace ICHNOS {
 						std::cout << vm_cfg["Velocity.Type"].as<std::string>() << " is an invalid velocity type" << std::endl;
 						return false;
 					}
+					else if (velocityFieldType == VelType::STEADY){// Steady flow field is essentially an one-step transient. The only difference is the input file for XYZ and velocity format
+                        velocityFieldType = VelType::TRANS;
+					}
 
 					xyztype = castXYZType2Enum(vm_cfg["Velocity.XYZType"].as<std::string>());
 					if (xyztype == XYZType::INVALID){
@@ -308,7 +311,7 @@ namespace ICHNOS {
 					Popt.MaxIterationsPerStreamline = vm_cfg["StoppingCriteria.MaxIterationsPerStreamline"].as<int>();
 					Popt.MaxProcessorExchanges = vm_cfg["StoppingCriteria.MaxProcessorExchanges"].as<int>();
 					Popt.AgeLimit = vm_cfg["StoppingCriteria.AgeLimit"].as<double>();
-					Popt.StuckIterations = vm_cfg["StoppingCriteria.Stuckiter"].as<int>();
+					Popt.StuckIterations = vm_cfg["StoppingCriteria.StuckIter"].as<int>();
                     Dopt.AttractorsFile = vm_cfg["StoppingCriteria.AttractFile"].as<std::string>();
                     Dopt.AttractRadius = vm_cfg["StoppingCriteria.AttractRadius"].as<double>();
                     Dopt.AttractRadius = Dopt.AttractRadius * Dopt.AttractRadius;

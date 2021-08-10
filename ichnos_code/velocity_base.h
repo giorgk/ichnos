@@ -13,9 +13,12 @@ namespace ICHNOS {
 	
 	class velocityField {
 	public:
-		velocityField(boost::mpi::communicator& world_in, VelType Vtype_in);
+		velocityField(boost::mpi::communicator& world_in);
 		virtual void readVelocityField(std::string vf_file){}
-		virtual void calcVelocity(vec3& vel, std::map<int, double>& proc_map, vec3& p, double time = 0) {}
+		virtual void calcVelocity(vec3& vel,
+                                  std::vector<int>& ids,
+                                  std::vector<double>& weights,
+                                  double tm = 0) {}
 		virtual void reset(){}
 		virtual void updateStep(double& step){}
 		
@@ -32,10 +35,9 @@ namespace ICHNOS {
 
 	};
 
-	velocityField::velocityField(boost::mpi::communicator& world_in, VelType Vtype_in)
+	velocityField::velocityField(boost::mpi::communicator& world_in)
 		:
-		world(world_in),
-		Vtype(Vtype_in)
+		world(world_in)
 	{}
 
 	bool velocityField::bIsInGhostArea(std::map<int, double> proc_map) {

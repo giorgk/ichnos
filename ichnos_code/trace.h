@@ -251,10 +251,22 @@ namespace ICHNOS {
 			return ExitReason::INIT_OUT;
 
 		// Attempt to calculate the velocity
-		std::map<int, double> proc_map;
-		VF.calcVelocity(v, proc_map, p, tm);
-		if (v.isInvalid())
-			return ExitReason::FAR_AWAY;
+        {
+            std::vector<int> ids;
+            std::vector<double> weights;
+            std::map<int, double> proc_map;
+            bool tf;
+            XYZ.calcWeights(p,ids,weights,proc_map,tf);
+            if (!tf) {return ExitReason::FAR_AWAY;}
+
+            VF.calcVelocity(v,ids,weights,tm);
+            if (v.isInvalid()) {return ExitReason::FAR_AWAY;}
+        }
+
+
+
+
+
 		//proc = VF.calcProcID(proc_map);
 		//if (proc != world.rank())
 		//	return ExitReason::FIRST_POINT_GHOST;
@@ -320,11 +332,15 @@ namespace ICHNOS {
 		// It does not check if its in the velocity field owned by this processor
 		ExitReason exitreason = CheckNewPoint(p);
 		std::map<int, double> proc_map;
+		std::vector<int> ids;
+		std::vector<double> weights;
+		bool tf;
 		// If the point is outside the domain we can still caluclate velocity if
 		// the velocity field allows it. However the particle tracking will be terminated
 		if (exitreason != ExitReason::NO_EXIT) {
 			if (VF.InterpolateOutsideDomain) {
-				VF.calcVelocity(v, proc_map, p, tm);
+			    XYZ.calcWeights(p,ids,weights,proc_map, tf);
+				VF.calcVelocity(v,ids,weights, tm);
 			}
 			else {
 				v = vec3();
@@ -332,7 +348,8 @@ namespace ICHNOS {
 			return exitreason;
 		}
 		else {
-			VF.calcVelocity(v, proc_map, p, tm);
+            XYZ.calcWeights(p,ids,weights,proc_map, tf);
+            VF.calcVelocity(v,ids,weights, tm);
 			if (v.isInvalid())
 				return ExitReason::FAR_AWAY;
 			bool tf;

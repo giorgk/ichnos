@@ -12,9 +12,12 @@ namespace STOCH {
 
 	class MarkovChainVel : public ICHNOS::velocityField {
 	public:
-		MarkovChainVel(boost::mpi::communicator& world_in, ic::VelType Vtype_in);
+		MarkovChainVel(boost::mpi::communicator& world_in);
 		void readVelocityField(std::string vf_file);
-		void calcVelocity(ic::vec3& vel, std::map<int, double>& proc_map, ic::vec3& p, double time = 0);
+		void calcVelocity(ic::vec3& vel,
+                          std::vector<int>& ids,
+                          std::vector<double>& weights,
+                          double time = 0);
 		void reset();
 		void updateStep(double& step);
 	private:
@@ -54,9 +57,9 @@ namespace STOCH {
 
 	};
 
-	MarkovChainVel::MarkovChainVel(boost::mpi::communicator& world_in, ic::VelType Vtype_in)
+	MarkovChainVel::MarkovChainVel(boost::mpi::communicator& world_in)
 		:
-		velocityField(world_in, Vtype_in)
+		velocityField(world_in)
 	{}
 
 	void MarkovChainVel::reset() {
@@ -171,7 +174,11 @@ namespace STOCH {
 
 	}
 
-	void MarkovChainVel::calcVelocity(ic::vec3& vel, std::map<int, double>& proc_map, ic::vec3& p, double tm) {
+	void MarkovChainVel::calcVelocity(ic::vec3& vel,
+                                      std::vector<int>& ids,
+                                      std::vector<double>& weights,
+                                      double time) {
+	    ic::vec3 p;
 		// If this is the first point of this streamline we will carry out one additional range search
 		ll.zero();
 		uu.zero();
@@ -260,13 +267,13 @@ namespace STOCH {
 				}
 				else {
 					w = 1 / std::pow(scaled_dist, Power);
-					itd = proc_map.find(tmp[i].get<1>().proc);
-					if (itd == proc_map.end()) {
-						proc_map.insert(std::pair<int, double>(tmp[i].get<1>().proc, w));
-					}
-					else {
-						itd->second += w;
-					}
+//					itd = proc_map.find(tmp[i].get<1>().proc);
+//					if (itd == proc_map.end()) {
+//						proc_map.insert(std::pair<int, double>(tmp[i].get<1>().proc, w));
+//					}
+//					else {
+//						itd->second += w;
+//					}
 					sumW += w;
 					int n = tmp[i].get<1>().v.nValues(currentState, currentPeriod);
 					int rindex = RG->randomNumber(0, n);
@@ -279,10 +286,10 @@ namespace STOCH {
 				ratio = tmp_ratio;
 			}
 
-			itd = proc_map.begin();
-			for (; itd != proc_map.end(); ++itd) {
-				itd->second = itd->second / sumW;
-			}
+//			itd = proc_map.begin();
+//			for (; itd != proc_map.end(); ++itd) {
+//				itd->second = itd->second / sumW;
+//			}
 			if (calc_average)
 				vel = sumWVal * (1 / sumW);
 			
