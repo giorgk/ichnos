@@ -61,9 +61,7 @@ namespace TRANS{
         int FrequencyStat;
         double calc_time = 0.0;
         double max_calc_time = 0.0;
-        int cout_times = 0;
-
-        void PrintStat();
+        int count_times = 0;
 
         double currentTime;
 
@@ -71,8 +69,6 @@ namespace TRANS{
         double search_mult = 2.5;
         ic::vec3 ll, uu, pp, vv;
         ic::TimeInterpType timeInterp = ic::TimeInterpType::NEAREST;
-
-        void calculate_search_box(ic::vec3& p, ic::vec3& l, ic::vec3& u);
 
     };
 
@@ -85,7 +81,7 @@ namespace TRANS{
 
     void transVel::readVelocityField(std::string vf_file) {
         if (world.rank() == 0)
-            std::cout << "Velocity configuration file: " << vf_file << std::endl;
+            std::cout << "--> Velocity configuration file: " << vf_file << std::endl;
 
         po::options_description velocityFieldOptions("Velocity field options");
         po::variables_map vm_vfo;
@@ -285,7 +281,7 @@ namespace TRANS{
         pp.zero();
         vv.zero();
         if (!bIsInitialized){
-            calculate_search_box(p,ll,uu);
+            ic::calculate_search_box(p,ll,uu,diameter,ratio,search_mult);
             ic::cgal_point_3 llp(ll.x, ll.y, ll.z);
             ic::cgal_point_3 uup(uu.x, uu.y, uu.z);
             ic::Fuzzy_iso_box_trans fib(llp,uup, 0.0);
@@ -324,7 +320,7 @@ namespace TRANS{
             std::vector<boost::tuples::tuple<ic::cgal_point_3, ic::TRANS_data>> tmp;
             while (true){
                 tmp.clear();
-                calculate_search_box(p,ll,uu);
+                ic::calculate_search_box(p,ll,uu, diameter, ratio,search_mult);
                 ic::cgal_point_3 llp(ll.x, ll.y, ll.z);
                 ic::cgal_point_3 uup(uu.x, uu.y, uu.z);
                 ic::Fuzzy_iso_box_trans fib(llp,uup, 0.0);
@@ -414,8 +410,8 @@ namespace TRANS{
         pp = p; // I dont understand this. It seems we need to use these variables in the updateStep method
         vv = vel;
 
-        cout_times++;
-        PrintStat();
+        count_times++;
+        ic::PrintStat(count_times, FrequencyStat, calc_time, max_calc_time);
 
     }
 
@@ -427,28 +423,6 @@ namespace TRANS{
 
     void transVel::updateStep(double &step) {
 
-    }
-
-    void transVel::calculate_search_box(ic::vec3 &p, ic::vec3 &l, ic::vec3 &u) {
-        double xy_dir = (diameter/2)*search_mult;
-        double z_dir = xy_dir/ratio;
-        l.x = p.x - xy_dir;
-        l.y = p.y - xy_dir;
-        l.z = p.z - z_dir;
-        u.x = p.x + xy_dir;
-        u.y = p.y + xy_dir;
-        u.z = p.z + z_dir;
-    }
-
-    void transVel::PrintStat() {
-        if (cout_times > FrequencyStat){
-            std::cout << "||			---Velocity Calc time: " << std::fixed << std::setprecision(15) << calc_time/static_cast<double>(cout_times) <<  ", (";// std::endl;
-            std::cout << max_calc_time << "), ";
-            std::cout << std::endl << std::flush;
-            cout_times = 0;
-            calc_time = 0.0;
-            max_calc_time = 0.0;
-        }
     }
 }
 

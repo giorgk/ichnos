@@ -16,8 +16,6 @@ namespace ICHNOS {
      * VelType is a list of velocity field types
      */
 	enum class VelType {
-	//	Cloud3d,
-		IWFM, /// This is no longer used
 		STEADY, /// This is a velocity type where a single value for the velocity is defined
 		TRANS, /// This is a velocity type where for its point the velocity is defined as a time series
 		STOCH, /// (Experimental) This is a velocity type where the velocity is defined in some stochastic manner
@@ -63,6 +61,40 @@ namespace ICHNOS {
 		}
 	}
 
+	enum class XYZType{
+	    CLOUD,
+	    IWFM,
+	    INVALID
+	};
+
+	std::string castXYZType2String(XYZType xyzt) {
+	    std::map <XYZType, std::string> xyztMap;
+	    std::map <XYZType, std::string>::iterator it;
+	    //vtMap.insert(std::pair<VelType, std::string>(VelType::Cloud3d, "Cloud3d"));
+	    xyztMap.insert(std::pair<XYZType, std::string>(XYZType::CLOUD, "CLOUD"));
+	    xyztMap.insert(std::pair<XYZType, std::string>(XYZType::IWFM, "IWFM"));
+	    it = xyztMap.find(xyzt);
+	    if (it != xyztMap.end())
+	        return it->second;
+	    else {
+	        return "INVALID";
+	    }
+	}
+
+	XYZType castXYZType2Enum(std::string xyzt) {
+	    std::map < std::string, XYZType> xyztMap;
+	    std::map < std::string, XYZType>::iterator it;
+	    //vtMap.insert(std::pair<std::string, VelType>("Cloud3d", VelType::Cloud3d));
+	    xyztMap.insert(std::pair<std::string, XYZType>("STEADY", XYZType::CLOUD));
+	    xyztMap.insert(std::pair<std::string, XYZType>("TRANS", XYZType::IWFM));
+	    it = xyztMap.find(xyzt);
+	    if (it != xyztMap.end())
+	        return it->second;
+	    else {
+	        return XYZType::INVALID;
+	    }
+	}
+
 	/*! \brief The main class that defines all the options
 	 *
 	 */
@@ -101,6 +133,7 @@ namespace ICHNOS {
 		int niter = 0; /// The number of iterations during the gather mode. This is set also from the input files
 
 		VelType velocityFieldType; /// The velocity field type
+		XYZType xyztype;
 		
 
 		
@@ -163,7 +196,8 @@ namespace ICHNOS {
 		po::options_description config_options("Configuration file options");
 		config_options.add_options()
 			// Velocity Options
-			("Velocity.Type", po::value<std::string>(), "Type of velocity. (STEADY or IWFM)")
+			("Velocity.XYZType", po::value<std::string>(), "Type of point coordinates e.g CLOUD/IWFM")
+			("Velocity.Type", po::value<std::string>(), "Type of velocity. (STEADY or TRANS)")
 			("Velocity.ConfigFile", po::value<std::string >(), "Set configuration file for the velocity field")
 
 			// Domain options
@@ -189,13 +223,14 @@ namespace ICHNOS {
 			("StepConfig.Method", po::value<std::string >(), "Method for steping")
 			("StepConfig.Direction", po::value<double>()->default_value(1), "Backward or forward particle tracking")
 			("StepConfig.StepSize", po::value<double>()->default_value(1), "Step Size in units of length")
+            ("StepConfig.StepSizeTime", po::value<double>()->default_value(1), "Step Size in units of time")
 			("StepConfig.minExitStepSize", po::value<double>()->default_value(0.1), "Minimum Step Size at the exit as percentage of the stepsize")
 
 			// Adaptive Step configurations
 			("AdaptStep.UpdateStepSize", po::value<int>()->default_value(1), "Update step size wrt bbox")
 			("AdaptStep.MaxStepSize", po::value<double>()->default_value(2), "Maximum Step Size in units of length")
 			("AdaptStep.MinStepSize", po::value<double>()->default_value(0.1), "Minimum Step Size in units of length")
-			("AdaptStep.increasRatechange", po::value<double>()->default_value(1.5), "Maximum Step Size in units of length")
+			("AdaptStep.increaseRateChange", po::value<double>()->default_value(1.5), "Maximum Step Size in units of length")
 			("AdaptStep.limitUpperDecreaseStep", po::value<double>()->default_value(0.75), "Upper limit of decrease step size")
 			("AdaptStep.Tolerance", po::value<double>()->default_value(0.1), "Tolerance when the RK45 is used")
 
@@ -233,7 +268,7 @@ namespace ICHNOS {
 		if (vm_cmd.count("config")) {
 			try {
 				Popt.configfile = vm_cmd["config"].as<std::string>().c_str();
-				std::cout << "Configuration file: " << vm_cmd["config"].as<std::string>().c_str() << std::endl;
+				std::cout << "--> Configuration file: " << vm_cmd["config"].as<std::string>().c_str() << std::endl;
 				po::store(po::parse_config_file<char>(vm_cmd["config"].as<std::string>().c_str(), config_options), vm_cfg);
 
 				{// Velocity Options
@@ -242,6 +277,13 @@ namespace ICHNOS {
 						std::cout << vm_cfg["Velocity.Type"].as<std::string>() << " is an invalid velocity type" << std::endl;
 						return false;
 					}
+
+					xyztype = castXYZType2Enum(vm_cfg["Velocity.XYZType"].as<std::string>());
+					if (xyztype == XYZType::INVALID){
+					    std::cout << vm_cfg["Velocity.XYZType"].as<std::string>() << " is an invalid XYZ type" << std::endl;
+					    return false;
+					}
+
 					velocityFieldFileName = vm_cfg["Velocity.ConfigFile"].as<std::string>();
 				}
 
@@ -286,6 +328,7 @@ namespace ICHNOS {
 						Popt.Direction = -1;
 					
 					Popt.StepSize = vm_cfg["StepConfig.StepSize"].as<double>();
+					Popt.StepSizeTime = vm_cfg["StepConfig.StepSizeTime"].as<double>();
 
 					Popt.minExitStepSize = vm_cfg["StepConfig.minExitStepSize"].as<double>();
 					if (Popt.minExitStepSize < 0 || Popt.minExitStepSize > 1) {
@@ -298,10 +341,10 @@ namespace ICHNOS {
 					Popt.UpdateStepSize = vm_cfg["AdaptStep.UpdateStepSize"].as<int>();
 					Popt.MaxStepSize = vm_cfg["AdaptStep.MaxStepSize"].as<double>();
 					Popt.MinStepSize = vm_cfg["AdaptStep.MinStepSize"].as<double>();
-					Popt.increasRatechange = vm_cfg["AdaptStep.increasRatechange"].as<double>();
-					if (Popt.increasRatechange < 1) {
-						std::cout << "increasRatechange should be higher than 1. It gets the default value of 1.5" << std::endl;
-						Popt.increasRatechange = 1.5;
+					Popt.increaseRateChange = vm_cfg["AdaptStep.increaseRateChange"].as<double>();
+					if (Popt.increaseRateChange < 1) {
+						std::cout << "increaseRateChange should be higher than 1. It gets the default value of 1.5" << std::endl;
+						Popt.increaseRateChange = 1.5;
 					}
 					Popt.limitUpperDecreaseStep = vm_cfg["AdaptStep.limitUpperDecreaseStep"].as<double>();
 					if (Popt.limitUpperDecreaseStep < 0 || Popt.limitUpperDecreaseStep > 1) {

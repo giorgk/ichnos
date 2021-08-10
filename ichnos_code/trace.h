@@ -4,6 +4,7 @@
 #include "ichnos_structures.h"
 #include "velocity_base.h"
 #include "ichnos_domain.h"
+#include "ichnos_XYZ_base.h"
 
 
 namespace ICHNOS {
@@ -12,6 +13,7 @@ namespace ICHNOS {
 	public:
 		ParticleTrace(
 			boost::mpi::communicator& world_in,
+            XYZ_base &XYZ_in,
 			velocityField &VF_in,
 			DomainBase &dom_in,
 			ParticleOptions& popt_in);
@@ -25,31 +27,35 @@ namespace ICHNOS {
 		const ParticleOptions popt;
 		velocityField& VF;
 		DomainBase& Domain;
+        XYZ_base& XYZ;
 		boost::mpi::communicator world;
-		bool findNextPoint(const Particle& P, vec3& pnew, ExitReason& er);
+		bool findNextPoint(const Particle& P, vec3& pnew, vec3& vnew, double& tm, ExitReason& er);
 		ExitReason traceInner(Streamline& S);
 		void traceOuter(std::vector<Streamline>& S, int iter, int ireal);
 		ExitReason CheckNewPoint(vec3& p);
 		ExitReason CheckNewPointAndCalcVelocity(vec3& p, vec3& v/*, int &proc*/, double tm = 0);
 
-		bool EulerStep(const Particle& P, vec3& pnew, ExitReason& er);
-		bool RK2Step(const Particle& P, vec3& pnew, ExitReason& er);
-		bool RK4Step(const Particle& P, vec3& pnew, ExitReason& er);
-		bool RK45Step(const Particle& P, vec3& pnew, ExitReason& er);
+		bool EulerStep(const Particle& P, vec3& pnew, vec3& vnew, double& tm, ExitReason& er);
+		bool RK2Step(const Particle& P, vec3& pnew, vec3& vnew, double& tm, ExitReason& er);
+		bool RK4Step(const Particle& P, vec3& pnew, vec3& vnew, double& tm, ExitReason& er);
+		bool RK45Step(const Particle& P, vec3& pnew, vec3& vnew, double& tm, ExitReason& er);
 
 		const std::vector<std::vector<double> > CF = getRK45coef();
 
 		double adaptStepSize;
 		double actualStep;
+		double actualStepTime;
 	};
 
 	ParticleTrace::ParticleTrace(
 		boost::mpi::communicator& world_in,
+        XYZ_base &XYZ_in,
 		velocityField& VF_in,
 		DomainBase& dom_in,
 		ParticleOptions &popt_in)
 		:
 		world(world_in),
+        XYZ(XYZ_in),
 		VF(VF_in),
 		Domain(dom_in),
 		popt(popt_in)
@@ -233,6 +239,7 @@ namespace ICHNOS {
 		// Reset the step size
 		adaptStepSize = popt.StepSize;
 		actualStep = popt.StepSize;
+		actualStepTime = popt.StepSizeTime;
 		VF.reset();
 		vec3 v;
 		vec3 p = S.getLastParticle().getP();
@@ -271,7 +278,7 @@ namespace ICHNOS {
 			//}
 			if (popt.UpdateStepSize == 1 && popt.method != SolutionMethods::RK45)
 				VF.updateStep(actualStep);
-			bool foundPoint = findNextPoint(S.getLastParticle(), p, er);
+			bool foundPoint = findNextPoint(S.getLastParticle(), p, v, tm, er);
 			if (foundPoint) {
 			    if (popt.bIsTransient){
 			        tm = S.getLastParticle().getTime() + popt.Direction * (p - S.getLastParticle().getP()).len()/S.getLastParticle().getV().len();
@@ -279,7 +286,7 @@ namespace ICHNOS {
 			    else{
 			        tm = 0.0;
 			    }
-				er = CheckNewPointAndCalcVelocity(p, v/*, proc*/, tm);
+				//er = CheckNewPointAndCalcVelocity(p, v/*, proc*/, tm);
 				//DEBUG::displayPVasVex(p, v);
 				S.AddParticle(Particle(p, v, S.getLastParticle(), tm));
 				//S.getLastParticle().displayAsVEX(true);
@@ -371,35 +378,43 @@ namespace ICHNOS {
 		return ExitReason::NO_EXIT;
 	}
 
-	bool ParticleTrace::findNextPoint(const Particle& P, vec3& pnew, ExitReason& er) {
+	bool ParticleTrace::findNextPoint(const Particle& P, vec3& pnew, vec3& vnew, double& tm, ExitReason& er) {
 		switch (popt.method)
 		{
 		case SolutionMethods::Euler:
-			return EulerStep(P, pnew, er);
+			return EulerStep(P, pnew, vnew, tm, er);
 			break;
 		case SolutionMethods::RK2:
-			return RK2Step(P, pnew, er);
+			return RK2Step(P, pnew, vnew, tm, er);
 			break;
 		case SolutionMethods::RK4:
-			return RK4Step(P, pnew, er);
+			return RK4Step(P, pnew, vnew, tm, er);
 			break;
 		case SolutionMethods::RK45:
-			return RK45Step(P, pnew, er);
+			return RK45Step(P, pnew, vnew, tm, er);
 			break;
 		default:
-			return EulerStep(P, pnew, er);
+			return EulerStep(P, pnew, vnew, tm, er);
 			break;
 		}
 	}
 
-	bool ParticleTrace::EulerStep(const Particle& P, vec3& pnew, ExitReason& er) {
+	bool ParticleTrace::EulerStep(const Particle& P, vec3& pnew, vec3& vnew, double& tm, ExitReason& er) {
 		//DEBUG::displayParticleasVex(P, true);
 		pnew = P.getP() + P.getV().normalize() * actualStep * popt.Direction;
 		//DEBUG::displayVectorasVex(pnew);
+
+        er = CheckNewPointAndCalcVelocity(pnew, vnew/*, proc*/, tm);
+        if (actualStep > popt.minExitStepSize){
+            if (er == ExitReason::EXIT_SIDE || er == ExitReason::EXIT_BOTTOM || er == ExitReason::EXIT_TOP ){
+                actualStep = actualStep * 0.45;
+                EulerStep(P, pnew, vnew, tm, er);
+            }
+        }
 		return true;
 	}
 
-	bool ParticleTrace::RK2Step(const Particle& P, vec3& pnew, ExitReason& er) {
+	bool ParticleTrace::RK2Step(const Particle& P, vec3& pnew, vec3& vnew, double& tm, ExitReason& er) {
 		//DEBUG::displayParticleasVex(P, true);
 		// We set this value to the current processor however this is not actually used
 		// as it does not get out of this function
@@ -420,7 +435,7 @@ namespace ICHNOS {
 		return true;
 	}
 
-	bool ParticleTrace::RK4Step(const Particle& P, vec3& pnew, ExitReason& er) {
+	bool ParticleTrace::RK4Step(const Particle& P, vec3& pnew, vec3& vnew, double& tm, ExitReason& er) {
 		//DEBUG::displayParitcleasVex(P, true);
 		// See RK2Step
 		int proc = world.rank();
@@ -457,7 +472,7 @@ namespace ICHNOS {
 		return true;
 	}
 
-	bool ParticleTrace::RK45Step(const Particle& P, vec3& pnew, ExitReason& er) {
+	bool ParticleTrace::RK45Step(const Particle& P, vec3& pnew, vec3& vnew, double& tm, ExitReason& er) {
 		//DEBUG::displayParticleasVex(P, true);
 		// See RK2Step
 		int proc = world.rank();
@@ -476,7 +491,7 @@ namespace ICHNOS {
 		if (adaptStepSize > popt.minExitStepSize)
 			if (er == ExitReason::EXIT_SIDE || er == ExitReason::EXIT_BOTTOM || er == ExitReason::EXIT_TOP) {
 				adaptStepSize = adaptStepSize * 0.24;
-				RK45Step(P, pnew, er);
+				//TODO RK45Step(P, pnew, er);
 				return true;
 			}
 
@@ -490,7 +505,7 @@ namespace ICHNOS {
 		if (adaptStepSize > popt.minExitStepSize)
 			if (er == ExitReason::EXIT_SIDE || er == ExitReason::EXIT_BOTTOM || er == ExitReason::EXIT_TOP) {
 				adaptStepSize = adaptStepSize * 0.37;
-				RK45Step(P, pnew, er);
+				// TODO RK45Step(P, pnew, er);
 				return true;
 			}
 
@@ -520,7 +535,7 @@ namespace ICHNOS {
 		if ( adaptStepSize > popt.minExitStepSize )
 			if (er == ExitReason::EXIT_SIDE || er == ExitReason::EXIT_BOTTOM || er == ExitReason::EXIT_TOP ) {
 				adaptStepSize = adaptStepSize * 0.45;
-				RK45Step(P, pnew, er);
+				// TODO RK45Step(P, pnew, er);
 				return true;
 			}
 
@@ -537,7 +552,7 @@ namespace ICHNOS {
 		double q = 0.84 * pow(popt.ToleranceStepSize / R, 0.25);
 
 		if (q >= 1) {
-			q = std::min(q, popt.increasRatechange);
+			q = std::min(q, popt.increaseRateChange);
 			// We can increase the step size
 			adaptStepSize = adaptStepSize * q;
 			if (adaptStepSize > popt.MaxStepSize)
@@ -559,8 +574,9 @@ namespace ICHNOS {
 			else {
 				q = std::min(q, popt.limitUpperDecreaseStep);
 				adaptStepSize = adaptStepSize * q;
-				if (R > popt.ToleranceStepSize)
-					RK45Step(P, pnew, er);
+				if (R > popt.ToleranceStepSize){
+                    // TODO RK45Step(P, pnew, er);
+				}
 			}
 		}
 		return true;

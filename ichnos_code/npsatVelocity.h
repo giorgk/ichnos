@@ -59,12 +59,11 @@ namespace NPSAT {
 		double max_calc_time = 0.0;
 		//double calc_time1 = 0.0;
 		//double calc_time2 = 0.0;
-		int cout_times = 0;
+		int count_times = 0;
 		int FrequencyStat;
 		int nids_size = 0;
 		//int method;
 		//double max_distance = 0;
-		void PrintStat();
 
 		bool bIsInitialized = false;
 		double initial_diameter = 640;
@@ -78,7 +77,6 @@ namespace NPSAT {
 		//void add_interpolationVertex(std::map<int, npsatVeldata>& nids, ic::vec3& lp, ic::vec3& up, ic::vertex_handle& vh, ic::vec3& p, npsatVeldata& tmp);
 		void calculate_BB(ic::vertex_handle& vh, ic::vec3& l, ic::vec3& u);
 		double calculate_step(ic::vec3& p, ic::vec3& v, ic::vec3& l, ic::vec3& u);
-		void calculate_search_box(ic::vec3& p, ic::vec3& l, ic::vec3& u);
 	};
 
 	npsatVel::npsatVel(boost::mpi::communicator& world_in, ic::VelType Vtype_in)
@@ -197,7 +195,7 @@ namespace NPSAT {
 		pp.zero();
 		vv.zero();
 		if (!bIsInitialized){ 
-			calculate_search_box(p,ll,uu);
+			ic::calculate_search_box(p,ll,uu,diameter,ratio,search_mult);
 			ic::cgal_point_3 llp(ll.x, ll.y, ll.z);
 			ic::cgal_point_3 uup(uu.x, uu.y, uu.z);
 			ic::Fuzzy_iso_box fib(llp,uup, 0.0);
@@ -233,7 +231,7 @@ namespace NPSAT {
 			std::vector<boost::tuples::tuple<ic::cgal_point_3, ic::NPSAT_data>> tmp;
 			while (true){
 				tmp.clear();
-				calculate_search_box(p,ll,uu);
+				ic::calculate_search_box(p,ll,uu,diameter,ratio,search_mult);
 				ic::cgal_point_3 llp(ll.x, ll.y, ll.z);
 				ic::cgal_point_3 uup(uu.x, uu.y, uu.z);
 				ic::Fuzzy_iso_box fib(llp,uup, 0.0);
@@ -533,9 +531,9 @@ namespace NPSAT {
 		//std::cout << "Calc time Tria: " << elapsed.count() << std::endl;
 		//calc_time += elapsed.count();
 		
-		cout_times++;
+		count_times++;
 		//nids_size = nids.size();
-		PrintStat();
+        ic::PrintStat(count_times, FrequencyStat, calc_time, max_calc_time);
 	}
 
 /*
@@ -664,35 +662,5 @@ namespace NPSAT {
 		return pmin.distance(pmax.x, pmax.y, pmax.z)/n_steps;
 	}
 
-	void npsatVel::calculate_search_box(ic::vec3& p, ic::vec3& l, ic::vec3& u){
-		double xy_dir = (diameter/2)*search_mult;
-		double z_dir = xy_dir/ratio;
-		l.x = p.x - xy_dir;
-		l.y = p.y - xy_dir;
-		l.z = p.z - z_dir;
-		u.x = p.x + xy_dir;
-		u.y = p.y + xy_dir;
-		u.z = p.z + z_dir;
-	}
-
-	void npsatVel::PrintStat() {
-		if (cout_times > FrequencyStat) {
-			//std::cout << "Search time: " << std::fixed << std::setprecision(15) << search_time/static_cast<double>(cout_times) << ", ("; // std::endl;
-			//std::cout << max_search_time << "), ";
-			std::cout << "||			---Velocity Calc time: " << std::fixed << std::setprecision(15) << calc_time/static_cast<double>(cout_times) <<  ", (";// std::endl;
-			std::cout << max_calc_time << "), ";
-			std::cout << std::endl << std::flush;
-			//std::cout << "max: " << max_distance << ", ";
-			//std::cout << "Number of nodes: " << nids_size << std::endl;
-			//std::cout << "Velocity Calc time1: " << std::fixed << std::setprecision(15) << calc_time1 / static_cast<double>(cout_times) << std::endl;
-			//std::cout << "Velocity Calc time2: " << std::fixed << std::setprecision(15) << calc_time2 / static_cast<double>(cout_times) << std::endl;
- 			cout_times = 0;
-			//search_time = 0.0;
-			calc_time = 0.0;
-			max_calc_time = 0.0;
-			//calc_time1 = 0.0;
-			//calc_time2 = 0.0;
-		}
-	}
 }
 

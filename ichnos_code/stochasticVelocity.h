@@ -52,7 +52,6 @@ namespace STOCH {
 		double StepSize;
 		ic::vec3 ll, uu, pp, vv;
 
-		void calculate_search_box(ic::vec3& p, ic::vec3& l, ic::vec3& u);
 	};
 
 	MarkovChainVel::MarkovChainVel(boost::mpi::communicator& world_in, ic::VelType Vtype_in)
@@ -179,7 +178,7 @@ namespace STOCH {
 		pp.zero();
 		vv.zero();
 		if (!bIsInitialized) {
-			calculate_search_box(p, ll, uu);
+			ic::calculate_search_box(p, ll, uu, diameter, ratio, search_mult);
 			ic::cgal_point_3 llp(ll.x, ll.y, ll.z);
 			ic::cgal_point_3 uup(uu.x, uu.y, uu.z);
 			ic::Fuzzy_iso_box_stoch fib(llp, uup, 0.0);
@@ -213,7 +212,7 @@ namespace STOCH {
 			std::vector<boost::tuples::tuple<ic::cgal_point_3, ic::STOCH_data>> tmp;
 			while (true) {
 				tmp.clear();
-				calculate_search_box(p, ll, uu);
+				ic::calculate_search_box(p, ll, uu, diameter, ratio, search_mult);
 				ic::cgal_point_3 llp(ll.x, ll.y, ll.z);
 				ic::cgal_point_3 uup(uu.x, uu.y, uu.z);
 				ic::Fuzzy_iso_box_stoch fib(llp, uup, 0.0);
@@ -446,16 +445,6 @@ namespace STOCH {
 		return true;
 	}
 
-	void MarkovChainVel::calculate_search_box(ic::vec3& p, ic::vec3& l, ic::vec3& u) {
-		double xy_dir = (diameter / 2) * search_mult;
-		double z_dir = xy_dir / ratio;
-		l.x = p.x - xy_dir;
-		l.y = p.y - xy_dir;
-		l.z = p.z - z_dir;
-		u.x = p.x + xy_dir;
-		u.y = p.y + xy_dir;
-		u.z = p.z + z_dir;
-	}
 
 	void MarkovChainVel::updateStep(double& step) {
 		TimeSinceLastUpdate += StepSize;

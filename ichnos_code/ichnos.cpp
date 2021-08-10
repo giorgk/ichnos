@@ -12,6 +12,7 @@
 #include "ichnos_options.h"
 #include "ichnos_structures.h"
 #include "velocity_base.h"
+#include "ichnos_XYZ_base.h"
 #include "trace.h"
 #include "iwfmVelocity.h"
 #include "npsatVelocity.h"
@@ -59,6 +60,17 @@ int main(int argc, char* argv[])
         ICHNOS::gather_particles(OPT);
     }
     else {
+        switch (OPT.xyztype){
+            case ICHNOS::XYZType::CLOUD:
+            {
+                break;
+            }
+            case ICHNOS::XYZType::IWFM:
+            {
+                break;
+            }
+        }
+
         switch (OPT.velocityFieldType) {
         case ICHNOS::VelType::STEADY:
         {

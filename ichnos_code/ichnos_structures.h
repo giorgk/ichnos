@@ -509,12 +509,14 @@ namespace ICHNOS {
 		double MinStepSize;
 		// This is the step size of the initial step size for the adaptive
 		double StepSize;
+		// The step size in units of time
+		double StepSizeTime;
 		// This is the minimum step size at the exit side of the particles
 		double minExitStepSize;
 		//When the method is adaptive this is the tolerance
 		double ToleranceStepSize;
 		// When the method is adaptive this modifies the rate of change of the step size.
-		double increasRatechange;
+		double increaseRateChange;
 
 		// When the method is adaptive this limits the upper threshold of step decrease.
 		// For example if the decrease is lower that 1 but very close to one then it may be possible that

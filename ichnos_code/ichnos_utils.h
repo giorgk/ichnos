@@ -110,6 +110,28 @@ namespace ICHNOS {
 		}
 	}
 
+    void calculate_search_box(vec3 &p, vec3 &l, vec3 &u, double diameter, double ratio, double search_mult) {
+        double xy_dir = (diameter/2)*search_mult;
+        double z_dir = xy_dir/ratio;
+        l.x = p.x - xy_dir;
+        l.y = p.y - xy_dir;
+        l.z = p.z - z_dir;
+        u.x = p.x + xy_dir;
+        u.y = p.y + xy_dir;
+        u.z = p.z + z_dir;
+    }
+
+    void PrintStat(int &count_times, int &FrequencyStat, double &calc_time, double &max_calc_time) {
+        if (count_times > FrequencyStat){
+            std::cout << "||			---Velocity Calc time: " << std::fixed << std::setprecision(15) << calc_time/static_cast<double>(count_times) <<  ", (";// std::endl;
+            std::cout << max_calc_time << "), ";
+            std::cout << std::endl << std::flush;
+            count_times = 0;
+            calc_time = 0.0;
+            max_calc_time = 0.0;
+        }
+    }
+
 	namespace READ {
 
 		void readTopBot(std::string filename, PointSet2& Pset, bool top, bool bot) {
