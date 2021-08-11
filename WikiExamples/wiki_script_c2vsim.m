@@ -183,8 +183,8 @@ Vz_m_day = Vz_m3_day;
 for ii = 1:size(Vx_m_day,2)
     for jj = 1:size(Vx_m_day,3)
         Vx_m_day(:,ii,jj) = Vx_m_day(:,ii,jj) ./ (2.*av_dist.*av_thick(:,jj));
-        Vy_m_day(:,ii,jj) = Vx_m_day(:,ii,jj) ./ (2.*av_dist.*av_thick(:,jj));
-        Vz_m_day(:,ii,jj) = Vx_m_day(:,ii,jj) ./ elem_area;
+        Vy_m_day(:,ii,jj) = Vy_m_day(:,ii,jj) ./ (2.*av_dist.*av_thick(:,jj));
+        Vz_m_day(:,ii,jj) = Vz_m_day(:,ii,jj) ./ elem_area;
     end
 end
 %% Split velocity data
@@ -219,6 +219,8 @@ plot(XYZ_DATA(:,1),XYZ_DATA(:,2),'.')
 dbg_domain = ginput;
 hold on
 plot(dbg_domain(:,1), dbg_domain(:,2))
+%% or 
+dbg_domain = [-112418,-67904;-62745,-2063;-44444,-24010;-94118,-122195];
 %% create domain outline for debug area
 simplify_threshold = 1000;
 [xx,yy] = reducem(Xs{1,1}', Ys{1,1}', simplify_threshold);

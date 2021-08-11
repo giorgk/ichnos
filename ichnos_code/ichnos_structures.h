@@ -289,6 +289,7 @@ namespace ICHNOS {
         void setTSvalue(std::vector<double>& TS_in);
         void findIIT(double x, int &i1, int &i2, double &t);
         vec3 getVelocity(int pnt, int i1, int i2, double t, TimeInterpType tp);
+        double getTSvalue(int idx);
     private:
         std::vector<std::vector<double>> VX;
         std::vector<std::vector<double>> VY;
@@ -387,6 +388,13 @@ namespace ICHNOS {
         else{
             return vec3(VX[pnt][i1], VY[pnt][i1], VZ[pnt][i1]);
         }
+    }
+
+    double VelTR::getTSvalue(int idx) {
+        if (idx >= 0 && idx < static_cast<int>(TS.size()))
+            return TS[idx];
+        else
+            return -9.0;
     }
 
 
@@ -497,31 +505,44 @@ namespace ICHNOS {
 		}
 	}
 
+	struct StepOptions {
+        /// This is the step size with units of length. For RK45 this is the initial step size
+        double StepSize;
+        /// This is the step size with units of Time. For RK45 this is the initial step size
+        double StepSizeTime;
+        /// This is the number of steps to divide the size of an element
+        int nSteps;
+        /// This is the number of steps to take within a time step
+        int nStepsTime;
+        /// This is the minimum step size at the exit side of the particles
+        double minExitStepSize;
+        /// The direction of particle tracking
+        double dir;
+	};
+
+	struct AdaptStepOptions{
+        /// When the method is adaptive this is the maximum step size
+        double MaxStepSize;
+        /// When the method is adaptive this is the minimum step size
+        double MinStepSize;
+        /// When the method is adaptive this is the tolerance
+        double ToleranceStepSize;
+        /// When the method is adaptive this modifies the rate of change of the step size.
+        double increaseRateChange;
+        /// When the method is adaptive this limits the upper threshold of step decrease.
+        /// For example if the decrease is lower that 1 but very close to one then it may be possible that
+        /// the algorithm will repeat the decreasing of the step size many times by a very small amount.
+        double limitUpperDecreaseStep;
+	};
+
 
 	struct ParticleOptions {
 		
 		SolutionMethods method;
+        StepOptions StepOpt;
+        AdaptStepOptions AdaptOpt;
 		// The maximum number of iteratiosn that each streamline is alloweded not to expand
 		int StuckIterations;
-		// When the method is adaptive this is the maximum step size
-		double MaxStepSize;
-		// When the method is adaptive this is the minimum step size
-		double MinStepSize;
-		// This is the step size of the initial step size for the adaptive
-		double StepSize;
-		// The step size in units of time
-		double StepSizeTime;
-		// This is the minimum step size at the exit side of the particles
-		double minExitStepSize;
-		//When the method is adaptive this is the tolerance
-		double ToleranceStepSize;
-		// When the method is adaptive this modifies the rate of change of the step size.
-		double increaseRateChange;
-
-		// When the method is adaptive this limits the upper threshold of step decrease.
-		// For example if the decrease is lower that 1 but very close to one then it may be possible that
-		// the algorithm will repeat the decreasing of the step size many times by a very small amount.
-		double limitUpperDecreaseStep;
 
 		// If update step size is set to 1 then the step size is determined 
 		// by the extend of the bounding box that the particle currently is.

@@ -120,6 +120,77 @@ namespace ICHNOS {
         u.y = p.y + xy_dir;
         u.z = p.z + z_dir;
     }
+    /*!
+     * Calculates the length of the segment that intersects the bbox along the velocity vector
+     * @param p The point that sets the location of the segment in 3D
+     * @param v The vector that sets the orientation
+     * @param l The lower point of the bounding box
+     * @param u The upper point of the bounding box
+     * @return the length of the segment
+     */
+    double diameter_along_velocity(vec3& p, vec3& v, vec3& l, vec3& u){
+        // Find another point along the vector v with origin p
+        vec3 p1 = p + v * 0.1;
+
+        double t_max = 1000000000;
+        double t_min = -1000000000;
+        double tmp_min, tmp_max;
+
+        if (std::abs(v.x) < 0.000001){
+            tmp_min = -1000000000;
+            tmp_max =  1000000000;
+        }
+        else if (v.x > 0.0 ){
+            tmp_min = (l.x - p.x)/(p1.x - p.x);
+            tmp_max = (u.x - p.x)/(p1.x - p.x);
+        }
+        else if (v.x < 0.0){
+            tmp_min = (u.x - p.x)/(p1.x - p.x);
+            tmp_max = (l.x - p.x)/(p1.x - p.x);
+        }
+        if (tmp_max < t_max)
+            t_max = tmp_max;
+        if (tmp_min > t_min)
+            t_min = tmp_min;
+
+        if (std::abs(v.y) < 0.000001){
+            tmp_min = -1000000000;
+            tmp_max =  1000000000;
+        }
+        else if (v.y > 0.0 ){
+            tmp_min = (l.y - p.y)/(p1.y - p.y);
+            tmp_max = (u.y - p.y)/(p1.y - p.y);
+        }
+        else if (v.y < 0.0){
+            tmp_min = (u.y - p.y)/(p1.y - p.y);
+            tmp_max = (l.y - p.y)/(p1.y - p.y);
+        }
+        if (tmp_max < t_max)
+            t_max = tmp_max;
+        if (tmp_min > t_min)
+            t_min = tmp_min;
+
+        if (std::abs(v.z) < 0.000001){
+            tmp_min = -1000000000;
+            tmp_max =  1000000000;
+        }
+        else if (v.z > 0.0 ){
+            tmp_min = (l.z - p.z)/(p1.z - p.z);
+            tmp_max = (u.z - p.z)/(p1.z - p.z);
+        }
+        else if (v.z < 0.0){
+            tmp_min = (u.z - p.z)/(p1.z - p.z);
+            tmp_max = (l.z - p.z)/(p1.z - p.z);
+        }
+        if (tmp_max < t_max)
+            t_max = tmp_max;
+        if (tmp_min > t_min)
+            t_min = tmp_min;
+
+        vec3 pmin = p*(1-t_min) + p1 * t_min;
+        vec3 pmax = p*(1-t_max) + p1 * t_max;
+        return pmin.distance(pmax.x, pmax.y, pmax.z);
+	}
 
     void PrintStat(int &count_times, int &FrequencyStat, double &calc_time, double &max_calc_time) {
         if (count_times > FrequencyStat){
@@ -172,7 +243,7 @@ namespace ICHNOS {
 		}
 
 		bool readXYZfile(std::string fileXYZ, std::vector<cgal_point_3>& pp, std::vector<Pnt_info>& dd) {
-            std::cout << "Reading file " + fileXYZ << std::endl;
+            std::cout << "\tReading file " + fileXYZ << std::endl;
             std::ifstream datafile(fileXYZ.c_str());
             if (!datafile.good()) {
                 std::cout << "Can't open the file " << fileXYZ << std::endl;

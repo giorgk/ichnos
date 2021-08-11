@@ -224,10 +224,13 @@ namespace ICHNOS {
 			("StepConfig.Direction", po::value<double>()->default_value(1), "Backward or forward particle tracking")
 			("StepConfig.StepSize", po::value<double>()->default_value(1), "Step Size in units of length")
             ("StepConfig.StepSizeTime", po::value<double>()->default_value(1), "Step Size in units of time")
+            ("StepConfig.nSteps", po::value<int>()->default_value(4), "The number of steps to take within the BBox or the element")
+            ("StepConfig.nStepsTime", po::value<int>()->default_value(2), "The number of steps to take within a time step")
 			("StepConfig.minExitStepSize", po::value<double>()->default_value(0.1), "Minimum Step Size at the exit as percentage of the stepsize")
+            //("StepConfig.UpdateStepSize", po::value<int>()->default_value(1), "Update step size wrt bbox")
 
 			// Adaptive Step configurations
-			("AdaptStep.UpdateStepSize", po::value<int>()->default_value(1), "Update step size wrt bbox")
+
 			("AdaptStep.MaxStepSize", po::value<double>()->default_value(2), "Maximum Step Size in units of length")
 			("AdaptStep.MinStepSize", po::value<double>()->default_value(0.1), "Minimum Step Size in units of length")
 			("AdaptStep.increaseRateChange", po::value<double>()->default_value(1.5), "Maximum Step Size in units of length")
@@ -329,32 +332,39 @@ namespace ICHNOS {
 						Popt.Direction = 1;
 					else
 						Popt.Direction = -1;
-					
-					Popt.StepSize = vm_cfg["StepConfig.StepSize"].as<double>();
-					Popt.StepSizeTime = vm_cfg["StepConfig.StepSizeTime"].as<double>();
 
-					Popt.minExitStepSize = vm_cfg["StepConfig.minExitStepSize"].as<double>();
-					if (Popt.minExitStepSize < 0 || Popt.minExitStepSize > 1) {
+					Popt.StepOpt.dir = Popt.Direction;
+					Popt.StepOpt.StepSize = vm_cfg["StepConfig.StepSize"].as<double>();
+					Popt.StepOpt.StepSizeTime = vm_cfg["StepConfig.StepSizeTime"].as<double>();
+					Popt.StepOpt.nSteps = vm_cfg["StepConfig.nSteps"].as<int>();
+                    Popt.StepOpt.nStepsTime = vm_cfg["StepConfig.nStepsTime"].as<int>();
+					Popt.StepOpt.minExitStepSize = vm_cfg["StepConfig.minExitStepSize"].as<double>();
+					if (Popt.StepOpt.minExitStepSize < 0 || Popt.StepOpt.minExitStepSize > 1) {
 						std::cout << "minExitStepSize should be between 0 and 1. It gets the default value of 0.1" << std::endl;
-						Popt.minExitStepSize = 0.1;
+						Popt.StepOpt.minExitStepSize = 0.1;
+					}
+                    //Popt.UpdateStepSize = vm_cfg["StepConfig.UpdateStepSize"].as<int>();
+                    Popt.UpdateStepSize = 1;
+					if (Popt.method == SolutionMethods::RK45){
+                        Popt.UpdateStepSize = 0;
 					}
 				}
 
 				{// Adaptive Step configurations
-					Popt.UpdateStepSize = vm_cfg["AdaptStep.UpdateStepSize"].as<int>();
-					Popt.MaxStepSize = vm_cfg["AdaptStep.MaxStepSize"].as<double>();
-					Popt.MinStepSize = vm_cfg["AdaptStep.MinStepSize"].as<double>();
-					Popt.increaseRateChange = vm_cfg["AdaptStep.increaseRateChange"].as<double>();
-					if (Popt.increaseRateChange < 1) {
+
+					Popt.AdaptOpt.MaxStepSize = vm_cfg["AdaptStep.MaxStepSize"].as<double>();
+					Popt.AdaptOpt.MinStepSize = vm_cfg["AdaptStep.MinStepSize"].as<double>();
+					Popt.AdaptOpt.increaseRateChange = vm_cfg["AdaptStep.increaseRateChange"].as<double>();
+					if (Popt.AdaptOpt.increaseRateChange < 1) {
 						std::cout << "increaseRateChange should be higher than 1. It gets the default value of 1.5" << std::endl;
-						Popt.increaseRateChange = 1.5;
+						Popt.AdaptOpt.increaseRateChange = 1.5;
 					}
-					Popt.limitUpperDecreaseStep = vm_cfg["AdaptStep.limitUpperDecreaseStep"].as<double>();
-					if (Popt.limitUpperDecreaseStep < 0 || Popt.limitUpperDecreaseStep > 1) {
+					Popt.AdaptOpt.limitUpperDecreaseStep = vm_cfg["AdaptStep.limitUpperDecreaseStep"].as<double>();
+					if (Popt.AdaptOpt.limitUpperDecreaseStep < 0 || Popt.AdaptOpt.limitUpperDecreaseStep > 1) {
 						std::cout << "limitUpperDecreaseStep should be between 0 and 1. It gets the default value of 0.75" << std::endl;
-						Popt.limitUpperDecreaseStep = 0.75;
+						Popt.AdaptOpt.limitUpperDecreaseStep = 0.75;
 					}
-					Popt.ToleranceStepSize = vm_cfg["AdaptStep.Tolerance"].as<double>();
+					Popt.AdaptOpt.ToleranceStepSize = vm_cfg["AdaptStep.Tolerance"].as<double>();
 				}
 
 				{// InputOutput

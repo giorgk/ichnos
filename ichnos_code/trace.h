@@ -60,7 +60,7 @@ namespace ICHNOS {
 		Domain(dom_in),
 		popt(popt_in)
 	{
-		adaptStepSize = popt.StepSize;
+		adaptStepSize = popt.StepOpt.StepSize;
 	}
 
 	bool ParticleTrace::readInputFiles(std::vector <Streamline>& S) {
@@ -108,7 +108,7 @@ namespace ICHNOS {
 			world.barrier();
 			if (my_rank == 0) {
 			    particle_index_end = particle_index_start + popt.ParticlesInParallel;
-			    if (particle_index_end + 1000 > ALL_Streamlines.size()){
+			    if (particle_index_end + 1000 > static_cast<int>(ALL_Streamlines.size())){
                     particle_index_end = ALL_Streamlines.size();
 			    }
 			    for (int i = particle_index_start; i < particle_index_end; ++i){
@@ -237,10 +237,11 @@ namespace ICHNOS {
 
 	ExitReason ParticleTrace::traceInner(Streamline& S) {
 		// Reset the step size
-		adaptStepSize = popt.StepSize;
-		actualStep = popt.StepSize;
-		actualStepTime = popt.StepSizeTime;
+		adaptStepSize = popt.StepOpt.StepSize;
+		actualStep = popt.StepOpt.StepSize;
+		actualStepTime = popt.StepOpt.StepSizeTime;
 		VF.reset();
+		XYZ.reset();
 		vec3 v;
 		vec3 p = S.getLastParticle().getP();
 		double tm = S.getLastParticle().getTime();
@@ -255,17 +256,16 @@ namespace ICHNOS {
             std::vector<int> ids;
             std::vector<double> weights;
             std::map<int, double> proc_map;
+            std::vector<vec3> tmp_data;
             bool tf;
             XYZ.calcWeights(p,ids,weights,proc_map,tf);
-            if (!tf) {return ExitReason::FAR_AWAY;}
-
+            XYZ.sendVec3Data(tmp_data);
+            if (!tf) {
+                return ExitReason::FAR_AWAY;
+            }
             VF.calcVelocity(v,ids,weights,tm);
-            if (v.isInvalid()) {return ExitReason::FAR_AWAY;}
+            VF.getVec3Data(tmp_data);
         }
-
-
-
-
 
 		//proc = VF.calcProcID(proc_map);
 		//if (proc != world.rank())
@@ -292,12 +292,6 @@ namespace ICHNOS {
 				VF.updateStep(actualStep);
 			bool foundPoint = findNextPoint(S.getLastParticle(), p, v, tm, er);
 			if (foundPoint) {
-			    if (popt.bIsTransient){
-			        tm = S.getLastParticle().getTime() + popt.Direction * (p - S.getLastParticle().getP()).len()/S.getLastParticle().getV().len();
-			    }
-			    else{
-			        tm = 0.0;
-			    }
 				//er = CheckNewPointAndCalcVelocity(p, v/*, proc*/, tm);
 				//DEBUG::displayPVasVex(p, v);
 				S.AddParticle(Particle(p, v, S.getLastParticle(), tm));
@@ -334,13 +328,21 @@ namespace ICHNOS {
 		std::map<int, double> proc_map;
 		std::vector<int> ids;
 		std::vector<double> weights;
+        std::vector<vec3> tmp_vec;
 		bool tf;
-		// If the point is outside the domain we can still caluclate velocity if
+		// If the point is outside the domain we can still calculate velocity if
 		// the velocity field allows it. However the particle tracking will be terminated
 		if (exitreason != ExitReason::NO_EXIT) {
 			if (VF.InterpolateOutsideDomain) {
 			    XYZ.calcWeights(p,ids,weights,proc_map, tf);
-				VF.calcVelocity(v,ids,weights, tm);
+			    XYZ.sendVec3Data(tmp_vec);
+                if (!tf) {
+                    v = vec3();
+                }
+                else{
+                    VF.calcVelocity(v,ids,weights, tm);
+                    VF.getVec3Data(tmp_vec);
+                }
 			}
 			else {
 				v = vec3();
@@ -349,10 +351,18 @@ namespace ICHNOS {
 		}
 		else {
             XYZ.calcWeights(p,ids,weights,proc_map, tf);
-            VF.calcVelocity(v,ids,weights, tm);
+            XYZ.sendVec3Data(tmp_vec);
+            if (!tf) {
+                v = vec3(-99999, -99999, -99999);
+            }
+            else{
+                VF.calcVelocity(v,ids,weights, tm);
+                VF.getVec3Data(tmp_vec);
+            }
+
 			if (v.isInvalid())
 				return ExitReason::FAR_AWAY;
-			bool tf;
+
 			Domain.bisInProcessorPolygon(p, tf);
 			if (tf) { // If the point is still in the processor domain then no reason to change even if the other processors may have greater influence
 				//proc = world.rank();
@@ -361,7 +371,6 @@ namespace ICHNOS {
 			// If the point is outside the actual domain then calculate the ownership threshold
 			tf = VF.bIsInGhostArea(proc_map);
 			if (tf) {// If the point is influenced more by points of another processor then change
-				//proc = VF.calcProcID(proc_map);
 				return ExitReason::CHANGE_PROCESSOR;
 			}
 			else {// If the point is in the overlapping domain but this processor has greater influence
@@ -420,9 +429,10 @@ namespace ICHNOS {
 		//DEBUG::displayParticleasVex(P, true);
 		pnew = P.getP() + P.getV().normalize() * actualStep * popt.Direction;
 		//DEBUG::displayVectorasVex(pnew);
+        tm += actualStep*popt.Direction / P.getV().len();
 
         er = CheckNewPointAndCalcVelocity(pnew, vnew/*, proc*/, tm);
-        if (actualStep > popt.minExitStepSize){
+        if (actualStep > popt.StepOpt.minExitStepSize){
             if (er == ExitReason::EXIT_SIDE || er == ExitReason::EXIT_BOTTOM || er == ExitReason::EXIT_TOP ){
                 actualStep = actualStep * 0.45;
                 EulerStep(P, pnew, vnew, tm, er);
@@ -505,7 +515,7 @@ namespace ICHNOS {
 		er = CheckNewPointAndCalcVelocity(p2, v2/*, proc*/, P.getTime());
 		//DEBUG::displayPVasVex(p2, v2);
 		if (v2.isZero()) { return false; }
-		if (adaptStepSize > popt.minExitStepSize)
+		if (adaptStepSize > popt.StepOpt.minExitStepSize)
 			if (er == ExitReason::EXIT_SIDE || er == ExitReason::EXIT_BOTTOM || er == ExitReason::EXIT_TOP) {
 				adaptStepSize = adaptStepSize * 0.24;
 				//TODO RK45Step(P, pnew, er);
@@ -519,7 +529,7 @@ namespace ICHNOS {
 		er = CheckNewPointAndCalcVelocity(p3, v3/*, proc*/, P.getTime());
 		//DEBUG::displayPVasVex(p3, v3);
 		if (v3.isZero()) return false;
-		if (adaptStepSize > popt.minExitStepSize)
+		if (adaptStepSize > popt.StepOpt.minExitStepSize)
 			if (er == ExitReason::EXIT_SIDE || er == ExitReason::EXIT_BOTTOM || er == ExitReason::EXIT_TOP) {
 				adaptStepSize = adaptStepSize * 0.37;
 				// TODO RK45Step(P, pnew, er);
@@ -549,7 +559,7 @@ namespace ICHNOS {
 		er = CheckNewPointAndCalcVelocity(p6, v6/*, proc*/, P.getTime());
 		//DEBUG::displayPVasVex(p6, v6);
 		if (v6.isZero()) return false;
-		if ( adaptStepSize > popt.minExitStepSize )
+		if ( adaptStepSize > popt.StepOpt.minExitStepSize )
 			if (er == ExitReason::EXIT_SIDE || er == ExitReason::EXIT_BOTTOM || er == ExitReason::EXIT_TOP ) {
 				adaptStepSize = adaptStepSize * 0.45;
 				// TODO RK45Step(P, pnew, er);
@@ -566,37 +576,36 @@ namespace ICHNOS {
 		zn = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
 		//DEBUG::displayVectorasVex(zn);
 		double R = (yn - zn).len();
-		double q = 0.84 * pow(popt.ToleranceStepSize / R, 0.25);
+		double q = 0.84 * pow(popt.AdaptOpt.ToleranceStepSize / R, 0.25);
 
 		if (q >= 1) {
-			q = std::min(q, popt.increaseRateChange);
+			q = std::min(q, popt.AdaptOpt.increaseRateChange);
 			// We can increase the step size
 			adaptStepSize = adaptStepSize * q;
-			if (adaptStepSize > popt.MaxStepSize)
-				adaptStepSize = popt.MaxStepSize;
+			if (adaptStepSize > popt.AdaptOpt.MaxStepSize)
+				adaptStepSize = popt.AdaptOpt.MaxStepSize;
 			//if (adaptStepSize < popt.MinStepSize)
 			//	adaptStepSize = popt.MinStepSize;
 			pnew = yn;
 		}
 		else {
-			if (adaptStepSize <= popt.MinStepSize) {
+			if (adaptStepSize <= popt.AdaptOpt.MinStepSize) {
 				pnew = yn;
-				if (R > popt.ToleranceStepSize){
+				if (R > popt.AdaptOpt.ToleranceStepSize){
 					std::cout << "The algorithm will continue although it cannot reach the desired accuracy of "
-						<< popt.ToleranceStepSize
-						<< "with the limit of minimum step size " << popt.MinStepSize << std::endl;
+						<< popt.AdaptOpt.ToleranceStepSize
+						<< "with the limit of minimum step size " << popt.AdaptOpt.MinStepSize << std::endl;
 					std::cout << "Either relax the tolerance or reduce the Minimum Step Size" << std::endl;
 				}
 			}
 			else {
-				q = std::min(q, popt.limitUpperDecreaseStep);
+				q = std::min(q, popt.AdaptOpt.limitUpperDecreaseStep);
 				adaptStepSize = adaptStepSize * q;
-				if (R > popt.ToleranceStepSize){
+				if (R > popt.AdaptOpt.ToleranceStepSize){
                     // TODO RK45Step(P, pnew, er);
 				}
 			}
 		}
 		return true;
 	}
-
 }

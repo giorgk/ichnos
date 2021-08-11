@@ -23,6 +23,7 @@ namespace ICHNOS{
                                  std::map<int, double>& proc_map,
                                  bool& out){}
         virtual void reset(){}
+        virtual void sendVec3Data(std::vector<vec3>& data){};
 
     protected:
         boost::mpi::communicator world;
@@ -44,6 +45,8 @@ namespace ICHNOS{
                          std::map<int, double>& proc_map,
                          bool& out);
         void reset();
+        void sendVec3Data(std::vector<vec3>& data);
+        int getNpnts(){return Tree.size();}
     private:
         search_tree_info Tree;
         VelType vtype;
@@ -68,7 +71,7 @@ namespace ICHNOS{
 
     void XYZ_cloud::readXYZdata(std::string vf_file) {
         if (world.rank() == 0){
-            std::cout << "Reading XYZ data..." << std::endl;
+            std::cout << "\tReading XYZ data..." << std::endl;
         }
 
         po::options_description velocityFieldOptions("Velocity field options");
@@ -126,7 +129,7 @@ namespace ICHNOS{
             Tree.build();
             auto finish = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> elapsed = finish - start;
-            std::cout << "Point Set Building time: " << elapsed.count() << std::endl;
+            std::cout << "\tPoint Set Building time: " << elapsed.count() << std::endl;
         }
     }
 
@@ -135,6 +138,8 @@ namespace ICHNOS{
                                 std::vector<double> &weights,
                                 std::map<int, double>& proc_map,
                                 bool& out) {
+        ids.clear();
+        weights.clear();
         ll.zero();
         uu.zero();
         pp.zero();
@@ -250,6 +255,13 @@ namespace ICHNOS{
         ratio = initial_ratio;
     }
 
+    void XYZ_cloud::sendVec3Data(std::vector<vec3> &data) {
+        data.clear();
+        data.push_back(pp);
+        data.push_back(ll);
+        data.push_back(uu);
+    }
+
     class XYZ_IWFM : public XYZ_base {
     public:
         XYZ_IWFM(boost::mpi::communicator& world_in);
@@ -260,6 +272,7 @@ namespace ICHNOS{
                          std::map<int, double>& proc_map,
                          bool& out);
         void reset();
+        void sendVec3Data(std::vector<vec3>& data);
     };
     XYZ_IWFM::XYZ_IWFM(boost::mpi::communicator& world_in)
         :
@@ -280,6 +293,10 @@ namespace ICHNOS{
     }
 
     void XYZ_IWFM::reset() {
-        std::cout << "CLOUD version" << std::endl;
+        std::cout << "IWFM version" << std::endl;
+    }
+
+    void XYZ_IWFM::sendVec3Data(std::vector<vec3> &data) {
+        std::cout << "IWFM version" << std::endl;
     }
 }

@@ -72,7 +72,7 @@ namespace IWFM {
 	class iwfmVel : public ICHNOS::velocityField {
 	public:
 		iwfmVel(boost::mpi::communicator& world_in);
-		void readVelocityField(std::string vf_file);
+		void readVelocityField(std::string vf_file, int nPnts);
 		void calcVelocity(ic::vec3& vel,
                           std::vector<int>& ids,
                           std::vector<double>& weights,
@@ -94,7 +94,7 @@ namespace IWFM {
 		velocityField(world_in)
 	{}
 
-	void iwfmVel::readVelocityField(std::string vf_file) {
+	void iwfmVel::readVelocityField(std::string vf_file, int nPnts) {
 		std::cout << "Velocity configuration file: " << vf_file << std::endl;
 		po::options_description velocityFieldOptions("Velocity field options");
 		po::variables_map vm_vfo;

@@ -32,7 +32,7 @@ namespace NPSAT {
 	class npsatVel : public ic::velocityField {
 	public:
 		npsatVel(boost::mpi::communicator& world_in);
-		void readVelocityField(std::string vf_file);
+		void readVelocityField(std::string vf_file, int nPnts);
 		void calcVelocity(ic::vec3& vel,
                           std::vector<int>& ids,
                           std::vector<double>& weights,
@@ -95,7 +95,7 @@ namespace NPSAT {
 		ratio = initial_ratio;
 	}
 
-	void npsatVel::readVelocityField(std::string vf_file) {
+	void npsatVel::readVelocityField(std::string vf_file, int nPnts) {
 		if (world.rank() == 0)
 			std::cout << "Reading data..." << std::endl;
 		po::options_description velocityFieldOptions("Velocity field options");

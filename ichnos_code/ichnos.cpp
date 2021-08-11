@@ -71,9 +71,13 @@ int main(int argc, char* argv[])
                     case ICHNOS::VelType::TRANS:
                     {
                         TRANS::transVel VF(world);
-                        VF.readVelocityField(OPT.getVelFname());
+                        VF.readVelocityField(OPT.getVelFname(), XYZ.getNpnts());
+                        VF.SetStepOptions(OPT.Popt.StepOpt);
 
                         ICHNOS::ParticleTrace pt(world, XYZ, VF, domain, OPT.Popt);
+                        if (world.rank() == 0)
+                            std::cout << "Tracing particles..." << std::endl;
+                        pt.Trace();
                         break;
                     }
                     case ICHNOS::VelType::STOCH:
