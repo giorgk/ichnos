@@ -448,7 +448,7 @@ namespace TRANS{
                 double tmp_step = dt*(tm_2 - tm_1);
                 double end_time = tm_data.tm + stepOpt.dir*tmp_step;
                 if (stepOpt.dir > 0){
-                    if (end_time > tm_2){
+                    if (end_time > tm_2 && tm_data.idx2 < nSteps - 1){
                         stepTime = vv.len() * (tm_2 - tm_data.tm);
                     }
                     else{
@@ -456,7 +456,7 @@ namespace TRANS{
                     }
                 }
                 else{
-                    if (end_time < tm_1){
+                    if (end_time < tm_1 && tm_data.idx1 > 0){
                         stepTime = vv.len() * (tm_data.tm - tm_1);
                     }
                     else{

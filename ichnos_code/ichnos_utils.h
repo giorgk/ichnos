@@ -646,9 +646,10 @@ namespace ICHNOS {
 				<< S.getSid() << " "
 				<< std::setprecision(2) << std::fixed
 				<< pp.getP().x << " " << pp.getP().y << " " << pp.getP().z << " "
-				<< std::setprecision(6) << std::fixed
+				<< std::setprecision(6) << std::scientific
 				<< pp.getV().x << " " << pp.getV().y << " " << pp.getV().z << " "
-				/*<< pp.getAge()*/ << std::endl;
+                << std::setprecision(2) << std::fixed
+				<< pp.getTime() << std::endl;
 		}
 		void PrintExitReason(std::ofstream& log_file, Streamline& S, ExitReason er) {
 			log_file << -9 << " "

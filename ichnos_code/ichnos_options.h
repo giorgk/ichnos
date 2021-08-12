@@ -185,7 +185,7 @@ namespace ICHNOS {
 			if (world.rank() == 0) {
 				std::cout << "|------------------|" << std::endl;
 				std::cout << "|      ICHNOS      |" << std::endl;
-				std::cout << "| Version : 0.1.10 |" << std::endl;
+				std::cout << "| Version : 0.2.01 |" << std::endl;
 				std::cout << "|    by  giorgk    |" << std::endl;
 				std::cout << "|------------------|" << std::endl;
 			}
