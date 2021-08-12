@@ -13,6 +13,13 @@ At the moment we provide one type of velocity field i.e. point cloud type and th
   2. Transient State flow fields (Coming soon...)
   3. Stochastic flow fields (This is available but in an experimental stage)
 
+## :construction: Current development  :warning:
+Currently the project is under heavy development. 
+
+Below is a list of task where the active development is focusing
+
+https://gist.github.com/giorgk/0b1d12461759768e2c7a0cda92f7a694
+
 # Getting the code
 ## Windons
 Windows executables are available under the [Bin](Bin/) folder. However those executables may not contain the latest updates, fixes and new bugs.
