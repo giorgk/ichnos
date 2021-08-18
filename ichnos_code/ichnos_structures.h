@@ -290,6 +290,7 @@ namespace ICHNOS {
         void findIIT(double x, int &i1, int &i2, double &t);
         vec3 getVelocity(int pnt, int i1, int i2, double t, TimeInterpType tp);
         double getTSvalue(int idx);
+        void setNrepeatDays(double n){nDaysRepeat = n;}
     private:
         std::vector<std::vector<double>> VX;
         std::vector<std::vector<double>> VY;
@@ -300,6 +301,8 @@ namespace ICHNOS {
         int nPoints;
         int nSteps;
         void findTimeStepIndex(int &i, int &ii, double x);
+
+        double nDaysRepeat = 0;
 
     };
 
@@ -360,11 +363,19 @@ namespace ICHNOS {
     }
 
     void VelTR::findIIT(double x, int &i1, int &i2, double &t){
+        double x_tmp = x;
         if (x <= TS[0]){
-            i1 = 0;
-            i2 = 0;
-            t = 0.0;
-            return;
+            if (nDaysRepeat == 0){
+                i1 = 0;
+                i2 = 0;
+                t = 0.0;
+                return;
+            }
+            else{
+                while (x_tmp <= TS[0]){
+                    x_tmp += nDaysRepeat;
+                }
+            }
         }
         if (x >= TS[TS.size()-1]){
             i1 = TS.size()-1;
@@ -374,8 +385,8 @@ namespace ICHNOS {
         }
         i1 = 0;
         i2 = TS.size()-1;
-        findTimeStepIndex(i1, i2, x);
-        t = (x - TS[i1]) / (TS[i2] - TS[i1]);
+        findTimeStepIndex(i1, i2, x_tmp);
+        t = (x_tmp - TS[i1]) / (TS[i2] - TS[i1]);
     }
 
     vec3 VelTR::getVelocity(int pnt, int i1, int i2, double t, TimeInterpType tp){

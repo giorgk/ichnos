@@ -272,3 +272,8 @@ fprintf(fid, '# Eid Sid X Y Z Time\n');
 fprintf(fid, '#\n');
 fprintf(fid, '%d %d %.3f %.3f %.3f %.2f\n', [ones(size(part_TR,1),1) (1:size(part_TR,1))' part_TR 8035*ones(size(part_TR,1),1)]');
 fclose(fid);
+%% read streamlines
+S = readICHNOStraj('c2vsim_out01__ireal_0000_iter_0000_proc_0000.traj');
+%% plot
+ii = 10;
+plot3(S(ii,1).p(:,1),S(ii,1).p(:,2),S(ii,1).p(:,3),'.-')

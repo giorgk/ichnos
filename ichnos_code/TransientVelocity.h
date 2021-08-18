@@ -30,7 +30,6 @@ namespace TRANS{
         int idx1;
         int idx2;
         double t;
-        double dir;
     };
 
     class transVel : public ic::velocityField{
@@ -106,7 +105,8 @@ namespace TRANS{
             ("Velocity.Type", po::value<std::string>(), "Type of velocity. (STEADY or TRANS)")
             ("Velocity.TimeStepFile", po::value<std::string>(), "This filename with the time steps")
             ("Velocity.TimeInterp", po::value<std::string>(), "Interpolation type between timesteps")
-            ("Velocity.Multiplier", po::value<double>()->default_value(1), "This is a multiplier to scale velocity")
+            ("Velocity.RepeatTime", po::value<double>()->default_value(0.0), "The number of days to repeat after the and of time steps")
+            ("Velocity.Multiplier", po::value<double>()->default_value(1.0), "This is a multiplier to scale velocity")
             //("Velocity.Scale", po::value<double>()->default_value(1.0), "Scale the domain before velocity calculation")
             //("Velocity.Power", po::value<double>()->default_value(3.0), "Power of the IDW interpolation")
             //("Velocity.InitDiameter", po::value<double>()->default_value(5000), "Initial diameter")
@@ -133,6 +133,8 @@ namespace TRANS{
 
         {// Velocity parameters
             multiplier = vm_vfo["Velocity.Multiplier"].as<double>();
+            VEL.setNrepeatDays(vm_vfo["Velocity.RepeatTime"].as<double>());
+
             //Scale = vm_vfo["Velocity.Scale"].as<double>();
             //Power = vm_vfo["Velocity.Power"].as<double>();
             //initial_diameter = vm_vfo["Velocity.InitDiameter"].as<double>();
@@ -392,9 +394,8 @@ namespace TRANS{
             porosity = porosityValue;
         vel = vel * (1/porosity);
 
-        // TODO Understand why this is needed
         vv = vel;
-        tm_data.tm = tm;
+        tm_data.tm = VEL.getTSvalue(i1) * (1-t) + VEL.getTSvalue(i2)*t;
         tm_data.idx1 = i1;
         tm_data.idx2 = i2;
         tm_data.t = t;
@@ -448,6 +449,11 @@ namespace TRANS{
                 double tmp_step = dt*(tm_2 - tm_1);
                 double end_time = tm_data.tm + stepOpt.dir*tmp_step;
                 if (stepOpt.dir > 0){
+                    if (std::abs(tm_data.tm - tm_2) < 0.25*tmp_step){
+                        if (tm_data.idx2 + 1 < nSteps){
+                            tm_2 = VEL.getTSvalue(tm_data.idx2+1);
+                        }
+                    }
                     if (end_time > tm_2 && tm_data.idx2 < nSteps - 1){
                         stepTime = vv.len() * (tm_2 - tm_data.tm);
                     }

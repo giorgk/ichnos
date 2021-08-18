@@ -129,6 +129,9 @@ namespace ICHNOS {
      * @return the length of the segment
      */
     double diameter_along_velocity(vec3& p, vec3& v, vec3& l, vec3& u){
+        // DEBUG::displayPVasVex(p,v);
+        // DEBUG::displayVectorasVex(l);
+        // DEBUG::displayVectorasVex(u);
         // Find another point along the vector v with origin p
         vec3 p1 = p + v * 0.1;
 
@@ -136,7 +139,7 @@ namespace ICHNOS {
         double t_min = -1000000000;
         double tmp_min, tmp_max;
 
-        if (std::abs(v.x) < 0.000001){
+        if (std::abs(v.x) < 0.00000000001){
             tmp_min = -1000000000;
             tmp_max =  1000000000;
         }
@@ -153,7 +156,7 @@ namespace ICHNOS {
         if (tmp_min > t_min)
             t_min = tmp_min;
 
-        if (std::abs(v.y) < 0.000001){
+        if (std::abs(v.y) < 0.00000000001){
             tmp_min = -1000000000;
             tmp_max =  1000000000;
         }
@@ -170,7 +173,7 @@ namespace ICHNOS {
         if (tmp_min > t_min)
             t_min = tmp_min;
 
-        if (std::abs(v.z) < 0.000001){
+        if (std::abs(v.z) < 0.00000000001){
             tmp_min = -1000000000;
             tmp_max =  1000000000;
         }
