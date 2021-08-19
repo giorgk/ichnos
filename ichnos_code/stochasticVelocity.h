@@ -13,7 +13,7 @@ namespace STOCH {
 	class MarkovChainVel : public ICHNOS::velocityField {
 	public:
 		MarkovChainVel(boost::mpi::communicator& world_in);
-		void readVelocityField(std::string vf_file, int nPnts);
+		bool readVelocityField(std::string vf_file, int nPnts);
 		void calcVelocity(ic::vec3& vel,
                           std::vector<int>& ids,
                           std::vector<double>& weights,
@@ -71,7 +71,7 @@ namespace STOCH {
 		TimeSinceLastUpdate = 0;
 	}
 
-	void MarkovChainVel::readVelocityField(std::string vf_file, int nPnts) {
+	bool MarkovChainVel::readVelocityField(std::string vf_file, int nPnts) {
         if (world.rank() == 0)
 		    std::cout << "Velocity configuration file: " << vf_file << std::endl;
 		po::options_description velocityFieldOptions("Velocity field options");
@@ -171,7 +171,7 @@ namespace STOCH {
 			porType = ic::interpType::INGORE;
             porosityValue = 1.0;
 		}
-
+        return true;
 	}
 
 	void MarkovChainVel::calcVelocity(ic::vec3& vel,

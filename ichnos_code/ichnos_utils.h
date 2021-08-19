@@ -63,7 +63,7 @@ namespace ICHNOS {
 		std::vector<double> zval;
 		linspace(bot, top, wopt.Nlayer, zval);
 		int Nppl = wopt.Nparticles/wopt.Nlayer;
-		double rads = (2.0*pi)/Nppl;
+		double rads = (2.0*pi)/static_cast<double>(Nppl);
 		std::vector<double> rads1; 
 		linspace(0.0, 2.0*pi, wopt.Nlayer, rads1);
 		std::vector<std::vector<double> > radpos;
@@ -520,19 +520,30 @@ namespace ICHNOS {
 				return false;
 			}
 			else {
+                std::string comment("#");
 				WellOptions wopt;
 				std::string line;
 				int eid;
 				double rt = 0;
 				double x, y, top, bot;
-				getline(datafile, line);
-				{
+				while (getline(datafile, line)){
+                    if (line.size() >= 1 && !line.empty())
+                        if (comment.compare(0, 1, line, 0, 1) == 0)
+                            continue;
+                    if (line.empty())
+                        continue;
 					std::istringstream inp(line.c_str());
 					inp >> wopt.Nparticles;
 					inp >> wopt.Nlayer;
 					inp >> wopt.Radius;
+					break;
 				}
 				while (getline(datafile, line)) {
+                    if (line.size() >= 1 && !line.empty())
+                        if (comment.compare(0, 1, line, 0, 1) == 0)
+                            continue;
+                    if (line.empty())
+                        continue;
 					std::istringstream inp(line.c_str());
 					inp >> eid;
 					inp >> x;

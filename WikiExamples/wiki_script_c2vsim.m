@@ -94,15 +94,15 @@ VEL_DATA = [...
     repmat(BCY_3310,4,1) ... % X
     reshape(MSH_ELEV, nvel_p, 1) ... % Z
     zeros(nvel_p,1) ... % Proc ID
+    repmat(DIAM,4,1) ... % DIAM 
+    reshape(bsxfun(@rdivide, DIAM, av_thick), nvel_p, 1) ... % RATIO
     reshape(Vx_av, nvel_p, 1)*mult ... % VX
     reshape(Vy_av, nvel_p, 1)*mult ... % VY
     reshape(Vz_av, nvel_p, 1)*mult ... % VZ
-    repmat(DIAM,4,1) ... % DIAM 
-    reshape(bsxfun(@rdivide, DIAM, av_thick), nvel_p, 1) ... % RATIO
 ];
 %% Write velocity file
 fid = fopen('c2vsim_SS_05_15_vel_000.ich','w');
-fprintf(fid, '%.3f %.3f %.3f %d %.5f %.5f %.5f 0 %.2f %.2f\n', VEL_DATA');
+fprintf(fid, '%.3f %.3f %.3f %d %.2f %.2f %.5f %.5f %.5f\n', VEL_DATA');
 fclose(fid);
 %% Generate Individual particles
 bbx = c2vsim_outline.BoundingBox(:,1)';
@@ -151,6 +151,21 @@ fid = fopen('CV_particles.ich','w');
 fprintf(fid, '# Test particle file\n');
 fprintf(fid, '#\n');
 fprintf(fid, '%d %d %.3f %.3f %.3f\n', particleData');
+fclose(fid);
+%% Particles from wells
+plot(c2vsim_outline.X, c2vsim_outline.Y)
+well_locations = ginput(3);
+wtop = Ftop(well_locations(:,1), well_locations(:,2));
+well_data = [ (100:100:300)' well_locations wtop - 10 wtop - 60 8022*ones(length(wtop),1)];
+%% Write wells for particle
+fid = fopen('CV_wells.ich','w');
+fprintf(fid, '# Test well file\n');
+fprintf(fid, '#\n');
+fprintf(fid, '# These wells are all located in the TLB region\n');
+fprintf(fid, '# Npart Nlay Rad\n');
+fprintf(fid, '%d %d %.2f\n', [20 4 10.0]); 
+fprintf(fid, '# Eid X Y T B RT\n');
+fprintf(fid, '%d %.3f %.3f %.3f %.3f %.1f\n', well_data');
 fclose(fid);
 %% Read the particles
 S = readICHNOStraj('c2vsim_out01__ireal_0000_iter_0000_proc_0000.traj');

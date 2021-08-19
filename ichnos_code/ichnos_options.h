@@ -134,6 +134,8 @@ namespace ICHNOS {
 
 		VelType velocityFieldType; /// The velocity field type
 		XYZType xyztype;
+
+		std::string Version;
 		
 
 		
@@ -150,6 +152,7 @@ namespace ICHNOS {
 		:
 		world(world_in)
 	{
+        Version = "0.2.10";
 		//if (world.size() > 1) {
 		//	bIsMultiThreaded = false;
 		//}
@@ -185,7 +188,7 @@ namespace ICHNOS {
 			if (world.rank() == 0) {
 				std::cout << "|------------------|" << std::endl;
 				std::cout << "|      ICHNOS      |" << std::endl;
-				std::cout << "| Version : 0.2.01 |" << std::endl;
+				std::cout << "| Version : " << Version <<" |" << std::endl;
 				std::cout << "|    by  giorgk    |" << std::endl;
 				std::cout << "|------------------|" << std::endl;
 			}
@@ -223,10 +226,10 @@ namespace ICHNOS {
 			("StepConfig.Method", po::value<std::string >(), "Method for stepping")
 			("StepConfig.Direction", po::value<double>()->default_value(1), "Backward or forward particle tracking")
 			("StepConfig.StepSize", po::value<double>()->default_value(1), "Step Size in units of length")
-            ("StepConfig.StepSizeTime", po::value<double>()->default_value(1), "Step Size in units of time")
+            ("StepConfig.StepSizeTime", po::value<double>()->default_value(10000), "Step Size in units of time")
             ("StepConfig.nSteps", po::value<int>()->default_value(4), "The number of steps to take within the BBox or the element")
             ("StepConfig.nStepsTime", po::value<int>()->default_value(2), "The number of steps to take within a time step")
-			("StepConfig.minExitStepSize", po::value<double>()->default_value(0.1), "Minimum Step Size at the exit as percentage of the stepsize")
+			("StepConfig.minExitStepSize", po::value<double>()->default_value(0.1), "Minimum Step Size at the exit")
             //("StepConfig.UpdateStepSize", po::value<int>()->default_value(1), "Update step size wrt bbox")
 
 			// Adaptive Step configurations
@@ -245,7 +248,8 @@ namespace ICHNOS {
 			("InputOutput.GatherOneFile", po::value<int>()->default_value(1), "Put all streamlines into one file")
 
 			// Other
-			("Other.Nrealizations", po::value<int>()->default_value(1), "NUmber of realizations")
+			("Other.Nrealizations", po::value<int>()->default_value(1), "Number of realizations")
+			("Other.Version", po::value<std::string >(), "The version of the Ichnos. (Check ichnos.exe -v)")
 
 			// Unsued
 			//("Unused.nThreads", po::value<int>()->default_value(1), "Number of threads")
@@ -273,6 +277,19 @@ namespace ICHNOS {
 				Popt.configfile = vm_cmd["config"].as<std::string>().c_str();
 				std::cout << "--> Configuration file: " << vm_cmd["config"].as<std::string>().c_str() << std::endl;
 				po::store(po::parse_config_file<char>(vm_cmd["config"].as<std::string>().c_str(), config_options), vm_cfg);
+
+                {// Other
+                    if (!vm_cfg.count("Other.Version")){
+                        std::cout << "Version is not specified!. The current version is " << Version << std::endl;
+                        return false;
+                    }
+                    std::string user_version = vm_cfg["Other.Version"].as<std::string>();
+                    if (Version.compare(user_version) != 0){
+                        std::cout << "Mismatch between code version (" << Version << ") and Input file version (" << user_version << ")" << std::endl;
+                        return false;
+                    }
+                    Popt.Nrealizations = vm_cfg["Other.Nrealizations"].as<int>();
+                }
 
 				{// Velocity Options
 					velocityFieldType = castVelType2Enum(vm_cfg["Velocity.Type"].as<std::string>());
@@ -336,7 +353,7 @@ namespace ICHNOS {
 					Popt.StepOpt.dir = Popt.Direction;
 					Popt.StepOpt.StepSize = vm_cfg["StepConfig.StepSize"].as<double>();
 					Popt.StepOpt.StepSizeTime = vm_cfg["StepConfig.StepSizeTime"].as<double>();
-					Popt.StepOpt.nSteps = vm_cfg["StepConfig.nSteps"].as<int>();
+					Popt.StepOpt.nSteps = std::max(vm_cfg["StepConfig.nSteps"].as<int>(),1);
                     Popt.StepOpt.nStepsTime = vm_cfg["StepConfig.nStepsTime"].as<int>();
 					Popt.StepOpt.minExitStepSize = vm_cfg["StepConfig.minExitStepSize"].as<double>();
 					if (Popt.StepOpt.minExitStepSize < 0 || Popt.StepOpt.minExitStepSize > 1) {
@@ -373,11 +390,6 @@ namespace ICHNOS {
 					Popt.OutputFile = vm_cfg["InputOutput.OutputFile"].as<std::string>();
 					Popt.ParticlesInParallel = vm_cfg["InputOutput.ParticlesInParallel"].as<int>(); 
 				}
-
-				{// Other
-					Popt.Nrealizations = vm_cfg["Other.Nrealizations"].as<int>();
-				}
-
 				//{// Unsued
 					//nThreads = vm_cfg["Unused.nThreads"].as<int>();
 				//}

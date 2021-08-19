@@ -35,7 +35,7 @@ namespace TRANS{
     class transVel : public ic::velocityField{
     public:
         transVel(boost::mpi::communicator& world_in);
-        void readVelocityField(std::string vf_file, int nPnts);
+        bool readVelocityField(std::string vf_file, int nPnts);
         void calcVelocity(ic::vec3& vel,
                           std::vector<int>& ids,
                           std::vector<double>& weights,
@@ -91,7 +91,7 @@ namespace TRANS{
         InterpolateOutsideDomain = true;
     }
 
-    void transVel::readVelocityField(std::string vf_file, int nPnts) {
+    bool transVel::readVelocityField(std::string vf_file, int nPnts) {
         if (world.rank() == 0)
             std::cout << "--> Velocity configuration file: " << vf_file << std::endl;
 
@@ -132,8 +132,14 @@ namespace TRANS{
         }
 
         {// Velocity parameters
+            Vtype = ic::castVelType2Enum(vm_vfo["Velocity.Type"].as<std::string>());
+            if (Vtype == ic::VelType::INVALID) {
+                std::cout << vm_vfo["Velocity.Type"].as<std::string>() << " is an invalid velocity type" << std::endl;
+                return false;
+            }
+
             multiplier = vm_vfo["Velocity.Multiplier"].as<double>();
-            VEL.setNrepeatDays(vm_vfo["Velocity.RepeatTime"].as<double>());
+
 
             //Scale = vm_vfo["Velocity.Scale"].as<double>();
             //Power = vm_vfo["Velocity.Power"].as<double>();
@@ -141,16 +147,23 @@ namespace TRANS{
             //initial_ratio = vm_vfo["Velocity.InitRatio"].as<double>();
 
             // Read the time step
-            std::string TSfile = vm_vfo["Velocity.TimeStepFile"].as<std::string>();
             std::vector<double> TimeSteps;
-            bool tf = readTimeSteps(TSfile, TimeSteps);
-            if (!tf) return;
+            if (Vtype == ic::VelType::TRANS){
+                std::string TSfile = vm_vfo["Velocity.TimeStepFile"].as<std::string>();
 
-            {
+                bool tf = readTimeSteps(TSfile, TimeSteps);
+                if (!tf) {return false;}
                 std::string TimeInterpType = vm_vfo["Velocity.TimeInterp"].as<std::string>();
                 if (TimeInterpType.compare("LINEAR") == 0) {
                     timeInterp = ic::TimeInterpType::LINEAR;
                 }
+                VEL.setNrepeatDays(vm_vfo["Velocity.RepeatTime"].as<double>());
+            }
+            else{
+                TimeSteps.push_back(0);
+                nSteps = TimeSteps.size();
+                timeInterp = ic::TimeInterpType::NEAREST;
+                VEL.setNrepeatDays(0);
             }
 
             std::string prefix = vm_vfo["Velocity.Prefix"].as<std::string>();
@@ -163,11 +176,7 @@ namespace TRANS{
             }
             int leadZeros = vm_vfo["Velocity.LeadingZeros"].as<int>();
 
-            Vtype = ic::castVelType2Enum(vm_vfo["Velocity.Type"].as<std::string>());
-            if (Vtype == ic::VelType::INVALID) {
-                std::cout << vm_vfo["Velocity.Type"].as<std::string>() << " is an invalid velocity type" << std::endl;
-                return;
-            }
+
 
 
             nPoints = nPnts;
@@ -175,7 +184,9 @@ namespace TRANS{
             VEL.setTSvalue(TimeSteps);
 
             // Read the Velocity files
-            tf = readVelocityFiles(prefix, suffix, leadZeros);
+            bool tf = readVelocityFiles(prefix, suffix, leadZeros);
+            if (!tf)
+                return false;
         }
 
         { // Porosity
@@ -196,6 +207,7 @@ namespace TRANS{
             }
 
         }
+        return true;
     }
 
     bool transVel::readVelocityFiles(std::string prefix, std::string suffix, int ld_zero){
@@ -215,7 +227,7 @@ namespace TRANS{
         }
         else if (Vtype == ic::VelType::STEADY){
             std::string fileVX = prefix + ic::num2Padstr(world.rank(), ld_zero) + suffix;
-            tf = readSteadyVfile(fileVX,nPoints);
+            tf = readSteadyVfile(fileVX, nPoints);
         }
 
         if (!tf)
@@ -250,7 +262,7 @@ namespace TRANS{
     }
 
     bool transVel::readSteadyVfile(std::string filename, int nPoints){
-        std::cout << "Reading file " + filename << std::endl;
+        std::cout << "\tReading file " + filename << std::endl;
         std::ifstream datafile(filename.c_str());
         if (!datafile.good()){
             std::cout << "Can't open the file " << filename << std::endl;

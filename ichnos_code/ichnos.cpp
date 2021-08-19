@@ -61,17 +61,20 @@ int main(int argc, char* argv[])
     }
     else {
         ICHNOS::Domain2D domain(OPT.Dopt);
+        bool tf;
         switch (OPT.xyztype){
             case ICHNOS::XYZType::CLOUD:
             {
                 ICHNOS::XYZ_cloud XYZ(world);
-                XYZ.readXYZdata(OPT.getVelFname());
+                tf = XYZ.readXYZdata(OPT.getVelFname());
+                if (!tf){return 0;}
 
                 switch (OPT.velocityFieldType) {
                     case ICHNOS::VelType::TRANS:
                     {
                         TRANS::transVel VF(world);
-                        VF.readVelocityField(OPT.getVelFname(), XYZ.getNpnts());
+                        tf = VF.readVelocityField(OPT.getVelFname(), XYZ.getNpnts());
+                        if (!tf){return 0;}
                         VF.SetStepOptions(OPT.Popt.StepOpt);
 
                         ICHNOS::ParticleTrace pt(world, XYZ, VF, domain, OPT.Popt);
@@ -93,7 +96,8 @@ int main(int argc, char* argv[])
             case ICHNOS::XYZType::IWFM:
             {
                 ICHNOS::XYZ_IWFM XYZ(world);
-                XYZ.readXYZdata(OPT.getVelFname());
+                tf = XYZ.readXYZdata(OPT.getVelFname());
+                if (!tf){return 0;}
 
                 switch (OPT.velocityFieldType) {
                     case ICHNOS::VelType::TRANS:

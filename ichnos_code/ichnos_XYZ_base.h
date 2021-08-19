@@ -16,7 +16,7 @@ namespace ICHNOS{
     class XYZ_base{
     public:
         XYZ_base(boost::mpi::communicator& world_in);
-        virtual void readXYZdata(std::string vf_file){}
+        virtual bool readXYZdata(std::string vf_file){return true;}
         virtual void calcWeights(vec3& p,
                                  std::vector<int>& ids,
                                  std::vector<double>& weights,
@@ -38,7 +38,7 @@ namespace ICHNOS{
     class XYZ_cloud : public XYZ_base {
     public:
         XYZ_cloud(boost::mpi::communicator& world_in);
-        void readXYZdata(std::string vf_file);
+        bool readXYZdata(std::string vf_file);
         void calcWeights(vec3& p,
                          std::vector<int>& ids,
                          std::vector<double>& weights,
@@ -69,7 +69,7 @@ namespace ICHNOS{
         XYZ_base(world_in)
     {}
 
-    void XYZ_cloud::readXYZdata(std::string vf_file) {
+    bool XYZ_cloud::readXYZdata(std::string vf_file) {
         if (world.rank() == 0){
             std::cout << "\tReading XYZ data..." << std::endl;
         }
@@ -102,7 +102,7 @@ namespace ICHNOS{
         vtype = castVelType2Enum(vm_vfo["Velocity.Type"].as<std::string>());
         if (vtype == VelType::INVALID) {
             std::cout << vm_vfo["Velocity.Type"].as<std::string>() << " is an invalid velocity type" << std::endl;
-            return;
+            return false;
         }
         std::string fileXYZ;
         if (vtype == VelType::STEADY){
@@ -121,6 +121,8 @@ namespace ICHNOS{
         std::vector<cgal_point_3> pp;
         std::vector<Pnt_info> dd;
         bool tf = READ::readXYZfile(fileXYZ, pp, dd);
+        if (!tf)
+            return false;
 
         { //Build tree
             auto start = std::chrono::high_resolution_clock::now();
@@ -131,6 +133,7 @@ namespace ICHNOS{
             std::chrono::duration<double> elapsed = finish - start;
             std::cout << "\tPoint Set Building time: " << elapsed.count() << std::endl;
         }
+        return true;
     }
 
     void XYZ_cloud::calcWeights(vec3 &p,
@@ -265,7 +268,7 @@ namespace ICHNOS{
     class XYZ_IWFM : public XYZ_base {
     public:
         XYZ_IWFM(boost::mpi::communicator& world_in);
-        void readXYZdata(std::string vf_file);
+        bool readXYZdata(std::string vf_file);
         void calcWeights(vec3& p,
                          std::vector<int>& ids,
                          std::vector<double>& weights,
@@ -279,9 +282,10 @@ namespace ICHNOS{
         XYZ_base(world_in)
     {}
 
-    void XYZ_IWFM::readXYZdata(std::string vf_file) {
+    bool XYZ_IWFM::readXYZdata(std::string vf_file) {
         std::cout << "IWFM version" << std::endl;
         std::cout << "File: " << vf_file << std::endl;
+        return true;
     }
 
     void XYZ_IWFM::calcWeights(vec3 &p,

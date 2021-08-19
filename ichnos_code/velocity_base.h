@@ -14,7 +14,7 @@ namespace ICHNOS {
 	class velocityField {
 	public:
 		velocityField(boost::mpi::communicator& world_in);
-		virtual void readVelocityField(std::string vf_file, int nPnts){}
+		virtual bool readVelocityField(std::string vf_file, int nPnts){return true;}
 		virtual void calcVelocity(vec3& vel,
                                   std::vector<int>& ids,
                                   std::vector<double>& weights,
