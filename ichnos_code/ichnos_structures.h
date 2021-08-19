@@ -378,10 +378,18 @@ namespace ICHNOS {
             }
         }
         if (x >= TS[TS.size()-1]){
-            i1 = TS.size()-1;
-            i2 = TS.size()-1;
-            t = 1.0;
-            return;
+            if (nDaysRepeat == 0){
+                i1 = TS.size()-1;
+                i2 = TS.size()-1;
+                t = 1.0;
+                return;
+            }
+            else{
+                while (x_tmp >= TS[TS.size()-1]){
+                    x_tmp -= nDaysRepeat;
+                }
+            }
+
         }
         i1 = 0;
         i2 = TS.size()-1;

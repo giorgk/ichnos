@@ -356,10 +356,7 @@ namespace ICHNOS {
 					Popt.StepOpt.nSteps = std::max(vm_cfg["StepConfig.nSteps"].as<int>(),1);
                     Popt.StepOpt.nStepsTime = vm_cfg["StepConfig.nStepsTime"].as<int>();
 					Popt.StepOpt.minExitStepSize = vm_cfg["StepConfig.minExitStepSize"].as<double>();
-					if (Popt.StepOpt.minExitStepSize < 0 || Popt.StepOpt.minExitStepSize > 1) {
-						std::cout << "minExitStepSize should be between 0 and 1. It gets the default value of 0.1" << std::endl;
-						Popt.StepOpt.minExitStepSize = 0.1;
-					}
+
                     //Popt.UpdateStepSize = vm_cfg["StepConfig.UpdateStepSize"].as<int>();
                     Popt.UpdateStepSize = 1;
 					if (Popt.method == SolutionMethods::RK45){

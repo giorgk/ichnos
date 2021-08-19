@@ -272,20 +272,21 @@ fid = fopen([prefix 'VZ_000.ich'],'w');
 fprintf(fid, frmt, mult*VZ_DATA');
 fclose(fid);
 %% Time stamp
+TimeSteps = [0; cumsum(days_per_month(1:length(days_per_month)-1))];
 fid = fopen('c2vsim_STEP_monthly.ich','w');
-fprintf(fid, '%.0f\n', [0; cumsum(days_per_month(1:length(days_per_month)-1))]);
+fprintf(fid, '%.0f\n', TimeSteps);
 fclose(fid);
 %% create a few particles
 plot(polyout)
 part_TR = ginput;
-part_TR(:,3) = Ftop(part_TR(:,1),part_TR(:,2)) - 50;
+part_TR(:,3) = Ftop(part_TR(:,1),part_TR(:,2)) - 30;
 %% Write particles
 fid = fopen('CV_particlesTR.ich','w');
 fprintf(fid, '# Test particle file in transient velocity field\n');
-fprintf(fid, '# Transient tracing requires the location and the release time in the field\n');
+fprintf(fid, '# Transient tracking requires the location and the release time in the field\n');
 fprintf(fid, '# Eid Sid X Y Z Time\n');
 fprintf(fid, '#\n');
-fprintf(fid, '%d %d %.3f %.3f %.3f %.2f\n', [ones(size(part_TR,1),1) (1:size(part_TR,1))' part_TR 8035*ones(size(part_TR,1),1)]');
+fprintf(fid, '%d %d %.3f %.3f %.3f %.2f\n', [ones(size(part_TR,1),1) (1:size(part_TR,1))' part_TR 8022*ones(size(part_TR,1),1)]');
 fclose(fid);
 %% read streamlines
 S = readICHNOStraj('c2vsim_out01__ireal_0000_iter_0000_proc_0000.traj');
