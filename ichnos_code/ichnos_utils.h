@@ -195,6 +195,29 @@ namespace ICHNOS {
         return pmin.distance(pmax.x, pmax.y, pmax.z);
 	}
 
+	void calculateBaryCoordTriangle2D(vec3& bc,vec3 &p, vec3 &p1, vec3 &p2, vec3 &p3){
+        double det = (p2.y - p3.y)*(p1.x - p3.x) + (p3.x - p2.x)*(p1.y - p3.y);
+        if (std::abs(det) < 0.0000001){
+            bc.x = -9;
+            bc.y = -9;
+            bc.z = -9;
+            return;
+        }
+        double bc1 = (p2.y - p3.y)*(p.x - p3.x) + (p3.x - p2.x)*(p.y - p3.y);
+        double bc2 = (p3.y - p1.y)*(p.x - p3.x) + (p1.x - p3.x)*(p.y - p3.y);
+        bc.x = bc1/det;
+        bc.y = bc2/det;
+        bc.z = 1 - bc.x - bc.y;
+    }
+
+    bool isPointInTriangle(vec3 &p, vec3 &p1, vec3 &p2, vec3 &p3, vec3 &bc){
+        calculateBaryCoordTriangle2D(bc, p, p1, p2, p3);
+        if (bc.x >= 0 && bc.x <= 1 && bc.y >= 0 && bc.y <= 1 && bc.z >= 0 && bc.z <= 1)
+            return true;
+        else
+            return false;
+    }
+
     void PrintStat(int &count_times, int &FrequencyStat, double &calc_time, double &max_calc_time) {
         if (count_times > FrequencyStat){
             std::cout << "||			---Velocity Calc time: " << std::fixed << std::setprecision(15) << calc_time/static_cast<double>(count_times) <<  ", (";// std::endl;
@@ -647,6 +670,32 @@ namespace ICHNOS {
 				}
 				return true;
 			}
+		}
+
+		template<typename T>
+		bool read2Darray(std::string filename, int ncols, std::vector<std::vector<T>> &data){
+            std::ifstream datafile(filename.c_str());
+            if (!datafile.good()) {
+                std::cout << "Can't open the file" << filename << std::endl;
+                return false;
+            }
+            else{
+                T d;
+                data.clear();
+                std::vector<T> vecd(ncols);
+                std::string line;
+                while (getline(datafile, line)){
+                    if (line.size() > 1){
+                        std::istringstream inp(line.c_str());
+                        for (int i = 0; i < ncols; ++i) {
+                            inp >> d;
+                            vecd[i] = d;
+                        }
+                        data.push_back(vecd);
+                    }
+                }
+            }
+            return true;
 		}
 	}
 

@@ -102,7 +102,15 @@ int main(int argc, char* argv[])
                 switch (OPT.velocityFieldType) {
                     case ICHNOS::VelType::TRANS:
                     {
+                        TRANS::transVel VF(world);
+                        tf = VF.readVelocityField(OPT.getVelFname(), XYZ.getNpnts());
+                        if (!tf){return 0;}
+                        VF.SetStepOptions(OPT.Popt.StepOpt);
 
+                        ICHNOS::ParticleTrace pt(world, XYZ, VF, domain, OPT.Popt);
+                        if (world.rank() == 0)
+                            std::cout << "Tracing particles..." << std::endl;
+                        pt.Trace();
                         break;
                     }
                     case ICHNOS::VelType::STOCH:

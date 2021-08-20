@@ -293,3 +293,31 @@ S = readICHNOStraj('c2vsim_out01__ireal_0000_iter_0000_proc_0000.traj');
 %% plot
 ii = 10;
 plot3(S(ii,1).p(:,1),S(ii,1).p(:,2),S(ii,1).p(:,3),'.-')
+%% IWFM Type data
+c2vsim_path = fullfile('..','..','C2VsimV1','c2vsim-working');
+%% Nodefile
+ND = readIWFM_Nodes(fullfile(c2vsim_path,'Preprocessor','C2VSimFG_Nodes.dat'));
+% convert Nodes from EPSG 26910 to 3310
+[lat,lon] = projinv(projcrs(26910),ND(:,1), ND(:,2));
+[X_3310, Y_3310] = projfwd(projcrs(3310),lat, lon);
+%% write node file
+fid = fopen('C2Vsim_Nodefile.ich','w');
+fprintf(fid, '%.3f %.3f\n', [X_3310 Y_3310]');
+fclose(fid);
+%% Elevation file
+Strat = readIWFM_Stratigraphy(fullfile(c2vsim_path,'Preprocessor','C2VSimFG_Stratigraphy.dat'), size(ND,1), 105);
+ND_ELEV(:,1) = Strat(:,2)*0.3048;
+ND_ELEV(:,2) = ND_ELEV(:,1) - sum(Strat(:,3:4),2)*0.3048;
+ND_ELEV(:,3) = ND_ELEV(:,2) - sum(Strat(:,5:6),2)*0.3048;
+ND_ELEV(:,4) = ND_ELEV(:,3) - sum(Strat(:,7:8),2)*0.3048;
+ND_ELEV(:,5) = ND_ELEV(:,4) - sum(Strat(:,9:10),2)*0.3048;
+%% write Elevation file
+fid = fopen('C2Vsim_Elevationfile.ich','w');
+fprintf(fid, '%.3f %.3f %.3f %.3f %.3f\n', ND_ELEV');
+fclose(fid);
+%% Mesh file
+msh = readIWFM_Elements(fullfile(c2vsim_path,'Preprocessor','C2VSimFG_Elements.dat'), 32537, 142);
+%% write Mesh file
+fid = fopen('C2Vsim_Meshfile.ich','w');
+fprintf(fid, '%d %d %d %d %d\n', [msh(:,2:5) zeros(size(msh,1),1)]');
+fclose(fid);

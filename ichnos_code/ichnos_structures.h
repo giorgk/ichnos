@@ -20,6 +20,7 @@
 #include <CGAL/Search_traits_adapter.h>
 #include <CGAL/property_map.h>
 #include <CGAL/Fuzzy_iso_box.h>
+#include <CGAL/Fuzzy_sphere.h>
 #include <CGAL/Kd_tree.h>
 #include <CGAL/Orthogonal_k_neighbor_search.h>
 
@@ -279,6 +280,19 @@ namespace ICHNOS {
     typedef CGAL::Search_traits_adapter<pnt_with_info, CGAL::Nth_of_tuple_property_map<0, pnt_with_info>, Traits_base> search_traits_pnt_info;
     typedef CGAL::Fuzzy_iso_box<search_traits_pnt_info> Fuzzy_iso_box_info;
     typedef CGAL::Kd_tree<search_traits_pnt_info> search_tree_info;
+
+    struct Pnt_IWFM_info{
+        int proc = -9;
+        int tri_id = -9;
+        int elem_id = -9;
+        double diameter = 0;
+        std::vector<double> height;
+    };
+    // IWFM tree
+    typedef boost::tuple<cgal_point_3, Pnt_IWFM_info> pnt_iwfm;
+    typedef CGAL::Search_traits_adapter<pnt_iwfm, CGAL::Nth_of_tuple_property_map<0, pnt_iwfm>, Traits_base> search_traits_pnt_iwfm;
+    typedef CGAL::Fuzzy_sphere<search_traits_pnt_iwfm> Fuzzy_sphere_iwfm;
+    typedef CGAL::Kd_tree<search_traits_pnt_iwfm> search_tree_iwfm;
 
     class VelTR{
     public:
