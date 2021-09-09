@@ -1,7 +1,9 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.15)
 
 set(CMAKE_BUILD_TYPE Debug)
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra")
+if (UNIX)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra")
+endif(UNIX)
 #set(CMAKE_CXX_FLAGS_DEBUG "-g")
 #set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
@@ -17,16 +19,33 @@ project(ichnos)
 #ENDIF()
 find_package(MPI REQUIRED)
 
+if(USEHF)
+  message(STATUS "Compile with HDF5")
+  find_package(HighFive REQUIRED)
+  find_package(HDF5 REQUIRED)
+  add_definitions(-D_USEHF=1)
+else()
+  message(STATUS "Compile without HDF5")
+  add_definitions(-D_USEHF=0)
+endif(USEHF)
+
 find_package( CGAL QUIET COMPONENTS  )
 include( ${CGAL_USE_FILE} )
 
 find_package(Boost 1.58 REQUIRED COMPONENTS mpi serialization program_options system)
-INCLUDE_DIRECTORIES(${MPI_INCLUDE_PATH} ${Boost_INCLUDE_DIRS})
-
+if(USEHF)
+  INCLUDE_DIRECTORIES(${MPI_INCLUDE_PATH} ${Boost_INCLUDE_DIRS} ${HDF5_INCLUDE_DIRS})
+else()
+  INCLUDE_DIRECTORIES(${MPI_INCLUDE_PATH} ${Boost_INCLUDE_DIRS})
+endif(USEHF)
 
 add_executable(${PROJECT_NAME} "ichnos.cpp")
 
-TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${Boost_LIBRARIES} ${CGAL_LIBRARIES} ${MPI_LIBRARIES})
+if(USEHF)
+  TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${Boost_LIBRARIES} ${CGAL_LIBRARIES} ${MPI_LIBRARIES} ${HDF5_C_LIBRARIES})
+else()
+  TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${Boost_LIBRARIES} ${CGAL_LIBRARIES} ${MPI_LIBRARIES})
+endif(USEHF)
 
 if(MPI_COMPILE_FLAGS)
   set_target_properties(${PROJECT_NAME} PROPERTIES

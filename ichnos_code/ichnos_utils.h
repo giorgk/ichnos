@@ -8,11 +8,14 @@
 
 #include "ichnos_structures.h"
 
-
+#if _USEHF > 0
+#include <highfive/H5DataSet.hpp>
+#include <highfive/H5DataSpace.hpp>
+#include <highfive/H5File.hpp>
+#endif
 
 namespace ICHNOS {
-
-	namespace DEBUG {
+	namespace DBG {
 		/**
 		 * 
 		 * \param P
@@ -229,8 +232,19 @@ namespace ICHNOS {
         }
     }
 
-	namespace READ {
+    std::string getExtension(std::string filename){
+        // https://www.fluentcpp.com/2017/04/21/how-to-split-a-string-in-c/
+        // Solution 1.3: stepping away from the iterators
+        std::vector<std::string> tokens;
+        std::string token;
+        std::istringstream tokenStream(filename);
+        while (std::getline(tokenStream, token, '.')){
+            tokens.push_back(token);
+        }
+        return tokens.back();
+    }
 
+	namespace READ {
 		void readTopBot(std::string filename, PointSet2& Pset, bool top, bool bot) {
 			std::ifstream datafile(filename.c_str());
 			if (!datafile.good()) {
@@ -270,6 +284,32 @@ namespace ICHNOS {
 
 		bool readXYZfile(std::string fileXYZ, std::vector<cgal_point_3>& pp, std::vector<Pnt_info>& dd) {
             std::cout << "\tReading file " + fileXYZ << std::endl;
+
+#if _USEHF > 0
+            std::string ext = getExtension(fileXYZ);
+            if (ext.compare("h5") == 0){
+                const std::string XYZDRNameSet("XYZDR");
+                const std::string PROCNameSet("PROC");
+                HighFive::File HDFNfile(fileXYZ, HighFive::File::ReadOnly);
+                HighFive::DataSet datasetXYZDR = HDFNfile.getDataSet(XYZDRNameSet);
+                HighFive::DataSet datasetPROC = HDFNfile.getDataSet(PROCNameSet);
+                std::vector<std::vector<double>> XYZDR;
+                std::vector<int> PROC;
+                datasetXYZDR.read(XYZDR);
+                datasetPROC.read(PROC);
+                Pnt_info td;
+                for (int i = 0; i < PROC.size(); ++i) {
+                    td.proc = PROC[i];
+                    td.diameter = XYZDR[3][i];
+                    td.ratio = XYZDR[4][i];
+                    td.id = i;
+                    pp.push_back(cgal_point_3(XYZDR[0][i], XYZDR[1][i], XYZDR[2][i]));
+                    dd.push_back(td);
+                }
+                return true;
+            }
+#endif
+
             std::ifstream datafile(fileXYZ.c_str());
             if (!datafile.good()) {
                 std::cout << "Can't open the file " << fileXYZ << std::endl;
@@ -295,7 +335,6 @@ namespace ICHNOS {
                         dd.push_back(td);
                     }
                 }
-
                 return true;
             }
         }
@@ -1001,7 +1040,7 @@ namespace ICHNOS {
 	}
 
 	namespace MPI {
-		namespace DEBUG {
+		namespace DBG {
 			template <typename T>
 			void DataPerProc(std::vector<T>& v, int myrank, std::string vname) {
 				for (unsigned int i = 0; i < v.size(); ++i)
@@ -1023,7 +1062,6 @@ namespace ICHNOS {
 					std::cout << "I'm proc " << myrank << " and I have " << v[myrank].size() << " elements of " << vname << std::endl;
 				else
 					std::cout << "Vector " << vname << " doesnt have space for rank " << myrank << std::endl;
-
 			}
 		}
 		

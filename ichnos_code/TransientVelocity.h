@@ -20,6 +20,12 @@
 #include <ctime>
 #include <utility>
 
+#if _USEHF > 0
+#include <highfive/H5DataSet.hpp>
+#include <highfive/H5DataSpace.hpp>
+#include <highfive/H5File.hpp>
+#endif
+
 namespace po = boost::program_options;
 namespace ic = ICHNOS;
 
@@ -48,6 +54,7 @@ namespace TRANS{
         //bool readXYZfile(std::string prefix, std::string suffix, int ld_zero);
         bool readVelocityFiles(std::string prefix, std::string suffix, int ld_zero);
         bool readVfile(std::string filename, int nPoints, int nSteps, ic::coordDim dim);
+        bool readVH5file(std::string filename, int nPoints, int nSteps);
         bool readSteadyVfile(std::string filename, int nPoints);
         bool readTimeSteps(std::string filename, std::vector<double>& TS);
 
@@ -211,6 +218,13 @@ namespace TRANS{
     }
 
     bool transVel::readVelocityFiles(std::string prefix, std::string suffix, int ld_zero){
+#if _USEHF > 0
+        if (suffix.compare(".h5") == 0){
+            std::string fileVXYZ = prefix + ic::num2Padstr(world.rank(), ld_zero) + suffix;
+            bool tf1 = readVH5file(fileVXYZ, nPoints, nSteps);
+            return tf1;
+        }
+#endif
         bool tf = false;
         auto start = std::chrono::high_resolution_clock::now();
         if (Vtype == ic::VelType::TRANS){
@@ -237,6 +251,62 @@ namespace TRANS{
         std::chrono::duration<double> elapsed = finish - start;
         std::cout << "\tRead Velocity in : " << elapsed.count() << std::endl;
         return true;
+    }
+
+    bool transVel::readVH5file(std::string filename, int nPoints, int nSteps){
+        std::cout << "\tReading file " + filename << std::endl;
+#if _USEHF > 0
+        if (Vtype == ic::VelType::STEADY){
+            const std::string VXYZNameSet("VXYZ");
+            HighFive::File HDFNfile(filename, HighFive::File::ReadOnly);
+            HighFive::DataSet datasetVXYZ = HDFNfile.getDataSet(VXYZNameSet);
+            std::vector<std::vector<double>> VXYZ;
+            datasetVXYZ.read(VXYZ);
+            if (VXYZ[0].size() != nPoints){
+                std::cout << "The number of points (" << VXYZ[0].size() << ") in the file " << filename << " is not " << nPoints << std::endl;
+                return false;
+            }
+            for (int i = 0; i < VXYZ[0].size(); i++){
+                VEL.setVELvalue(VXYZ[0][i]*multiplier, i, 0, ic::coordDim::vx);
+                VEL.setVELvalue(VXYZ[1][i]*multiplier, i, 0, ic::coordDim::vy);
+                VEL.setVELvalue(VXYZ[2][i]*multiplier, i, 0, ic::coordDim::vz);
+            }
+        }
+        else if (Vtype == ic::VelType::TRANS){
+            const std::string VXNameSet("VX");
+            const std::string VYNameSet("VY");
+            const std::string VZNameSet("VZ");
+            HighFive::File HDFNfile(filename, HighFive::File::ReadOnly);
+            HighFive::DataSet datasetVX = HDFNfile.getDataSet(VXNameSet);
+            HighFive::DataSet datasetVY = HDFNfile.getDataSet(VYNameSet);
+            HighFive::DataSet datasetVZ = HDFNfile.getDataSet(VZNameSet);
+            std::vector<std::vector<double>> VX;
+            std::vector<std::vector<double>> VY;
+            std::vector<std::vector<double>> VZ;
+            datasetVX.read(VX);
+            datasetVY.read(VY);
+            datasetVZ.read(VZ);
+
+            if (VX[0].size() != nPoints){
+                std::cout << "The number of points (" << VX[0].size() << ") in the file " << filename << " is not " << nPoints << std::endl;
+                return false;
+            }
+            if (VX.size() != nSteps){
+                std::cout << "The number of time steps (" << VX.size() << ") in the file " << filename << " is not " << nSteps << std::endl;
+                return false;
+            }
+
+            for (int i = 0; i < VX[0].size(); i++){
+                for (int j = 0; j < VX.size(); ++j) {
+                    VEL.setVELvalue(VX[j][i]*multiplier, i, j, ic::coordDim::vx);
+                    VEL.setVELvalue(VY[j][i]*multiplier, i, j, ic::coordDim::vy);
+                    VEL.setVELvalue(VZ[j][i]*multiplier, i, j, ic::coordDim::vz);
+                }
+            }
+        }
+        return true;
+#endif
+        return false;
     }
 
     bool transVel::readVfile(std::string filename, int nPoints, int nSteps, ic::coordDim dim){

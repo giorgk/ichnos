@@ -105,7 +105,8 @@ namespace ICHNOS{
             return false;
         }
         std::string fileXYZ;
-        if (vtype == VelType::STEADY){
+
+        if (vtype == VelType::STEADY || suffix.compare(".h5") == 0){
             fileXYZ = prefix + num2Padstr(/*dbg_rank*/world.rank(), leadZeros) + suffix;
         }
         else if (vtype == VelType::TRANS){

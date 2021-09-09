@@ -104,6 +104,13 @@ VEL_DATA = [...
 fid = fopen('c2vsim_SS_05_15_vel_000.ich','w');
 fprintf(fid, '%.3f %.3f %.3f %d %.2f %.2f %.5f %.5f %.5f\n', VEL_DATA');
 fclose(fid);
+%% Write data in HDF5 format
+h5create('c2vsim_SS_05_15_000.h5','/XYZDR',[size(VEL_DATA,1) 5], 'Datatype','single');
+h5write('c2vsim_SS_05_15_000.h5', '/XYZDR', VEL_DATA(:,[1 2 3 5 6]));
+h5create('c2vsim_SS_05_15_000.h5','/PROC',[size(VEL_DATA,1) 1], 'Datatype','uint32');
+h5write('c2vsim_SS_05_15_000.h5', '/PROC', VEL_DATA(:,4));
+h5create('c2vsim_SS_05_15_000.h5','/VXYZ',[size(VEL_DATA,1) 3], 'Datatype','single');
+h5write('c2vsim_SS_05_15_000.h5', '/VXYZ', VEL_DATA(:,[7 8 9]));
 %% Generate Individual particles
 bbx = c2vsim_outline.BoundingBox(:,1)';
 bby = c2vsim_outline.BoundingBox(:,2)';
@@ -271,6 +278,17 @@ fclose(fid);
 fid = fopen([prefix 'VZ_000.ich'],'w');
 fprintf(fid, frmt, mult*VZ_DATA');
 fclose(fid);
+%% Write velocity files as transient state
+h5create([prefix '000.h5'],'/XYZDR',[size(XYZ_DATA,1) 5], 'Datatype','single');
+h5write([prefix '000.h5'], '/XYZDR', XYZ_DATA(:,[1 2 3 5 6]));
+h5create([prefix '000.h5'],'/PROC',[size(XYZ_DATA,1) 1], 'Datatype','uint32');
+h5write([prefix '000.h5'], '/PROC', XYZ_DATA(:,4));
+h5create([prefix '000.h5'],'/VX',[size(VX_DATA,1) size(VX_DATA,2)], 'Datatype','single');
+h5write([prefix '000.h5'], '/VX', mult*VX_DATA);
+h5create([prefix '000.h5'],'/VY',[size(VY_DATA,1) size(VY_DATA,2)], 'Datatype','single');
+h5write([prefix '000.h5'], '/VY', mult*VY_DATA);
+h5create([prefix '000.h5'],'/VZ',[size(VZ_DATA,1) size(VZ_DATA,2)], 'Datatype','single');
+h5write([prefix '000.h5'], '/VZ', mult*VZ_DATA);
 %% Time stamp
 TimeSteps = [0; cumsum(days_per_month(1:length(days_per_month)-1))];
 fid = fopen('c2vsim_STEP_monthly.ich','w');
