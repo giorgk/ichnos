@@ -103,3 +103,14 @@ fprintf(fid, '# Scatter particles 10m below gse\n');
 fprintf(fid, '#\n');
 fprintf(fid, '%d %d %.3f %.3f %.3f\n', [ones(size(particles,1),1) [1:size(particles,1)]' particles]');
 fclose(fid);
+%% Read the printed velocity field
+fid = fopen('c2vsim_SS_05_15_4proc_0000.ich','r');
+tmp = textscan(fid,'%f %f %f %f %f %f %f %f %f\n');
+fclose(fid);
+plot(tmp{1,1},tmp{1,2},'.')
+%% find velocity points inside the search box
+ll = [-136535,138035,-12.8326];
+uu = [-131097,143473,63.9158];
+idx = find(VEL_DATA(:,1) > ll(1) & VEL_DATA(:,1) < uu(1) & ...
+     VEL_DATA(:,2) > ll(2) & VEL_DATA(:,2) < uu(2) & ...
+     VEL_DATA(:,3) > ll(3) & VEL_DATA(:,3) < uu(3));

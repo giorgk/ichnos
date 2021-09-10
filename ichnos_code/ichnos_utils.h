@@ -655,7 +655,7 @@ namespace ICHNOS {
 						inp >> particle.v.x;
 						inp >> particle.v.y;
 						inp >> particle.v.z;
-						//inp >> particle.age;
+						inp >> particle.age;
 					}
 
 					bool dofind = true;
@@ -801,9 +801,10 @@ namespace ICHNOS {
 							<< pit->second.p.z << " "
 							<< std::setprecision(5) << std::fixed
 							<< pit->second.v.len() << " "
+							<< pit->second.age
 							// << pit->second.v.x << " "
 							// << pit->second.v.y << " "
-							// << pit->second.v.z << " " 
+							// << pit->second.v.z << " "
 							/* << age */ << std::endl;
 						//i++;
 					}

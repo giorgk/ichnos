@@ -795,7 +795,7 @@ namespace ICHNOS {
 	struct gPart {
 		vec3 p;
 		vec3 v;
-		//double age;
+		double age;
 	};
 
 	struct gStream {

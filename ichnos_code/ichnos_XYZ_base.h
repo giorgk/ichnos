@@ -193,12 +193,20 @@ namespace ICHNOS{
                 else{
                     diameter = diameter*1.5;
                     if (diameter > initial_diameter){
-                        std::cout << "I cant find any point around ("
+                        std::cout << "I have found " << tmp.size() << " points around ("
                                   << p.x << "," << p.y << "," << p.z
                                   <<") within the initial diameter of " << initial_diameter
                                   << ". Consider increasing the Initial diameter" << std::endl;
-                        out = false;
-                        return;
+                        //std::cout << "Actual diameter " << diameter << std::endl;
+                        //std::cout << "ll = [" << ll.x << "," << ll.y << "," << ll.z << "];" << std::endl;
+                        //std::cout << "uu = [" << uu.x << "," << uu.y << "," << uu.z << "];" << std::endl;
+                        if (tmp.size() == 0){
+                            out = false;
+                            return;
+                        }
+                        else{
+                            break;
+                        }
                     }
                 }
             }
@@ -258,6 +266,7 @@ namespace ICHNOS{
                 itd->second = itd->second / sumW;
             }
             pp = p;
+            out = true;
         }
     }
     void XYZ_cloud::reset() {

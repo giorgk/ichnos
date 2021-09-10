@@ -65,6 +65,7 @@ int main(int argc, char* argv[])
         switch (OPT.xyztype){
             case ICHNOS::XYZType::CLOUD:
             {
+                world.barrier();
                 ICHNOS::XYZ_cloud XYZ(world);
                 tf = XYZ.readXYZdata(OPT.getVelFname());
                 if (!tf){return 0;}
@@ -72,12 +73,14 @@ int main(int argc, char* argv[])
                 switch (OPT.velocityFieldType) {
                     case ICHNOS::VelType::TRANS:
                     {
+                        world.barrier();
                         TRANS::transVel VF(world);
                         tf = VF.readVelocityField(OPT.getVelFname(), XYZ.getNpnts());
                         if (!tf){return 0;}
                         VF.SetStepOptions(OPT.Popt.StepOpt);
 
                         ICHNOS::ParticleTrace pt(world, XYZ, VF, domain, OPT.Popt);
+                        world.barrier();
                         if (world.rank() == 0)
                             std::cout << "Tracing particles..." << std::endl;
                         pt.Trace();

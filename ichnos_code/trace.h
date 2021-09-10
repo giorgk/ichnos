@@ -108,7 +108,7 @@ namespace ICHNOS {
 			world.barrier();
 			if (my_rank == 0) {
 			    particle_index_end = particle_index_start + popt.ParticlesInParallel;
-			    if (particle_index_end + 1000 > static_cast<int>(ALL_Streamlines.size())){
+			    if (particle_index_end + static_cast<int>(static_cast<double>(popt.ParticlesInParallel)*0.3) > static_cast<int>(ALL_Streamlines.size())){
                     particle_index_end = ALL_Streamlines.size();
 			    }
 			    for (int i = particle_index_start; i < particle_index_end; ++i){
@@ -181,11 +181,14 @@ namespace ICHNOS {
 				Domain.bisInProcessorPolygon(S[i].getLastParticle().getP(),tf);
 				if (!tf)
 					continue;
-					
+				//std::cout << "Proc " << world.rank() << " :Particle id: " << S[i].getSid() << std::endl;
 				ExitReason er = traceInner(S[i]);
+                //std::cout << "Proc " << world.rank() << " :Particle id: " << S[i].getSid() << " " << castExitReasons2String(er) << std::endl;
 
-				if (er == ExitReason::FIRST_POINT_GHOST || er == ExitReason::FAR_AWAY)
-					continue;
+				if (er == ExitReason::FIRST_POINT_GHOST || er == ExitReason::FAR_AWAY){
+                    WRITE::PrintExitReason(log_file, S[i], er);
+                    continue;
+				}
 
 				for (unsigned int j = 0; j < S[i].size()-1; ++j) {
 					WRITE::PrintParticle2Log(log_file, S[i], j);
