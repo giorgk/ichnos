@@ -5,10 +5,13 @@ A brief demonstration of the capabilities of this code can be found at our [AGU 
 
 Note that this is a continuation of a previous project [IWFMtrack](https://gwt.ucdavis.edu/research-tools-and-applications/iwfm-track).
 
-In particle tracking codes there are essentially two main functionalities. i) Tracing the particles in a velocity field. ii) Interpolating a velocity field. The code has been designed so that tracing functions are unaware of the details of the velocity field. To do so the code contains a velocity base class that communicates with the tracing class. Then each different type of field has to derive from the base velocity class and overwrite a few functions. 
+In particle tracking codes there are essentially two main functionalities. i) Tracing the particles in a velocity field. ii) Interpolating a velocity field. The code has been designed so that tracing functions are unaware of the details of the velocity field. To do so the code contains a velocity base class that communicates with the tracing class. Then each different type of field has to derive from the base velocity class and overwrite a few functions. The velocity field field can be split into 2 components. The positional information of the points where the velocity is known and the velocity itself. Each of those components are defined in based classes. The positional base class `class XYZ` is responsible to calculate the weight contribution of each velocity point in the field for a given particle position. Then it passes the weights to the `Velocity` class which then calculates the velocity value. Using this separation it is posible to combine different data structure in the code.
 
-At the moment we provide one type of velocity field i.e. point cloud type and three modes
-
+At the moment we provide two types of positional classes `XYZ` 
+  1. CLOUD 
+  2. IWFM
+ 
+While for the velocity there are options:
   1. Steady State flow fields
   2. Transient State flow fields (Coming soon...)
   3. Stochastic flow fields (This is available but in an experimental stage)
@@ -46,9 +49,9 @@ Ichnos depends on a few libraries
 ## Bulding the dependencies
 Gettting the dependencies right sometimes can be quite tricky. To build Ichnos we have used three options for different systems.
 
-* [vcpkg](https://github.com/microsoft/vcpkg) is probably the easiset method to build the dependencies. It has always worked under windows without issues. Under linux can work but not without issues.
+* [vcpkg](https://github.com/microsoft/vcpkg) is probably the easiest method to build the dependencies. It has always worked under windows without issues. Under linux can work but not without issues.
 * [Spack](https://spack.io/) Using spack is probably the best option for linux, yet is a bit more involved compared to the vcpkg. There is more info about spack in the next section
-* **Build everything** That requires some experience and it is recommnded on systems without administration provilages, e.g clusters
+* **Build everything** That requires some experience and it is recommended on systems without administration privileges, e.g clusters
 
 ## Building with vcpkg
 All that is needed is to pass the following argument
