@@ -40,11 +40,14 @@ namespace ICHNOS {
 		bool RK4Step(const Particle& P, vec3& pnew, vec3& vnew, double& tm, ExitReason& er);
 		bool RK45Step(const Particle& P, vec3& pnew, vec3& vnew, double& tm, ExitReason& er);
 
+		void updateStep();
+
 		const std::vector<std::vector<double> > CF = getRK45coef();
 
 		double adaptStepSize;
 		double actualStep;
 		double actualStepTime;
+		vec3 pp, vv, ll, uu;
 	};
 
 	ParticleTrace::ParticleTrace(
@@ -261,13 +264,13 @@ namespace ICHNOS {
             std::map<int, double> proc_map;
             std::vector<vec3> tmp_data;
             bool tf;
-            XYZ.calcWeights(p,ids,weights,proc_map,tf);
-            XYZ.sendVec3Data(tmp_data);
+            pp = p;
+            XYZ.calcWeights(p,ids,weights,proc_map,ll,uu,tf);
             if (!tf) {
                 return ExitReason::FAR_AWAY;
             }
             VF.calcVelocity(v,ids,weights,tm);
-            VF.getVec3Data(tmp_data);
+            //VF.getVec3Data(tmp_data);
         }
 
 		//proc = VF.calcProcID(proc_map);
@@ -281,7 +284,7 @@ namespace ICHNOS {
 			S.InitialVelocity(v);
 
 
-		//S.getLastParticle().displayAsVEX(true);
+		S.getLastParticle().displayAsVEX(true);
 
 		int count_iterations = 0;
 		//DEBUG::displayParticleasVex(S.getLastParticle(), true);
@@ -291,14 +294,17 @@ namespace ICHNOS {
 			//	vec3 v_curr = S.getLastParticle().getV();
 			//	double angle = v_prev.angle(v_curr);
 			//}
-			if (popt.UpdateStepSize == 1 && popt.method != SolutionMethods::RK45)
-				VF.updateStep(actualStep);
+			if (popt.UpdateStepSize == 1 && popt.method != SolutionMethods::RK45){
+			    vv = v;
+                updateStep();
+			}
+
 			bool foundPoint = findNextPoint(S.getLastParticle(), p, v, tm, er);
 			if (foundPoint) {
 				//er = CheckNewPointAndCalcVelocity(p, v/*, proc*/, tm);
-				//DEBUG::displayPVasVex(p, v);
+				//ICHNOS::DBG::displayPVasVex(p, v);
 				S.AddParticle(Particle(p, v, S.getLastParticle(), tm));
-				//S.getLastParticle().displayAsVEX(true);
+				S.getLastParticle().displayAsVEX(true);
 				// In the unlike event that the velocity of the point is zero
 				// we can avoid unnessecary iterations by simply exit
 				if (v.isZero() & (er == ExitReason::NO_EXIT))
@@ -337,8 +343,9 @@ namespace ICHNOS {
 		// the velocity field allows it. However the particle tracking will be terminated
 		if (exitreason != ExitReason::NO_EXIT) {
 			if (VF.InterpolateOutsideDomain) {
-			    XYZ.calcWeights(p,ids,weights,proc_map, tf);
-			    XYZ.sendVec3Data(tmp_vec);
+			    pp = p;
+			    XYZ.calcWeights(p,ids,weights,proc_map, ll, uu, tf);
+			    //XYZ.sendVec3Data(tmp_vec);
                 if (!tf) {
                     v = vec3();
                 }
@@ -353,8 +360,9 @@ namespace ICHNOS {
 			return exitreason;
 		}
 		else {
-            XYZ.calcWeights(p,ids,weights,proc_map, tf);
-            XYZ.sendVec3Data(tmp_vec);
+		    pp = p;
+            XYZ.calcWeights(p, ids, weights, proc_map, ll, uu, tf);
+            //XYZ.sendVec3Data(tmp_vec);
             if (!tf) {
                 v = vec3(-99999, -99999, -99999);
             }
@@ -398,7 +406,10 @@ namespace ICHNOS {
 			return ExitReason::EXIT_SIDE;
 
 		double top, bottom;
-		Domain.getTopBottomElevation(p, top, bottom);
+		Domain.getTopBottomElevation(p, top, bottom, bInDomain);
+		if (!bInDomain)
+            return ExitReason::FAR_AWAY;
+
 		if (p.z < bottom)
 			return ExitReason::EXIT_BOTTOM;
 		if (p.z > top)
@@ -650,5 +661,35 @@ namespace ICHNOS {
             }
         }
 		return true;
+	}
+
+	void ParticleTrace::updateStep() {
+        double stepLen, stepTime;
+        double dst = ICHNOS::diameter_along_velocity(pp, vv, ll, uu);
+
+        if (popt.StepOpt.nSteps > 0){
+            // This is the length that respects the nSteps
+            stepLen = dst/popt.StepOpt.nSteps;
+        }
+        else{
+            stepLen = 10000000;
+        }
+
+        if (popt.StepOpt.StepSize > 0){
+            // If the length of the user step is smaller than the step defined by the nSteps.
+            // Use the used defined that is smaller
+            if (popt.StepOpt.StepSize < stepLen){
+                stepLen = popt.StepOpt.StepSize;
+            }
+        }
+
+        if (popt.StepOpt.StepSizeTime > 0){
+            stepTime = vv.len()*popt.StepOpt.StepSizeTime;
+        }
+        else{
+            stepTime = 10000000;
+        }
+        //TODO Add the part of the nStepsTime limit
+        actualStep = std::min<double>(stepTime, stepLen);
 	}
 }

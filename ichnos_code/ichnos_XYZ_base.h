@@ -21,9 +21,9 @@ namespace ICHNOS{
                                  std::vector<int>& ids,
                                  std::vector<double>& weights,
                                  std::map<int, double>& proc_map,
-                                 bool& out){}
+                                 vec3& ll, vec3& uu, bool& out){}
         virtual void reset(){}
-        virtual void sendVec3Data(std::vector<vec3>& data){};
+        //virtual void sendVec3Data(std::vector<vec3>& data){};
 
     protected:
         boost::mpi::communicator world;
@@ -43,9 +43,9 @@ namespace ICHNOS{
                          std::vector<int>& ids,
                          std::vector<double>& weights,
                          std::map<int, double>& proc_map,
-                         bool& out);
+                         vec3& ll, vec3& uu, bool& out);
         void reset();
-        void sendVec3Data(std::vector<vec3>& data);
+        //void sendVec3Data(std::vector<vec3>& data);
         int getNpnts(){return Tree.size();}
     private:
         search_tree_info Tree;
@@ -61,7 +61,7 @@ namespace ICHNOS{
 
         bool bIsInitialized = false;
         double search_mult = 2.5;
-        vec3 ll, uu, pp, vv;
+        //vec3 ll, uu, pp, vv;
     };
 
     XYZ_cloud::XYZ_cloud(boost::mpi::communicator& world_in)
@@ -141,13 +141,11 @@ namespace ICHNOS{
                                 std::vector<int> &ids,
                                 std::vector<double> &weights,
                                 std::map<int, double>& proc_map,
-                                bool& out) {
+                                vec3& ll, vec3& uu, bool& out) {
         ids.clear();
         weights.clear();
         ll.zero();
         uu.zero();
-        pp.zero();
-        vv.zero();
         if (!bIsInitialized){
             calculate_search_box(p,ll,uu,diameter,ratio,search_mult);
             cgal_point_3 llp(ll.x, ll.y, ll.z);
@@ -265,7 +263,6 @@ namespace ICHNOS{
             for (; itd != proc_map.end(); ++itd) {
                 itd->second = itd->second / sumW;
             }
-            pp = p;
             out = true;
         }
     }
@@ -275,12 +272,12 @@ namespace ICHNOS{
         ratio = initial_ratio;
     }
 
-    void XYZ_cloud::sendVec3Data(std::vector<vec3> &data) {
-        data.clear();
-        data.push_back(pp);
-        data.push_back(ll);
-        data.push_back(uu);
-    }
+    //void XYZ_cloud::sendVec3Data(std::vector<vec3> &data) {
+    //    data.clear();
+    //    data.push_back(pp);
+    //    data.push_back(ll);
+    //    data.push_back(uu);
+    //}
 
     class XYZ_IWFM : public XYZ_base {
     public:
@@ -290,9 +287,9 @@ namespace ICHNOS{
                          std::vector<int>& ids,
                          std::vector<double>& weights,
                          std::map<int, double>& proc_map,
-                         bool& out);
+                         vec3& ll, vec3& uu, bool& out);
         void reset();
-        void sendVec3Data(std::vector<vec3>& data);
+        //void sendVec3Data(std::vector<vec3>& data);
         int getNpnts(){return nXYpnts * nLay;}
 
     private:
@@ -312,7 +309,7 @@ namespace ICHNOS{
         bool readNodes(std::string filename);
         bool readStrat(std::string filename);
         bool readMesh(std::string filename);
-        vec3 ll, uu, pp, vv;
+        //vec3 ll, uu, pp, vv;
     };
     XYZ_IWFM::XYZ_IWFM(boost::mpi::communicator& world_in)
         :
@@ -329,7 +326,7 @@ namespace ICHNOS{
         velocityFieldOptions.add_options()
             ("IWFM.NodeFile", po::value<std::string>(), "An array of the node coordinates")
             ("IWFM.ElevationFile", po::value<std::string>(), "An array of the Elevations")
-            ("IWFM.Meshfile", po::value<std::string>(), "An array of the Mesh ids")
+            ("IWFM.Meshfile", po::value<std::string>(), "An array of the Mesh2D ids")
             ("IWFM.Nlayers", po::value<int>()->default_value(4), "Number of layers")
             ("IWFM.Power", po::value<double>()->default_value(3.0), "Power of the IDW interpolation")
             ("IWFM.Diameter", po::value<double>()->default_value(1.0), "Scale the domain before velocity calculation")
@@ -360,7 +357,7 @@ namespace ICHNOS{
                                std::vector<int> &ids,
                                std::vector<double> &weights,
                                std::map<int, double>& proc_map,
-                               bool& out) {
+                               vec3& ll, vec3& uu, bool& out) {
         out = false;
         ids.clear();
         weights.clear();
@@ -483,19 +480,18 @@ namespace ICHNOS{
             itd->second = itd->second / sumW;
         }
         calculate_search_box(p, ll, uu, diam, ratio, search_mult);
-        pp = p;
     }
 
     void XYZ_IWFM::reset() {
 
     }
 
-    void XYZ_IWFM::sendVec3Data(std::vector<vec3> &data) {
-        data.clear();
-        data.push_back(pp);
-        data.push_back(ll);
-        data.push_back(uu);
-    }
+    //void XYZ_IWFM::sendVec3Data(std::vector<vec3> &data) {
+    //    data.clear();
+    //    data.push_back(pp);
+    //    data.push_back(ll);
+    //    data.push_back(uu);
+    //}
 
     bool XYZ_IWFM::readNodes(std::string filename) {
         std::vector<std::vector<double>> data;
@@ -616,4 +612,6 @@ namespace ICHNOS{
         }
         return true;
     }
+
+
 }

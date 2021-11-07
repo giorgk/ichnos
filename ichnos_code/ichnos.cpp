@@ -18,6 +18,8 @@
 #include "npsatVelocity.h"
 #include "stochasticVelocity.h"
 #include "TransientVelocity.h"
+#include "velocity_mesh2D.h"
+#include "XYZ_mesh2D.h"
 
 
 ICHNOS::SingletonGenerator* ICHNOS::SingletonGenerator::_instance = nullptr;
@@ -74,7 +76,7 @@ int main(int argc, char* argv[])
                     case ICHNOS::VelType::TRANS:
                     {
                         world.barrier();
-                        TRANS::transVel VF(world);
+                        ICHNOS::CloudVel VF(world);
                         tf = VF.readVelocityField(OPT.getVelFname(), XYZ.getNpnts());
                         if (!tf){return 0;}
                         VF.SetStepOptions(OPT.Popt.StepOpt);
@@ -96,6 +98,30 @@ int main(int argc, char* argv[])
 
                 break;
             }
+            case ICHNOS::XYZType::MESH2D:
+            {
+                ICHNOS::XYZ_MESH2D XYZ(world);
+                tf = XYZ.readXYZdata(OPT.getVelFname());
+                if (!tf){return 0;}
+
+                switch (OPT.velocityFieldType){
+                    case ICHNOS::VelType::TRANS:
+                    {
+                        ICHNOS::Mesh2DVel VF(world);
+                        tf = VF.readVelocityField(OPT.getVelFname(), XYZ.getNpnts());
+                        XYZ.SetInterpType(VF.getInterpType());
+
+                        ICHNOS::ParticleTrace pt(world, XYZ, VF, domain, OPT.Popt);
+                        world.barrier();
+                        if (world.rank() == 0)
+                            std::cout << "Tracing particles..." << std::endl;
+                        pt.Trace();
+                    }
+                }
+
+                break;
+            }
+
             case ICHNOS::XYZType::IWFM:
             {
                 ICHNOS::XYZ_IWFM XYZ(world);
@@ -105,7 +131,7 @@ int main(int argc, char* argv[])
                 switch (OPT.velocityFieldType) {
                     case ICHNOS::VelType::TRANS:
                     {
-                        TRANS::transVel VF(world);
+                        ICHNOS::CloudVel VF(world);
                         tf = VF.readVelocityField(OPT.getVelFname(), XYZ.getNpnts());
                         if (!tf){return 0;}
                         VF.SetStepOptions(OPT.Popt.StepOpt);
@@ -140,7 +166,7 @@ int main(int argc, char* argv[])
 //        }
 //        case ICHNOS::VelType::TRANS:
 //        {
-//            TRANS::transVel VF(world, ICHNOS::VelType::TRANS);
+//            TRANS::CloudVel VF(world, ICHNOS::VelType::TRANS);
 //            VF.readVelocityField(OPT.getVelFname());
 //            ICHNOS::Domain2D domain(OPT.Dopt);
 //            OPT.Popt.bIsTransient = true;

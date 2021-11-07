@@ -73,6 +73,18 @@ namespace ICHNOS {
 			x(x), y(y), z(z)
 		{}
 
+		void operator=(const vec3& a) {
+		    x = a.x;
+		    y = a.y;
+		    z = a.z;
+		}
+
+        void operator=(const double& a) {
+		    x = a;
+		    y = a;
+		    z = a;
+        }
+
 		//! Element wise vector multiplication operator
 		vec3 operator*(const vec3& a) const {
 			return vec3(a.x * x, a.y * y, a.z * z);
@@ -148,6 +160,7 @@ namespace ICHNOS {
 	struct elev_data{
 		double top = 0;
 		double bot = 0;
+		int id = -9;
 	};
 
 	// 3D Triangulation
@@ -267,6 +280,14 @@ namespace ICHNOS {
 
     enum class coordDim {vx, vy, vz};
     enum class TimeInterpType {NEAREST, LINEAR};
+    enum class MeshVelInterpType{ELEMENT, NODE, FACE, UNKNOWN};
+
+    struct TimeData{
+        double tm;
+        int idx1;
+        int idx2;
+        double t;
+    };
 
     struct Pnt_info{
         int proc = -9;
@@ -302,9 +323,10 @@ namespace ICHNOS {
         void setTSvalue(double v, int step);
         void setTSvalue(std::vector<double>& TS_in);
         void findIIT(double x, int &i1, int &i2, double &t);
-        vec3 getVelocity(int pnt, int i1, int i2, double t, TimeInterpType tp);
+        vec3 getVelocity(int pnt, int i1, int i2, double t);
         double getTSvalue(int idx);
         void setNrepeatDays(double n){nDaysRepeat = n;}
+        void setTimeInterpolationType(TimeInterpType tip_in){tip = tip_in;}
     private:
         std::vector<std::vector<double>> VX;
         std::vector<std::vector<double>> VY;
@@ -317,6 +339,7 @@ namespace ICHNOS {
         void findTimeStepIndex(int &i, int &ii, double x);
 
         double nDaysRepeat = 0;
+        TimeInterpType tip;
 
     };
 
@@ -411,15 +434,14 @@ namespace ICHNOS {
         t = (x_tmp - TS[i1]) / (TS[i2] - TS[i1]);
     }
 
-    vec3 VelTR::getVelocity(int pnt, int i1, int i2, double t, TimeInterpType tp){
-        if (tp == TimeInterpType::LINEAR){
+    vec3 VelTR::getVelocity(int pnt, int i1, int i2, double t){
+        if (tip == TimeInterpType::LINEAR){
             vec3 v1(VX[pnt][i1], VY[pnt][i1], VZ[pnt][i1]);
             vec3 v2(VX[pnt][i2], VY[pnt][i2], VZ[pnt][i2]);
             return v1*(1-t) + v2*t;
-
         }
         else{
-            return vec3(VX[pnt][i1], VY[pnt][i1], VZ[pnt][i1]);
+            return vec3(VX[pnt][i1], VY[pnt][i1],VZ[pnt][i1]);
         }
     }
 
@@ -618,6 +640,7 @@ namespace ICHNOS {
 		std::string processorDomainFile;
 		std::string expandedDomainFile;
 		int myRank;
+		int nProc;
 	};
 
 

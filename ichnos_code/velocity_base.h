@@ -15,9 +15,9 @@ namespace ICHNOS {
 	public:
 		velocityField(boost::mpi::communicator& world_in);
 		virtual bool readVelocityField(std::string vf_file, int nPnts){return true;}
-		virtual void calcVelocity(vec3& vel,
-                                  std::vector<int>& ids,
-                                  std::vector<double>& weights,
+		virtual void calcVelocity(vec3 &vel,
+                                  std::vector<int> &ids,
+                                  std::vector<double> &weights,
                                   double tm = 0) {}
 		virtual void reset(){}
 		virtual void updateStep(double& step){}
@@ -34,7 +34,10 @@ namespace ICHNOS {
 		double OwnerThreshold = 0.75;
 		VelType Vtype;
 		StepOptions stepOpt;
-		
+		std::string Prefix;
+		std::string Suffix;
+		int leadingZeros;
+        double multiplier = 1.0;
 
 	};
 

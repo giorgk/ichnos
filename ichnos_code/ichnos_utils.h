@@ -37,6 +37,9 @@ namespace ICHNOS {
 			std::cout << std::setprecision(3) << std::fixed << " setpointattrib(0,'N',p,{" << vn.x << "," << vn.z << "," << vn.y << "},'set');";
 			std::cout << std::endl;
 		}
+		void displayVectorMatlab(vec3 p){
+		    std::cout << std::setprecision(5) << std::fixed << "[" << p.x << "," << p.y << "," << p.z << "]" << std::endl;
+		}
 	}
 
 	std::string num2Padstr(int i, int n) {
@@ -230,6 +233,95 @@ namespace ICHNOS {
             calc_time = 0.0;
             max_calc_time = 0.0;
         }
+    }
+
+    void QuadShapeFunctions(double u, double v, double &N1, double &N2, double &N3, double &N4){
+        N1 = 0.25*(1-u)*(1-v);
+        N2 = 0.25*(1+u)*(1-v);
+        N3 = 0.25*(1+u)*(1+v);
+        N4 = 0.25*(1-u)*(1+v);
+    }
+
+    void local2GlobalCoord(double u, double v, vec3 &p1, vec3 &p2, vec3 &p3, vec3 &p4, vec3 &p){
+        p.zero();
+        double n1, n2, n3, n4;
+        QuadShapeFunctions(u,v, n1, n2, n3, n4);
+
+        p.x = n1*p1.x + n2*p2.x + n3*p3.x + n4*p4.x;
+        p.y = n1*p1.y + n2*p2.y + n3*p3.y + n4*p4.y;
+    }
+
+    void calculateQuadJacobian(double u, double v, vec3 &p1, vec3 &p2, vec3 &p3, vec3 &p4,
+                               double &a, double &b, double &c, double &d){
+        double dn1 = 0.25*(v - 1);
+        double dn2 = 0.25*(1 - v);
+        double dn3 = 0.25*(v + 1);
+        double dn4 = -0.25*(v + 1);
+        double dn5 = 0.25*(u - 1);
+        double dn6 = -0.25*(u + 1);
+        double dn7 = 0.25*(u + 1);
+        double dn8 = 0.25*(1 - u);
+        a = dn1*p1.x + dn2*p2.x + dn3*p3.x + dn4*p4.x;
+        b = dn1*p1.y + dn2*p2.y + dn3*p3.y + dn4*p4.y;
+        c = dn5*p1.x + dn6*p2.x + dn7*p3.x + dn8*p4.x;
+        d = dn5*p1.y + dn6*p2.y + dn7*p3.y + dn8*p4.y;
+    }
+
+    void calculateQuadInverseJacobian(double u, double v, vec3 &p1, vec3 &p2, vec3 &p3, vec3 &p4,
+                                      double &inva, double &invb, double &invc, double &invd){
+        double a, b, c, d;
+        calculateQuadJacobian(u, v, p1, p2, p3, p4, a, b, c, d);
+        double detA = 1/(a*d - b*c);
+        inva = d*detA;
+        invb = -b*detA;
+        invc = -c*detA;
+        invd = a*detA;
+    }
+
+    bool isPointInQuad(vec3 &p, vec3 &p1, vec3 &p2, vec3 &p3, vec3 &p4, vec3 &uv, double tol = 0.000001){
+        // See https://doi.org/10.1115/1.4027667
+        vec3 p2d(p.x, p.y, 0.0);
+        double u = 0;
+        double v = 0;
+        double a,b,c,d;
+        //DBG::displayVectorMatlab(p1);
+        //DBG::displayVectorMatlab(p2);
+        //DBG::displayVectorMatlab(p3);
+        //DBG::displayVectorMatlab(p4);
+        //DBG::displayVectorMatlab(p2d);
+        vec3 puv;
+        local2GlobalCoord(u, v, p1, p2, p3, p4, puv);
+        //DBG::displayVectorMatlab(puv);
+        double dst = p2d.distance(puv.x, puv.y, puv.z);
+        int iter = 0;
+        while (dst > tol) {
+            calculateQuadInverseJacobian(u,v,p1,p2,p3,p4,a,b,c,d);
+            u = u + a*(p.x - puv.x) + b*(p.y - puv.y);
+            v = v + c*(p.x - puv.x) + d*(p.y - puv.y);
+            local2GlobalCoord(u, v, p1, p2, p3, p4, puv);
+            //DBG::displayVectorMatlab(puv);
+            dst = p2d.distance(puv.x, puv.y, puv.z);
+            iter++;
+            if (iter > 2000) {
+                std::cout << "Failed to find the parametric coordinates for the point:" << std::endl;
+                std::cout << std::setprecision(5) << std::fixed << p.x << "," << p.y << std::endl;
+                std::cout << "for the following quad:" << std::endl;
+                std::cout << std::setprecision(5) << std::fixed << p1.x << "," << p1.y << std::endl;
+                std::cout << std::setprecision(5) << std::fixed << p2.x << "," << p2.y << std::endl;
+                std::cout << std::setprecision(5) << std::fixed << p3.x << "," << p3.y << std::endl;
+                std::cout << std::setprecision(5) << std::fixed << p4.x << "," << p4.y << std::endl;
+                break;
+            }
+        }
+        uv.x = u;
+        uv.y = v;
+        if (u >= -1.0 && u <= 1.0 && v >= -1.0 && v <= 1.0){
+            return true;
+        }
+        else{
+            return false;
+        }
+        return false;
     }
 
     std::string getExtension(std::string filename){
@@ -733,6 +825,27 @@ namespace ICHNOS {
                         data.push_back(vecd);
                     }
                 }
+            }
+            return true;
+		}
+
+		bool readTimeStepFile(std::string filename, std::vector<double>& TS){
+            std::ifstream datafile(filename.c_str());
+            if (!datafile.good()){
+                std::cout << "Can't open the file " << filename << std::endl;
+                return false;
+            }
+            else{
+                std::string line;
+                double v;
+                while (getline(datafile, line)){
+                    if (line.size() > 0){
+                        std::istringstream inp(line.c_str());
+                        inp >> v;
+                        TS.push_back(v);
+                    }
+                }
+                datafile.close();
             }
             return true;
 		}

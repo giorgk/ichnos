@@ -64,6 +64,7 @@ namespace ICHNOS {
 	enum class XYZType{
 	    CLOUD,
 	    IWFM,
+	    MESH2D,
 	    INVALID
 	};
 
@@ -73,6 +74,7 @@ namespace ICHNOS {
 	    //vtMap.insert(std::pair<VelType, std::string>(VelType::Cloud3d, "Cloud3d"));
 	    xyztMap.insert(std::pair<XYZType, std::string>(XYZType::CLOUD, "CLOUD"));
 	    xyztMap.insert(std::pair<XYZType, std::string>(XYZType::IWFM, "IWFM"));
+        xyztMap.insert(std::pair<XYZType, std::string>(XYZType::MESH2D, "MESH2D"));
 	    it = xyztMap.find(xyzt);
 	    if (it != xyztMap.end())
 	        return it->second;
@@ -87,6 +89,7 @@ namespace ICHNOS {
 	    //vtMap.insert(std::pair<std::string, VelType>("Cloud3d", VelType::Cloud3d));
 	    xyztMap.insert(std::pair<std::string, XYZType>("CLOUD", XYZType::CLOUD));
 	    xyztMap.insert(std::pair<std::string, XYZType>("IWFM", XYZType::IWFM));
+        xyztMap.insert(std::pair<std::string, XYZType>("MESH2D", XYZType::MESH2D));
 	    it = xyztMap.find(xyzt);
 	    if (it != xyztMap.end())
 	        return it->second;
@@ -152,7 +155,7 @@ namespace ICHNOS {
 		:
 		world(world_in)
 	{
-        Version = "0.2.10";
+        Version = "0.3.01";
 		//if (world.size() > 1) {
 		//	bIsMultiThreaded = false;
 		//}
@@ -206,11 +209,11 @@ namespace ICHNOS {
 			// Domain options
 			("Domain.Outline", po::value<std::string >(), "A filename that contains the vertices of the outline polygon")
 			("Domain.TopFile", po::value<std::string >(), "A filename with the point cloud of the top elevation")
-			("Domain.TopRadius", po::value<double>()->default_value(1000), "Search Radius for top elevation")
-			("Domain.TopPower", po::value<double>()->default_value(3), "Search Power for top elevation")
+			//("Domain.TopRadius", po::value<double>()->default_value(1000), "Search Radius for top elevation")
+			//("Domain.TopPower", po::value<double>()->default_value(3), "Search Power for top elevation")
 			("Domain.BottomFile", po::value<std::string >(), "A filename with the point cloud of the bottom elevation")
-			("Domain.BottomRadius", po::value<double>()->default_value(1000), "Search Radius for bottom elevation")
-			("Domain.BottomPower", po::value<double>()->default_value(3), "Search Power for bottom elevation")
+			//("Domain.BottomRadius", po::value<double>()->default_value(1000), "Search Radius for bottom elevation")
+			//("Domain.BottomPower", po::value<double>()->default_value(3), "Search Power for bottom elevation")
 			("Domain.ProcessorPolys", po::value<std::string >(), "A filename that contains the coordinates of each processor polygon")
 			("Domain.ExpandedPolys", po::value<std::string >(), "A filename that contains the coordinates of each Expanded polygon")
 
@@ -314,17 +317,18 @@ namespace ICHNOS {
 					Dopt.polygonFile = vm_cfg["Domain.Outline"].as<std::string>();
 					// Top elevation parameters
 					Dopt.TopElevationFile = vm_cfg["Domain.TopFile"].as<std::string>();
-					Dopt.TopRadius = vm_cfg["Domain.TopRadius"].as<double>();
-					Dopt.TopRadius = Dopt.TopRadius*Dopt.TopRadius;
-					Dopt.TopPower = vm_cfg["Domain.TopPower"].as<double>();
+					//Dopt.TopRadius = vm_cfg["Domain.TopRadius"].as<double>();
+					//Dopt.TopRadius = Dopt.TopRadius*Dopt.TopRadius;
+					//Dopt.TopPower = vm_cfg["Domain.TopPower"].as<double>();
 					// Bottom elevation parameters
 					Dopt.BottomeElevationFile = vm_cfg["Domain.BottomFile"].as<std::string>();
-					Dopt.BotRadius = vm_cfg["Domain.BottomRadius"].as<double>();
-					Dopt.BotRadius = Dopt.BotRadius*Dopt.BotRadius;
-					Dopt.BotPower = vm_cfg["Domain.BottomPower"].as<double>();
+					//Dopt.BotRadius = vm_cfg["Domain.BottomRadius"].as<double>();
+					//Dopt.BotRadius = Dopt.BotRadius*Dopt.BotRadius;
+					//Dopt.BotPower = vm_cfg["Domain.BottomPower"].as<double>();
 					Dopt.processorDomainFile = vm_cfg["Domain.ProcessorPolys"].as<std::string>();
 					Dopt.expandedDomainFile = vm_cfg["Domain.ExpandedPolys"].as<std::string>();
 					Dopt.myRank = world.rank();
+					Dopt.nProc = world.size();
 				}
 
 				{// Stopping criteria

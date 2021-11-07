@@ -29,18 +29,10 @@
 namespace po = boost::program_options;
 namespace ic = ICHNOS;
 
-namespace TRANS{
-
-    struct TimeData{
-        double tm;
-        int idx1;
-        int idx2;
-        double t;
-    };
-
-    class transVel : public ic::velocityField{
+namespace ICHNOS{
+    class CloudVel : public ic::velocityField{
     public:
-        transVel(boost::mpi::communicator& world_in);
+        CloudVel(boost::mpi::communicator& world_in);
         bool readVelocityField(std::string vf_file, int nPnts);
         void calcVelocity(ic::vec3& vel,
                           std::vector<int>& ids,
@@ -52,14 +44,15 @@ namespace TRANS{
 
     private:
         //bool readXYZfile(std::string prefix, std::string suffix, int ld_zero);
-        bool readVelocityFiles(std::string prefix, std::string suffix, int ld_zero);
+        bool readVelocityFiles();
         bool readVfile(std::string filename, int nPoints, int nSteps, ic::coordDim dim);
         bool readVH5file(std::string filename, int nPoints, int nSteps);
         bool readSteadyVfile(std::string filename, int nPoints);
         bool readTimeSteps(std::string filename, std::vector<double>& TS);
 
+
         ic::VelTR VEL;
-        ic::search_tree_info Tree;
+        //ic::search_tree_info Tree;
 
         ic::interpType porType;
         double porosityValue = 1.0;
@@ -68,7 +61,6 @@ namespace TRANS{
         int nPoints;
         int nSteps;
 
-        double multiplier = 1.0;
         //double Power;
         //double Scale = 1.0;
         //double initial_diameter = 640;
@@ -82,7 +74,7 @@ namespace TRANS{
         double max_calc_time = 0.0;
         int count_times = 0;
 
-        TimeData tm_data;
+        ic::TimeData tm_data;
 
         bool bIsInitialized = false;
         //double search_mult = 2.5;
@@ -91,14 +83,14 @@ namespace TRANS{
 
     };
 
-    transVel::transVel(boost::mpi::communicator &world_in)
+    CloudVel::CloudVel(boost::mpi::communicator &world_in)
         :
         velocityField(world_in)
     {
         InterpolateOutsideDomain = true;
     }
 
-    bool transVel::readVelocityField(std::string vf_file, int nPnts) {
+    bool CloudVel::readVelocityField(std::string vf_file, int nPnts) {
         if (world.rank() == 0)
             std::cout << "--> Velocity configuration file: " << vf_file << std::endl;
 
@@ -111,9 +103,11 @@ namespace TRANS{
             ("Velocity.Suffix", po::value<std::string>(), "ending of file after procid")
             ("Velocity.Type", po::value<std::string>(), "Type of velocity. (STEADY or TRANS)")
             ("Velocity.TimeStepFile", po::value<std::string>(), "This filename with the time steps")
-            ("Velocity.TimeInterp", po::value<std::string>(), "Interpolation type between timesteps")
+            ("Velocity.TimeInterp", po::value<std::string>(), "Interpolation type between time steps")
             ("Velocity.RepeatTime", po::value<double>()->default_value(0.0), "The number of days to repeat after the and of time steps")
             ("Velocity.Multiplier", po::value<double>()->default_value(1.0), "This is a multiplier to scale velocity")
+            ("Velocity.SetOnFaces", po::value<int>()->default_value(0), "Is the velocity defined on the element interfaces?")
+            ("Velocity.FaceIdFile", po::value<std::string>(), "Face ids for each element")
             //("Velocity.Scale", po::value<double>()->default_value(1.0), "Scale the domain before velocity calculation")
             //("Velocity.Power", po::value<double>()->default_value(3.0), "Power of the IDW interpolation")
             //("Velocity.InitDiameter", po::value<double>()->default_value(5000), "Initial diameter")
@@ -158,12 +152,13 @@ namespace TRANS{
             if (Vtype == ic::VelType::TRANS){
                 std::string TSfile = vm_vfo["Velocity.TimeStepFile"].as<std::string>();
 
-                bool tf = readTimeSteps(TSfile, TimeSteps);
+                bool tf = ic::READ::readTimeStepFile(TSfile, TimeSteps);
                 if (!tf) {return false;}
                 std::string TimeInterpType = vm_vfo["Velocity.TimeInterp"].as<std::string>();
                 if (TimeInterpType.compare("LINEAR") == 0) {
                     timeInterp = ic::TimeInterpType::LINEAR;
                 }
+                VEL.setTimeInterpolationType(timeInterp);
                 VEL.setNrepeatDays(vm_vfo["Velocity.RepeatTime"].as<double>());
             }
             else{
@@ -171,17 +166,17 @@ namespace TRANS{
                 nSteps = TimeSteps.size();
                 timeInterp = ic::TimeInterpType::NEAREST;
                 VEL.setNrepeatDays(0);
+                VEL.setTimeInterpolationType(timeInterp);
             }
 
-            std::string prefix = vm_vfo["Velocity.Prefix"].as<std::string>();
-            std::string suffix;
+            Prefix = vm_vfo["Velocity.Prefix"].as<std::string>();
             if (vm_vfo.count("Velocity.Suffix")) {
-                suffix = vm_vfo["Velocity.Suffix"].as<std::string>();
+                Suffix = vm_vfo["Velocity.Suffix"].as<std::string>();
             }
             else {
-                suffix = ".ich";
+                Suffix = ".ich";
             }
-            int leadZeros = vm_vfo["Velocity.LeadingZeros"].as<int>();
+            leadingZeros = vm_vfo["Velocity.LeadingZeros"].as<int>();
 
 
 
@@ -191,7 +186,7 @@ namespace TRANS{
             VEL.setTSvalue(TimeSteps);
 
             // Read the Velocity files
-            bool tf = readVelocityFiles(prefix, suffix, leadZeros);
+            bool tf = readVelocityFiles();
             if (!tf)
                 return false;
         }
@@ -217,10 +212,10 @@ namespace TRANS{
         return true;
     }
 
-    bool transVel::readVelocityFiles(std::string prefix, std::string suffix, int ld_zero){
+    bool CloudVel::readVelocityFiles(){
 #if _USEHF > 0
-        if (suffix.compare(".h5") == 0){
-            std::string fileVXYZ = prefix + ic::num2Padstr(world.rank(), ld_zero) + suffix;
+        if (Suffix.compare(".h5") == 0){
+            std::string fileVXYZ = Prefix + ic::num2Padstr(world.rank(), leadingZeros) + Suffix;
             bool tf1 = readVH5file(fileVXYZ, nPoints, nSteps);
             return tf1;
         }
@@ -228,19 +223,19 @@ namespace TRANS{
         bool tf = false;
         auto start = std::chrono::high_resolution_clock::now();
         if (Vtype == ic::VelType::TRANS){
-            std::string fileVX = prefix + "VX_" + ic::num2Padstr(/*dbg_rank*/world.rank(), ld_zero) + suffix;
+            std::string fileVX = Prefix + "VX_" + ic::num2Padstr(/*dbg_rank*/world.rank(), leadingZeros) + Suffix;
             tf = readVfile(fileVX, nPoints, nSteps, ic::coordDim::vx);
             if (tf){
-                std::string fileVY = prefix + "VY_" + ic::num2Padstr(/*dbg_rank*/world.rank(), ld_zero) + suffix;
+                std::string fileVY = Prefix + "VY_" + ic::num2Padstr(/*dbg_rank*/world.rank(), leadingZeros) + Suffix;
                 tf = readVfile(fileVY, nPoints, nSteps, ic::coordDim::vy);
             }
             if (tf){
-                std::string fileVZ = prefix + "VZ_" + ic::num2Padstr(/*dbg_rank*/world.rank(), ld_zero) + suffix;
+                std::string fileVZ = Prefix + "VZ_" + ic::num2Padstr(/*dbg_rank*/world.rank(), leadingZeros) + Suffix;
                 tf = readVfile(fileVZ, nPoints, nSteps, ic::coordDim::vz);
             }
         }
         else if (Vtype == ic::VelType::STEADY){
-            std::string fileVX = prefix + ic::num2Padstr(world.rank(), ld_zero) + suffix;
+            std::string fileVX = Prefix + ic::num2Padstr(world.rank(), leadingZeros) + Suffix;
             tf = readSteadyVfile(fileVX, nPoints);
         }
 
@@ -253,7 +248,7 @@ namespace TRANS{
         return true;
     }
 
-    bool transVel::readVH5file(std::string filename, int nPoints, int nSteps){
+    bool CloudVel::readVH5file(std::string filename, int nPoints, int nSteps){
         std::cout << "\tReading file " + filename << std::endl;
 #if _USEHF > 0
         if (Vtype == ic::VelType::STEADY){
@@ -309,7 +304,7 @@ namespace TRANS{
         return false;
     }
 
-    bool transVel::readVfile(std::string filename, int nPoints, int nSteps, ic::coordDim dim){
+    bool CloudVel::readVfile(std::string filename, int nPoints, int nSteps, ic::coordDim dim){
         std::cout << "\tReading file " + filename << std::endl;
         std::ifstream datafile(filename.c_str());
         if (!datafile.good()){
@@ -331,7 +326,7 @@ namespace TRANS{
         return true;
     }
 
-    bool transVel::readSteadyVfile(std::string filename, int nPoints){
+    bool CloudVel::readSteadyVfile(std::string filename, int nPoints){
         std::cout << "\tReading file " + filename << std::endl;
         std::ifstream datafile(filename.c_str());
         if (!datafile.good()){
@@ -363,7 +358,7 @@ namespace TRANS{
         return true;
     }
 
-    bool transVel::readTimeSteps(std::string filename, std::vector<double>& TS){
+    bool CloudVel::readTimeSteps(std::string filename, std::vector<double>& TS){
         std::cout << "\tReading file " + filename << std::endl;
         std::ifstream datafile(filename.c_str());
         if (!datafile.good()){
@@ -387,7 +382,7 @@ namespace TRANS{
         return true;
     }
 
-//    bool transVel::readXYZfile(std::string prefix, std::string suffix, int ld_zero){
+//    bool CloudVel::readXYZfile(std::string prefix, std::string suffix, int ld_zero){
 //        std::string fileXYZ = prefix + "XYZ_" + ic::num2Padstr(/*dbg_rank*/world.rank(), ld_zero) + suffix;
 //        std::cout << "Reading file " + fileXYZ << std::endl;
 //        std::ifstream datafile(fileXYZ.c_str());
@@ -436,7 +431,7 @@ namespace TRANS{
 //        return true;
 //    }
 
-    void transVel::calcVelocity(ic::vec3& vel,
+    void CloudVel::calcVelocity(ic::vec3& vel,
                                 std::vector<int>& ids,
                                 std::vector<double>& weights,
                                 double tm){
@@ -451,7 +446,7 @@ namespace TRANS{
         ic::vec3 sumWVal;
         vel.zero();
         for (unsigned int i = 0; i < ids.size(); ++i) {
-            vel = VEL.getVelocity(ids[i], i1, i2, t, timeInterp);
+            vel = VEL.getVelocity(ids[i], i1, i2, t);
             sumW += weights[i];
             sumWVal = sumWVal + vel * weights[i];
         }
@@ -486,17 +481,17 @@ namespace TRANS{
 //        ic::PrintStat(count_times, FrequencyStat, calc_time, max_calc_time);
     }
 
-    void transVel::reset() {
+    void CloudVel::reset() {
         bIsInitialized = false;
     }
 
-    void transVel::getVec3Data(std::vector<ic::vec3> &data) {
+    void CloudVel::getVec3Data(std::vector<ic::vec3> &data) {
         pp = data[0];
         ll = data[1];
         uu = data[2];
     }
 
-    void transVel::updateStep(double &step) {
+    void CloudVel::updateStep(double &step) {
         double stepLen, stepTime;
         double dst = ic::diameter_along_velocity(pp, vv, ll, uu);
 
