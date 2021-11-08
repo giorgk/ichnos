@@ -50,7 +50,7 @@ namespace ICHNOS{
         bool readVelocityFiles();
         bool readVH5file(std::string filename, int nPoints, int nSteps);
         bool readFaceIds(std::string filename);
-        bool readElementVelocity();
+        bool readXYZVelocity();
         bool readFaceVelocity();
 
         void elementInterpolation(vec3& vel,
@@ -59,7 +59,7 @@ namespace ICHNOS{
         void nodeInterpolation(vec3& vel,
                                std::vector<int>& ids,
                                std::vector<double>& weights,
-                               double time = 0);
+                               int i1, int i2, double t);
         void faceInterpolation(vec3& vel,
                                std::vector<int>& ids,
                                std::vector<double>& weights,
@@ -92,8 +92,9 @@ namespace ICHNOS{
                 ("Velocity.TimeInterp", po::value<std::string>(), "Interpolation type between time steps")
                 ("Velocity.RepeatTime", po::value<double>()->default_value(0.0), "The number of days to repeat after the and of time steps")
                 ("Velocity.Multiplier", po::value<double>()->default_value(1.0), "This is a multiplier to scale velocity")
-                ("Velocity.FaceIdFile", po::value<std::string>(), "Face ids for each element")
+                ("Velocity.FaceIdFile", po::value<std::string>(), "Face ids for each element, Required for FACE type")
                 ("MESH2D.Nlayers", po::value<int>()->default_value(4), "Number of layers")
+                ("MESH2D.Meshfile", po::value<std::string>(), "An array of the Mesh2D ids")
                 //("Velocity.Scale", po::value<double>()->default_value(1.0), "Scale the domain before velocity calculation")
                 //("Velocity.Power", po::value<double>()->default_value(3.0), "Power of the IDW interpolation")
                 //("Velocity.InitDiameter", po::value<double>()->default_value(5000), "Initial diameter")
@@ -185,9 +186,14 @@ namespace ICHNOS{
             if (!tf){return false;}
             VEL.setTSvalue(TimeSteps);
 
-            if (interp_type != ic::MeshVelInterpType::ELEMENT) {
+            if (interp_type == ic::MeshVelInterpType::FACE) {
                 std::string faceidsfile = vm_vfo["Velocity.FaceIdFile"].as<std::string>();
                 tf = readFaceIds(faceidsfile);
+                if (!tf) { return false;}
+            }
+            else if (interp_type == ic::MeshVelInterpType::NODE){
+                std::string meshfile = vm_vfo["MESH2D.Meshfile"].as<std::string>();
+                tf = readFaceIds(meshfile);
                 if (!tf) { return false;}
             }
         }
@@ -218,7 +224,13 @@ namespace ICHNOS{
         switch (interp_type) {
             case ic::MeshVelInterpType::ELEMENT:
             {
-                bool tf = readElementVelocity();
+                bool tf = readXYZVelocity();
+                if (!tf){return false;}
+                break;
+            }
+            case ic::MeshVelInterpType::NODE:
+            {
+                bool tf = readXYZVelocity();
                 if (!tf){return false;}
                 break;
             }
@@ -298,7 +310,7 @@ namespace ICHNOS{
                 std::vector<int> tmp_ids;
                 for (int j = 0; j < fids[i].size(); ++j){
                     if (fids[i][j] != 0)
-                        tmp_ids.push_back(fids[i][j]);
+                        tmp_ids.push_back(fids[i][j]-1);
                 }
                 FaceIds.push_back(tmp_ids);
             }
@@ -322,7 +334,7 @@ namespace ICHNOS{
             }
             case ic::MeshVelInterpType::NODE:
             {
-                nodeInterpolation(vel, ids, weights, tm);
+                nodeInterpolation(vel, ids, weights, i1, i2, t);
                 break;
             }
             case ic::MeshVelInterpType::FACE:
@@ -371,12 +383,45 @@ namespace ICHNOS{
     void Mesh2DVel::nodeInterpolation(vec3& vel,
                                       std::vector<int>& ids,
                                       std::vector<double>& weights,
-                                      double time) {
+                                      int i1, int i2, double t) {
         int elid = ids[0];
         int lay = ids[1];
+        double n1, n2, n3, n4;
+        std::vector<double> N;
+        if (FaceIds[elid].size() == 4) {
+            QuadShapeFunctions(weights[0], weights[1], n1, n2, n3, n4);
+            N.push_back(n1);
+            N.push_back(n2);
+            N.push_back(n3);
+            N.push_back(n4);
+        }
+        else if (FaceIds[elid].size() == 3){
+            N.push_back(weights[0]);
+            N.push_back(weights[1]);
+            N.push_back(1 - weights[0] - weights[1]);
+        }
 
 
+        std::vector<int> idxTop;
+        std::vector<int> idxBot;
+        for (unsigned int i = 0; i < FaceIds[elid].size(); ++i){
+            idxTop.push_back(FaceIds[elid][i] + lay*nXYZpnts);
+            idxBot.push_back(FaceIds[elid][i] + (lay+1)*nXYZpnts);
+        }
+        std::vector<vec3> velTop, velBot;
+        VEL.getVelocity(idxTop,i1,i2,t,velTop);
+        VEL.getVelocity(idxBot,i1,i2,t,velBot);
+
+        vec3 vt, vb;
+        for (unsigned int i = 0; i < velTop.size(); ++i){
+            vt = vt + velTop[i]*N[i];
+            vb = vb + velBot[i]*N[i];
+        }
+
+        vel = vt * weights[2] + vb * (1.0-weights[2]) ;
     }
+
+
     void Mesh2DVel::faceInterpolation(ic::vec3& vel,
                                       std::vector<int>& ids,
                                       std::vector<double>& weights,
@@ -387,7 +432,7 @@ namespace ICHNOS{
 
     }
 
-    bool Mesh2DVel::readElementVelocity() {
+    bool Mesh2DVel::readXYZVelocity() {
         switch (Vtype) {
             case ic::VelType::STEADY:
             {

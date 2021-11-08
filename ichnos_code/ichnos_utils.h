@@ -635,7 +635,7 @@ namespace ICHNOS {
 		bool readParticleFile(std::string filename, std::vector <Streamline>& S, VelType vt) {
 			std::ifstream datafile(filename.c_str());
 			if (!datafile.good()) {
-				std::cout << "Can't open the file" << filename << std::endl;
+				std::cout << "Can't open the file " << filename << std::endl;
 				return false;
 			}
 			else {

@@ -324,6 +324,7 @@ namespace ICHNOS {
         void setTSvalue(std::vector<double>& TS_in);
         void findIIT(double x, int &i1, int &i2, double &t);
         vec3 getVelocity(int pnt, int i1, int i2, double t);
+        void getVelocity(std::vector<int> &pnts, int i1, int i2, double t, std::vector<vec3> &vel_out);
         double getTSvalue(int idx);
         void setNrepeatDays(double n){nDaysRepeat = n;}
         void setTimeInterpolationType(TimeInterpType tip_in){tip = tip_in;}
@@ -442,6 +443,13 @@ namespace ICHNOS {
         }
         else{
             return vec3(VX[pnt][i1], VY[pnt][i1],VZ[pnt][i1]);
+        }
+    }
+
+    void VelTR::getVelocity(std::vector<int> &pnts, int i1, int i2, double t, std::vector<vec3> &vel_out) {
+        vel_out.clear();
+        for (unsigned int i = 0; i <pnts.size(); ++i){
+            vel_out.push_back(getVelocity(pnts[i],i1,i2,t));
         }
     }
 
