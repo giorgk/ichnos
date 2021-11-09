@@ -278,7 +278,59 @@ namespace ICHNOS {
         invd = a*detA;
     }
 
-    bool isPointInQuad(vec3 &p, vec3 &p1, vec3 &p2, vec3 &p3, vec3 &p4, vec3 &uv, double tol = 0.000001){
+    bool QuadUVApprox(vec3 &p, vec3 &p1, vec3 &p2, vec3 &p3, vec3 &p4, vec3 &uv){
+        bool out = false;
+        vec3 p2d(p.x, p.y, 0.0);
+        double u = 0;
+        double v = 0;
+        double u_best = u;
+        double v_best = v;
+        vec3 puv;
+        local2GlobalCoord(u, v, p1, p2, p3, p4, puv);
+        double err = p2d.distance(puv.x, puv.y, puv.z);
+        double err_best = err;
+        double err_prev = err;
+        int iter = 0;
+
+        double duv = 0.5;
+        std::vector<int> du{-1, -1, 1, 1};
+        std::vector<int> dv{-1, 1, -1, 1};
+        while (true){
+            for (unsigned int i = 0; i < du.size(); ++i){
+                u = u_best + du[i]*duv;
+                v = v_best + dv[i]*duv;
+                local2GlobalCoord(u, v, p1, p2, p3, p4, puv);
+                err = p2d.distance(puv.x, puv.y, puv.z);
+                if (err < err_best){
+                    u_best = u;
+                    v_best = v;
+                    err_best = err;
+                }
+            }
+            u = u_best;
+            v = v_best;
+            duv = duv/2;
+            if (err_best < 0.5){
+                break;
+            }
+            if (iter > 20 && abs(err_prev - err_best) < 0.01 ){
+                break;
+            }
+            iter++;
+            if (iter > 50){
+                break;
+            }
+            err_prev = err_best;
+        }
+        if (err_best < 1){
+            uv.x = u_best;
+            uv.y = v_best;
+            out = true;
+        }
+        return out;
+    }
+
+    void QuadInverseMapping(vec3 &p, vec3 &p1, vec3 &p2, vec3 &p3, vec3 &p4, vec3 &uv, double tol = 0.000001){
         // See https://doi.org/10.1115/1.4027667
         vec3 p2d(p.x, p.y, 0.0);
         double u = 0;
@@ -302,26 +354,30 @@ namespace ICHNOS {
             //DBG::displayVectorMatlab(puv);
             dst = p2d.distance(puv.x, puv.y, puv.z);
             iter++;
-            if (iter > 2000) {
-                std::cout << "Failed to find the parametric coordinates for the point:" << std::endl;
-                std::cout << std::setprecision(5) << std::fixed << p.x << "," << p.y << std::endl;
-                std::cout << "for the following quad:" << std::endl;
-                std::cout << std::setprecision(5) << std::fixed << p1.x << "," << p1.y << std::endl;
-                std::cout << std::setprecision(5) << std::fixed << p2.x << "," << p2.y << std::endl;
-                std::cout << std::setprecision(5) << std::fixed << p3.x << "," << p3.y << std::endl;
-                std::cout << std::setprecision(5) << std::fixed << p4.x << "," << p4.y << std::endl;
+            if (iter > 2000 || dst > 99999999) {
+                bool tf1 = QuadUVApprox(p,p1,p2,p3,p4,uv);
+                u = uv.x;
+                v = uv.y;
+                if (tf1){
+                    std::cout << "QuadUVApprox was used for the inverse parametric mapping" << std::endl;
+                }
+                else{
+                    std::cout << "Failed to find the parametric coordinates for the point:" << std::endl;
+                    std::cout << std::setprecision(5) << std::fixed << p.x << "," << p.y << std::endl;
+                    std::cout << "for the following quad:" << std::endl;
+                    std::cout << std::setprecision(5) << std::fixed << p1.x << "," << p1.y << std::endl;
+                    std::cout << std::setprecision(5) << std::fixed << p2.x << "," << p2.y << std::endl;
+                    std::cout << std::setprecision(5) << std::fixed << p3.x << "," << p3.y << std::endl;
+                    std::cout << std::setprecision(5) << std::fixed << p4.x << "," << p4.y << std::endl;
+                    std::cout << " uv coords were set to the center of element" << std::endl;
+                    u = 0;
+                    v = 0;
+                }
                 break;
             }
         }
         uv.x = u;
         uv.y = v;
-        if (u >= -1.0 && u <= 1.0 && v >= -1.0 && v <= 1.0){
-            return true;
-        }
-        else{
-            return false;
-        }
-        return false;
     }
 
     std::string getExtension(std::string filename){
@@ -863,6 +919,7 @@ namespace ICHNOS {
 				<< pp.getP().x << " " << pp.getP().y << " " << pp.getP().z << " "
 				<< std::setprecision(6) << std::scientific
 				<< pp.getV().x << " " << pp.getV().y << " " << pp.getV().z << " "
+                //<< pp.getV().len() << " "
                 << std::setprecision(2) << std::fixed
 				<< pp.getTime() << std::endl;
 		}

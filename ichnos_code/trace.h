@@ -284,7 +284,7 @@ namespace ICHNOS {
 			S.InitialVelocity(v);
 
 
-		S.getLastParticle().displayAsVEX(true);
+		//S.getLastParticle().displayAsVEX(true);
 
 		int count_iterations = 0;
 		//DEBUG::displayParticleasVex(S.getLastParticle(), true);
@@ -304,7 +304,7 @@ namespace ICHNOS {
 				//er = CheckNewPointAndCalcVelocity(p, v/*, proc*/, tm);
 				//ICHNOS::DBG::displayPVasVex(p, v);
 				S.AddParticle(Particle(p, v, S.getLastParticle(), tm));
-				S.getLastParticle().displayAsVEX(true);
+				//S.getLastParticle().displayAsVEX(true);
 				// In the unlike event that the velocity of the point is zero
 				// we can avoid unnessecary iterations by simply exit
 				if (v.isZero() & (er == ExitReason::NO_EXIT))

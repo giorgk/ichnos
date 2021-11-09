@@ -82,29 +82,30 @@ namespace ICHNOS{
 
         }
         else if (mesh[elid].size() == 4){
-            bool tf1, tf2;
-            tf1 = isPointInTriangle(p,
+            bool tf;
+            tf = isPointInTriangle(p,
                                      nodes[mesh[elid][0]],
                                      nodes[mesh[elid][1]],
                                      nodes[mesh[elid][2]],
                                      uv);
-            if (!tf1){
-                tf2 = isPointInTriangle(p,
+            if (!tf){
+                tf = isPointInTriangle(p,
                                         nodes[mesh[elid][0]],
                                         nodes[mesh[elid][2]],
                                         nodes[mesh[elid][3]],
                                         uv);
             }
-            if (!tf1 && !tf2){
+            if (!tf){
                 return false;
             }
             else{
-                return isPointInQuad(p,
-                                     nodes[mesh[elid][0]],
-                                     nodes[mesh[elid][1]],
-                                     nodes[mesh[elid][2]],
-                                     nodes[mesh[elid][3]],
-                                     uv,invtol);
+                QuadInverseMapping(p,
+                                  nodes[mesh[elid][0]],
+                                  nodes[mesh[elid][1]],
+                                  nodes[mesh[elid][2]],
+                                  nodes[mesh[elid][3]],
+                                  uv, invtol);
+                return true;
             }
         }
         else{

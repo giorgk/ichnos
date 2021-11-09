@@ -42,7 +42,7 @@ namespace ICHNOS{
 
         int FrequencyStat;
         int nPoints;
-        int nXYZpnts;
+        int nVelNodesPerLayer;
         int nSteps;
         int nLayers;
         ic::TimeData tm_data;
@@ -74,7 +74,7 @@ namespace ICHNOS{
     }
 
     bool Mesh2DVel::readVelocityField(std::string vf_file, int nPnts) {
-        nXYZpnts = nPnts;
+
         if (world.rank() == 0)
             std::cout << "--> Velocity configuration file: " << vf_file << std::endl;
 
@@ -225,12 +225,14 @@ namespace ICHNOS{
             case ic::MeshVelInterpType::ELEMENT:
             {
                 bool tf = readXYZVelocity();
+                nVelNodesPerLayer = nPoints/(nLayers);
                 if (!tf){return false;}
                 break;
             }
             case ic::MeshVelInterpType::NODE:
             {
                 bool tf = readXYZVelocity();
+                nVelNodesPerLayer = nPoints/(nLayers+1);
                 if (!tf){return false;}
                 break;
             }
@@ -376,7 +378,7 @@ namespace ICHNOS{
         // In element interpolation we only need the ids
         int elid = ids[0];
         int lay = ids[1];
-        int idx = elid + lay*nXYZpnts;
+        int idx = elid + lay * nVelNodesPerLayer;
         vel = VEL.getVelocity(idx, i1, i2, t);
     }
 
@@ -405,8 +407,8 @@ namespace ICHNOS{
         std::vector<int> idxTop;
         std::vector<int> idxBot;
         for (unsigned int i = 0; i < FaceIds[elid].size(); ++i){
-            idxTop.push_back(FaceIds[elid][i] + lay*nXYZpnts);
-            idxBot.push_back(FaceIds[elid][i] + (lay+1)*nXYZpnts);
+            idxTop.push_back(FaceIds[elid][i] + lay * nVelNodesPerLayer);
+            idxBot.push_back(FaceIds[elid][i] + (lay+1) * nVelNodesPerLayer);
         }
         std::vector<vec3> velTop, velBot;
         VEL.getVelocity(idxTop,i1,i2,t,velTop);
