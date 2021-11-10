@@ -38,13 +38,19 @@ namespace ICHNOS{
         double porosityValue = 1.0;
         ic::MeshVelInterpType interp_type = ic::MeshVelInterpType::UNKNOWN;
 
+        std::vector<vec3> nds;
+        std::vector<std::vector<int>> msh;
+
 
 
         int FrequencyStat;
         int nPoints;
-        int nVelNodesPerLayer;
         int nSteps;
         int nLayers;
+        int nFaces;
+        int nElements;
+        int nNodes;
+        int nTotalFaces;
         ic::TimeData tm_data;
 
         bool readVelocityFiles();
@@ -63,7 +69,7 @@ namespace ICHNOS{
         void faceInterpolation(vec3& vel,
                                std::vector<int>& ids,
                                std::vector<double>& weights,
-                               double time = 0);
+                               int i1, int i2, double t);
     };
 
     Mesh2DVel::Mesh2DVel(boost::mpi::communicator &world_in)
@@ -92,9 +98,13 @@ namespace ICHNOS{
                 ("Velocity.TimeInterp", po::value<std::string>(), "Interpolation type between time steps")
                 ("Velocity.RepeatTime", po::value<double>()->default_value(0.0), "The number of days to repeat after the and of time steps")
                 ("Velocity.Multiplier", po::value<double>()->default_value(1.0), "This is a multiplier to scale velocity")
-                ("Velocity.FaceIdFile", po::value<std::string>(), "Face ids for each element, Required for FACE type")
+                ("MESH2D.FaceIdFile", po::value<std::string>(), "Face ids for each element, Required for FACE type")
                 ("MESH2D.Nlayers", po::value<int>()->default_value(4), "Number of layers")
+                ("MESH2D.NodeFile", po::value<std::string>(), "An array of the node coordinates")
                 ("MESH2D.Meshfile", po::value<std::string>(), "An array of the Mesh2D ids")
+                ("MESH2D.Nfaces", po::value<int>()->default_value(0), "Number of faces per layer")
+                ("MESH2D.Nelements", po::value<int>()->default_value(0), "Number of elements per layer")
+                ("MESH2D.Nnodes", po::value<int>()->default_value(0), "Number of nodes per layer")
                 //("Velocity.Scale", po::value<double>()->default_value(1.0), "Scale the domain before velocity calculation")
                 //("Velocity.Power", po::value<double>()->default_value(3.0), "Power of the IDW interpolation")
                 //("Velocity.InitDiameter", po::value<double>()->default_value(5000), "Initial diameter")
@@ -145,6 +155,10 @@ namespace ICHNOS{
 
             multiplier = vm_vfo["Velocity.Multiplier"].as<double>();
             nLayers = vm_vfo["MESH2D.Nlayers"].as<int>();
+            nNodes = vm_vfo["MESH2D.Nnodes"].as<int>();
+            nElements = vm_vfo["MESH2D.Nelements"].as<int>();
+            nFaces = vm_vfo["MESH2D.Nfaces"].as<int>();
+            nTotalFaces = nFaces*nLayers;
 
             // Read the time step
             std::vector<double> TimeSteps;
@@ -187,9 +201,36 @@ namespace ICHNOS{
             VEL.setTSvalue(TimeSteps);
 
             if (interp_type == ic::MeshVelInterpType::FACE) {
-                std::string faceidsfile = vm_vfo["Velocity.FaceIdFile"].as<std::string>();
+                std::string faceidsfile = vm_vfo["MESH2D.FaceIdFile"].as<std::string>();
                 tf = readFaceIds(faceidsfile);
                 if (!tf) { return false;}
+                {// read Nodes
+                    std::string nodefile = vm_vfo["MESH2D.NodeFile"].as<std::string>();
+                    std::vector<std::vector<double>> tmp;
+                    tf = READ::read2Darray(nodefile,2,tmp);
+                    if (!tf) { return false;}
+                    for (unsigned int i = 0; i < tmp.size(); ++i){
+                        nds.push_back(vec3(tmp[i][0], tmp[i][1], 0.0));
+                    }
+                }
+
+                {// read mesh
+                    std::string mshfile = vm_vfo["MESH2D.Meshfile"].as<std::string>();
+                    std::vector<std::vector<int>> tmp;
+                    tf = READ::read2Darray(mshfile,2,tmp);
+                    if (!tf) { return false;}
+                    for (unsigned int i = 0; i < tmp.size(); ++i){
+                        std::vector<int>tmp_ids;
+                        for(unsigned int j = 0; tmp[i].size(); ++j){
+                            if (tmp[i][j] != 0){
+                                tmp_ids.push_back(tmp[i][j] - 1);
+                            }
+                        }
+                        msh.push_back(tmp_ids);
+                    }
+                }
+
+
             }
             else if (interp_type == ic::MeshVelInterpType::NODE){
                 std::string meshfile = vm_vfo["MESH2D.Meshfile"].as<std::string>();
@@ -225,14 +266,12 @@ namespace ICHNOS{
             case ic::MeshVelInterpType::ELEMENT:
             {
                 bool tf = readXYZVelocity();
-                nVelNodesPerLayer = nPoints/(nLayers);
                 if (!tf){return false;}
                 break;
             }
             case ic::MeshVelInterpType::NODE:
             {
                 bool tf = readXYZVelocity();
-                nVelNodesPerLayer = nPoints/(nLayers+1);
                 if (!tf){return false;}
                 break;
             }
@@ -311,8 +350,9 @@ namespace ICHNOS{
             for (int i = 0; i < fids.size(); i++){
                 std::vector<int> tmp_ids;
                 for (int j = 0; j < fids[i].size(); ++j){
-                    if (fids[i][j] != 0)
-                        tmp_ids.push_back(fids[i][j]-1);
+                    if (fids[i][j] != 0){
+                        tmp_ids.push_back(fids[i][j]);
+                    }
                 }
                 FaceIds.push_back(tmp_ids);
             }
@@ -341,7 +381,7 @@ namespace ICHNOS{
             }
             case ic::MeshVelInterpType::FACE:
             {
-                faceInterpolation(vel, ids, weights, tm);
+                faceInterpolation(vel, ids, weights, i1, i2, t);
                 break;
             }
         }
@@ -378,7 +418,7 @@ namespace ICHNOS{
         // In element interpolation we only need the ids
         int elid = ids[0];
         int lay = ids[1];
-        int idx = elid + lay * nVelNodesPerLayer;
+        int idx = elid + lay * nElements;
         vel = VEL.getVelocity(idx, i1, i2, t);
     }
 
@@ -407,8 +447,8 @@ namespace ICHNOS{
         std::vector<int> idxTop;
         std::vector<int> idxBot;
         for (unsigned int i = 0; i < FaceIds[elid].size(); ++i){
-            idxTop.push_back(FaceIds[elid][i] + lay * nVelNodesPerLayer);
-            idxBot.push_back(FaceIds[elid][i] + (lay+1) * nVelNodesPerLayer);
+            idxTop.push_back(FaceIds[elid][i] + lay * nNodes);
+            idxBot.push_back(FaceIds[elid][i] + (lay+1) * nNodes);
         }
         std::vector<vec3> velTop, velBot;
         VEL.getVelocity(idxTop,i1,i2,t,velTop);
@@ -427,9 +467,64 @@ namespace ICHNOS{
     void Mesh2DVel::faceInterpolation(ic::vec3& vel,
                                       std::vector<int>& ids,
                                       std::vector<double>& weights,
-                                      double time) {
+                                      int i1, int i2, double t) {
         int elid = ids[0];
         int lay = ids[1];
+
+        double vf1, vf2, vf3, vf4;// Face velocities
+        double vt, vb;
+        vec3 tmp;
+        int idx;
+        if (FaceIds[elid].size() == 4){
+            // face 1
+            idx = std::abs(FaceIds[elid][0]) - 1 + lay*nFaces;
+            tmp = VEL.getVelocity(idx, i1, i2, t);
+            vf1 = -1.0*sgnFace(FaceIds[elid][0]) * tmp.x;
+            // face 2
+            idx = std::abs(FaceIds[elid][1]) - 1 + lay*nFaces;
+            tmp = VEL.getVelocity(idx, i1, i2, t);
+            vf2 = sgnFace(FaceIds[elid][1]) * tmp.x;
+            // face 3
+            idx = std::abs(FaceIds[elid][2]) - 1 + lay*nFaces;
+            tmp = VEL.getVelocity(idx, i1, i2, t);
+            vf3 = sgnFace(FaceIds[elid][2]) * tmp.x;
+            //face 4
+            idx = std::abs(FaceIds[elid][3]) - 1 + lay*nFaces;
+            tmp = VEL.getVelocity(idx, i1, i2, t);
+            vf4 = -1.0*sgnFace(FaceIds[elid][3]) * tmp.x;
+
+            double u01 = weights[0]/2.0 + 0.5;
+            double v01 = weights[1]/2.0 + 0.5;
+            double vxt = u01 * vf2 + (1 - u01) * vf4; // Velocity on local space
+            double vyt = (1 - v01) * vf1 + v01 * vf3;
+            double vlen = std::sqrt(vxt*vxt + vyt*vyt);
+            double a, b, c, d;
+            calculateQuadJacobian(weights[0], weights[1],
+                                  nds[msh[elid][0]], nds[msh[elid][1]],
+                                  nds[msh[elid][2]], nds[msh[elid][3]],
+                                  a, b, c, d);
+            double vx = a * vxt + c * vyt; // Velocity on global space
+            double vy = b * vxt + d * vyt;
+            double vlen1 = std::sqrt(vx*vx + vy*vy);
+            vx = vlen*(vx / vlen1);
+            vy = vlen*(vy / vlen1);
+            vel.x = vx;
+            vel.y = vy;
+
+            // Top vertical velocity
+            idx = nTotalFaces + elid + lay*nElements;
+            tmp = VEL.getVelocity(idx, i1, i2, t);
+            double vt = tmp.x;
+            // Bottom vertical velocity
+            idx = nTotalFaces + elid + (lay+1)*nElements;
+            tmp = VEL.getVelocity(idx, i1, i2, t);
+            double vb = tmp.x;
+            vel.z = vt * weights[2] + vb * (1.0-weights[2]);
+        }
+        else if (FaceIds[elid].size() == 3){
+
+        }
+
 
 
     }
@@ -440,13 +535,13 @@ namespace ICHNOS{
             {
                 std::string filename = Prefix + ic::num2Padstr(world.rank(), leadingZeros) + Suffix;
                 if (Suffix.compare(".h5") == 0){
-                    std::cout << "MESH2D - Steady State - H5 input is not implemented yet" << std::endl;
+                    //TODO
+                    std::cout << "MESH2D xyz - Steady State - H5 input is not implemented yet" << std::endl;
                     return false;
                 }
                 std::cout << "\tReading file " + filename << std::endl;
                 std::ifstream datafile(filename.c_str());
                 if (!datafile.good()){
-                    //TODO
                     std::cout << "Can't open the file " << filename << std::endl;
                     return false;
                 }
@@ -482,14 +577,54 @@ namespace ICHNOS{
             }
 
         }
-
-
-
-        return true;
+        return false;
     }
 
     bool Mesh2DVel::readFaceVelocity() {
-        return true;
+        bool out = false;
+        switch (Vtype){
+            case ic::VelType::STEADY:
+            {
+                std::string filename = Prefix + ic::num2Padstr(world.rank(), leadingZeros) + Suffix;
+                if (Suffix.compare(".h5") == 0){
+                    //TODO
+                    std::cout << "MESH2D for Faces - Steady State - H5 input is not implemented yet" << std::endl;
+                    return false;
+                }
+                std::cout << "\tReading file " + filename << std::endl;
+                std::ifstream datafile(filename.c_str());
+                if (!datafile.good()){
+                    std::cout << "Can't open the file " << filename << std::endl;
+                    return false;
+                }
+                else{
+                    std::string line;
+                    double vf;
+                    std::vector<double> tmp;
+                    while (getline(datafile, line)){
+                        if (line.size() > 1){
+                            std::istringstream inp(line.c_str());
+                            inp >> vf;
+                            tmp.push_back(vf);
+                        }
+                    }
+                    datafile.close();
+                    nPoints = tmp.size();
+                    VEL.init(nPoints, nSteps, 1);
+                    for (unsigned int i = 0; i < tmp.size(); ++i){
+                        VEL.setVELvalue(tmp[i] * multiplier, i, 0, ic::coordDim::vx);
+                    }
+                    out = true;
+                }
+                break;
+            }
+            case ic::VelType::TRANS:
+            {
+                //TODO
+                break;
+            }
+        }
+        return out;
     }
 
 }

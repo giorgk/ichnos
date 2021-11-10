@@ -318,7 +318,7 @@ namespace ICHNOS {
     class VelTR{
     public:
         VelTR();
-        void init(int np, int nt);
+        void init(int np, int nt, int dim_in = 3);
         void setVELvalue(double v, int pnt, int step, coordDim dim);
         void setTSvalue(double v, int step);
         void setTSvalue(std::vector<double>& TS_in);
@@ -337,6 +337,7 @@ namespace ICHNOS {
 
         int nPoints;
         int nSteps;
+        int nDims;
         void findTimeStepIndex(int &i, int &ii, double x);
 
         double nDaysRepeat = 0;
@@ -350,15 +351,18 @@ namespace ICHNOS {
         nSteps(-9)
     {}
 
-    void VelTR::init(int np, int nt) {
+    void VelTR::init(int np, int nt, int dim_in) {
         nPoints = np;
         nSteps = nt;
+        nDims = dim_in;
         VX.clear();
         VY.clear();
         VZ.clear();
         VX.resize(nPoints, std::vector<double>(nSteps, 0));
-        VY.resize(nPoints, std::vector<double>(nSteps, 0));
-        VZ.resize(nPoints, std::vector<double>(nSteps, 0));
+        if (nDims >= 2)
+            VY.resize(nPoints, std::vector<double>(nSteps, 0));
+        if (nDims >= 3)
+            VZ.resize(nPoints, std::vector<double>(nSteps, 0));
         TS.clear();
         TS.resize(nSteps, 0);
     }
@@ -367,13 +371,13 @@ namespace ICHNOS {
         if (pnt >= nPoints || step >= nSteps || pnt < 0  || step < 0)
             return;
 
-        if (dim == coordDim::vx){
+        if (dim == coordDim::vx && nDims >= 1){
             VX[pnt][step] = v;
         }
-        else if (dim == coordDim::vy){
+        else if (dim == coordDim::vy && nDims >= 2){
             VY[pnt][step] = v;
         }
-        else if (dim == coordDim::vz){
+        else if (dim == coordDim::vz && nDims >= 1){
             VZ[pnt][step] = v;
         }
     }
@@ -437,12 +441,30 @@ namespace ICHNOS {
 
     vec3 VelTR::getVelocity(int pnt, int i1, int i2, double t){
         if (tip == TimeInterpType::LINEAR){
-            vec3 v1(VX[pnt][i1], VY[pnt][i1], VZ[pnt][i1]);
-            vec3 v2(VX[pnt][i2], VY[pnt][i2], VZ[pnt][i2]);
-            return v1*(1-t) + v2*t;
+            if (nDims == 3){
+                vec3 v1(VX[pnt][i1], VY[pnt][i1], VZ[pnt][i1]);
+                vec3 v2(VX[pnt][i2], VY[pnt][i2], VZ[pnt][i2]);
+                return v1*(1-t) + v2*t;
+            }
+            else if (nDims == 2){
+                vec3 v1(VX[pnt][i1], VY[pnt][i1], 0.0);
+                vec3 v2(VX[pnt][i2], VY[pnt][i2], 0.0);
+                return v1*(1-t) + v2*t;
+            }
+            else if (nDims == 1){
+                vec3 v1(VX[pnt][i1], 0.0, 0.0);
+                vec3 v2(VX[pnt][i2], 0.0, 0.0);
+                return v1*(1-t) + v2*t;
+            }
+
         }
         else{
-            return vec3(VX[pnt][i1], VY[pnt][i1],VZ[pnt][i1]);
+            if (nDims == 3)
+                return vec3(VX[pnt][i1], VY[pnt][i1], VZ[pnt][i1]);
+            else if (nDims == 2)
+                return vec3(VX[pnt][i1], VY[pnt][i1], 0.0);
+            else if (nDims == 1)
+                return vec3(VX[pnt][i1], 0.0, 0.0);
         }
     }
 

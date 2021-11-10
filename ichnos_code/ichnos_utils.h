@@ -42,6 +42,13 @@ namespace ICHNOS {
 		}
 	}
 
+
+	double sgnFace(int num){
+        if (num > 0) return 1.0;
+        if (num < 0) return -1.0;
+        return 0.0;
+	}
+
 	std::string num2Padstr(int i, int n) {
 		std::stringstream ss;
 		ss << std::setw(n) << std::setfill('0') << i;
