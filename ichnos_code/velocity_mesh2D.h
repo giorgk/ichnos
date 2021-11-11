@@ -217,11 +217,11 @@ namespace ICHNOS{
                 {// read mesh
                     std::string mshfile = vm_vfo["MESH2D.Meshfile"].as<std::string>();
                     std::vector<std::vector<int>> tmp;
-                    tf = READ::read2Darray(mshfile,2,tmp);
+                    tf = READ::read2Darray(mshfile,4,tmp);
                     if (!tf) { return false;}
                     for (unsigned int i = 0; i < tmp.size(); ++i){
                         std::vector<int>tmp_ids;
-                        for(unsigned int j = 0; tmp[i].size(); ++j){
+                        for(unsigned int j = 0; j < tmp[i].size(); ++j){
                             if (tmp[i][j] != 0){
                                 tmp_ids.push_back(tmp[i][j] - 1);
                             }
@@ -471,11 +471,10 @@ namespace ICHNOS{
         int elid = ids[0];
         int lay = ids[1];
 
-        double vf1, vf2, vf3, vf4;// Face velocities
-        double vt, vb;
         vec3 tmp;
         int idx;
         if (FaceIds[elid].size() == 4){
+            double vf1, vf2, vf3, vf4;// Face velocities
             // face 1
             idx = std::abs(FaceIds[elid][0]) - 1 + lay*nFaces;
             tmp = VEL.getVelocity(idx, i1, i2, t);
@@ -510,21 +509,49 @@ namespace ICHNOS{
             vy = vlen*(vy / vlen1);
             vel.x = vx;
             vel.y = vy;
-
-            // Top vertical velocity
-            idx = nTotalFaces + elid + lay*nElements;
-            tmp = VEL.getVelocity(idx, i1, i2, t);
-            double vt = tmp.x;
-            // Bottom vertical velocity
-            idx = nTotalFaces + elid + (lay+1)*nElements;
-            tmp = VEL.getVelocity(idx, i1, i2, t);
-            double vb = tmp.x;
-            vel.z = vt * weights[2] + vb * (1.0-weights[2]);
         }
         else if (FaceIds[elid].size() == 3){
+            double vf1, vf2, vf3;// Face velocities
+            // face 1
+            idx = std::abs(FaceIds[elid][0]) - 1 + lay*nFaces;
+            tmp = VEL.getVelocity(idx, i1, i2, t);
+            vf1 = sgnFace(FaceIds[elid][0]) * tmp.x;
+            // face 2
+            idx = std::abs(FaceIds[elid][1]) - 1 + lay*nFaces;
+            tmp = VEL.getVelocity(idx, i1, i2, t);
+            vf2 = sgnFace(FaceIds[elid][1]) * tmp.x;
+            // face 3
+            idx = std::abs(FaceIds[elid][2]) - 1 + lay*nFaces;
+            tmp = VEL.getVelocity(idx, i1, i2, t);
+            vf3 = sgnFace(FaceIds[elid][2]) * tmp.x;
 
+            double u = weights[0];
+            double v = weights[1];
+            double vxt = u*sqrt2*vf1 + (u-1)*vf2 + u*vf3; // Velocity on local space
+            double vyt = v*sqrt2*vf1 + v*vf2 + (v-1)*vf3;
+            double vlen = std::sqrt(vxt*vxt + vyt*vyt);
+            double a, b, c, d;
+            calculateTriangleJacobian(nds[msh[elid][0]], nds[msh[elid][1]],
+                                      nds[msh[elid][2]], a, b, c, d);
+            double vx = a * vxt + c * vyt; // Velocity on global space
+            double vy = b * vxt + d * vyt;
+            double vlen1 = std::sqrt(vx*vx + vy*vy);
+            // Scale the normalized direction of the global scale with the velocity magnitude
+            vx = vlen*(vx / vlen1);
+            vy = vlen*(vy / vlen1);
+            vel.x = vx;
+            vel.y = vy;
         }
 
+        // Top vertical velocity
+        idx = nTotalFaces + elid + lay*nElements;
+        tmp = VEL.getVelocity(idx, i1, i2, t);
+        double vt = tmp.x;
+        // Bottom vertical velocity
+        idx = nTotalFaces + elid + (lay+1)*nElements;
+        tmp = VEL.getVelocity(idx, i1, i2, t);
+        double vb = tmp.x;
+        vel.z = vt * weights[2] + vb * (1.0-weights[2]);
 
 
     }

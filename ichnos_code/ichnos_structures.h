@@ -40,6 +40,8 @@
 
 
 namespace ICHNOS {
+
+    const double sqrt2 = std::sqrt(2.0);
 	/**
 	 * @brief This is a structure to hold parameters for the distribution of 
 	 * particles around the wells
@@ -440,6 +442,11 @@ namespace ICHNOS {
     }
 
     vec3 VelTR::getVelocity(int pnt, int i1, int i2, double t){
+        if (pnt >= nPoints){
+            std::cout << "The requested id:" << pnt << " exceeds the number of velocity points: " << nPoints << std::endl;
+            std::cout << "the returned velocity will be invalid" << std::endl;
+            return vec3(-99999,-99999,-99999);
+        }
         if (tip == TimeInterpType::LINEAR){
             if (nDims == 3){
                 vec3 v1(VX[pnt][i1], VY[pnt][i1], VZ[pnt][i1]);
@@ -456,7 +463,6 @@ namespace ICHNOS {
                 vec3 v2(VX[pnt][i2], 0.0, 0.0);
                 return v1*(1-t) + v2*t;
             }
-
         }
         else{
             if (nDims == 3)
@@ -466,6 +472,7 @@ namespace ICHNOS {
             else if (nDims == 1)
                 return vec3(VX[pnt][i1], 0.0, 0.0);
         }
+        return vec3(-99999,-99999,-99999);
     }
 
     void VelTR::getVelocity(std::vector<int> &pnts, int i1, int i2, double t, std::vector<vec3> &vel_out) {
@@ -733,9 +740,11 @@ namespace ICHNOS {
 
 	void Particle::displayAsVEX(bool printAttrib) {
 		vec3 vn = v * (1 / v.len());
-		std::cout << "p = addpoint(0,{" << p.x << "," << p.z << "," << p.y << ",});";
+		std::cout << std::setprecision(3) << std::fixed
+		          << "p = addpoint(0,{" << p.x << "," << p.z << "," << p.y << "});";
 		if (printAttrib)
-			std::cout << " setpointattrib(0,'N',p,{" << vn.x << "," << vn.z << "," << vn.y << "},'set');";
+			std::cout
+                    << std::setprecision(6) << std::fixed << " setpointattrib(0,'N',p,{" << vn.x << "," << vn.z << "," << vn.y << "},'set');";
 		std::cout << std::endl;
 	}
 

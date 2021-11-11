@@ -258,6 +258,14 @@ namespace ICHNOS {
         p.y = n1*p1.y + n2*p2.y + n3*p3.y + n4*p4.y;
     }
 
+    void calculateTriangleJacobian(vec3 &p1, vec3 &p2, vec3 &p3,
+                                   double &a, double &b, double &c, double &d){
+        a = p1.x - p3.x;
+        b = p1.y - p3.y;
+        c = p2.x - p3.x;
+        d = p2.y - p3.y;
+    }
+
     void calculateQuadJacobian(double u, double v, vec3 &p1, vec3 &p2, vec3 &p3, vec3 &p4,
                                double &a, double &b, double &c, double &d){
         double dn1 = 0.25*(v - 1);
@@ -366,17 +374,17 @@ namespace ICHNOS {
                 u = uv.x;
                 v = uv.y;
                 if (tf1){
-                    std::cout << "QuadUVApprox was used for the inverse parametric mapping" << std::endl;
+                    //std::cout << "QuadUVApprox was used for the inverse parametric mapping" << std::endl;
                 }
                 else{
-                    std::cout << "Failed to find the parametric coordinates for the point:" << std::endl;
-                    std::cout << std::setprecision(5) << std::fixed << p.x << "," << p.y << std::endl;
-                    std::cout << "for the following quad:" << std::endl;
-                    std::cout << std::setprecision(5) << std::fixed << p1.x << "," << p1.y << std::endl;
-                    std::cout << std::setprecision(5) << std::fixed << p2.x << "," << p2.y << std::endl;
-                    std::cout << std::setprecision(5) << std::fixed << p3.x << "," << p3.y << std::endl;
-                    std::cout << std::setprecision(5) << std::fixed << p4.x << "," << p4.y << std::endl;
-                    std::cout << " uv coords were set to the center of element" << std::endl;
+                    //std::cout << "Failed to find the parametric coordinates for the point:" << std::endl;
+                    //std::cout << std::setprecision(5) << std::fixed << p.x << "," << p.y << std::endl;
+                    //std::cout << "for the following quad:" << std::endl;
+                    //std::cout << std::setprecision(5) << std::fixed << p1.x << "," << p1.y << std::endl;
+                    //std::cout << std::setprecision(5) << std::fixed << p2.x << "," << p2.y << std::endl;
+                    //std::cout << std::setprecision(5) << std::fixed << p3.x << "," << p3.y << std::endl;
+                    //std::cout << std::setprecision(5) << std::fixed << p4.x << "," << p4.y << std::endl;
+                    //std::cout << " uv coords were set to the center of element" << std::endl;
                     u = 0;
                     v = 0;
                 }
