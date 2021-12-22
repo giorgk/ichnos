@@ -229,8 +229,6 @@ namespace ICHNOS{
                         msh.push_back(tmp_ids);
                     }
                 }
-
-
             }
             else if (interp_type == ic::MeshVelInterpType::NODE){
                 std::string meshfile = vm_vfo["MESH2D.Meshfile"].as<std::string>();
@@ -326,38 +324,30 @@ namespace ICHNOS{
     bool Mesh2DVel::readFaceIds(std::string filename) {
 #if _USEHF > 0
         std::string ext = ic::getExtension(filename);
+        std::vector<std::vector<int>> fids;
+        bool getfid = false;
         if (ext.compare(".h5") == 0){
             const std::string FIDNameSet("FACEID");
             HighFive::File HDFNfile(filename, HighFive::File::ReadOnly);
             HighFive::DataSet datasetFID = HDFNfile.getDataSet(FIDNameSet);
-            std::vector<std::vector<int>> fids;
             datasetFID.read(fids);
-            for (int i = 0; i < fids[0].size(); i++){
-                std::vector<int> tmp_ids;
-                for (int j = 0; j < fids.size(); ++j){
-                    if (fids[j][i] != 0)
-                        tmp_ids.push_back(fids[j][i]);
-                }
-                FaceIds.push_back(tmp_ids);
-            }
-            return true;
+            getfid = true;
         }
 #endif
-        {
-            std::vector<std::vector<int>> fids;
+        if (!getfid){
             bool tf = ic::READ::read2Darray(filename,4,fids);
             if (!tf){return false;}
-            for (int i = 0; i < fids.size(); i++){
-                std::vector<int> tmp_ids;
-                for (int j = 0; j < fids[i].size(); ++j){
-                    if (fids[i][j] != 0){
-                        tmp_ids.push_back(fids[i][j]);
-                    }
-                }
-                FaceIds.push_back(tmp_ids);
-            }
-            return true;
         }
+        for (int i = 0; i < fids.size(); i++){
+            std::vector<int> tmp_ids;
+            for (int j = 0; j < fids[i].size(); ++j){
+                if (fids[i][j] != 0){
+                    tmp_ids.push_back(fids[i][j]);
+                }
+            }
+            FaceIds.push_back(tmp_ids);
+        }
+        return true;
     }
 
     void Mesh2DVel::calcVelocity(vec3 &vel, std::vector<int> &ids, std::vector<double> &weights, double tm) {
@@ -447,8 +437,8 @@ namespace ICHNOS{
         std::vector<int> idxTop;
         std::vector<int> idxBot;
         for (unsigned int i = 0; i < FaceIds[elid].size(); ++i){
-            idxTop.push_back(FaceIds[elid][i] + lay * nNodes);
-            idxBot.push_back(FaceIds[elid][i] + (lay+1) * nNodes);
+            idxTop.push_back(FaceIds[elid][i]-1 + lay * nNodes);
+            idxBot.push_back(FaceIds[elid][i]-1 + (lay+1) * nNodes);
         }
         std::vector<vec3> velTop, velBot;
         VEL.getVelocity(idxTop,i1,i2,t,velTop);

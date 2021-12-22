@@ -345,6 +345,13 @@ namespace ICHNOS {
         return out;
     }
 
+    int getSign(int a){
+        if ( a < 0)
+            return -1;
+        else
+            return 1;
+    }
+
     void QuadInverseMapping(vec3 &p, vec3 &p1, vec3 &p2, vec3 &p3, vec3 &p4, vec3 &uv, double tol = 0.000001){
         // See https://doi.org/10.1115/1.4027667
         vec3 p2d(p.x, p.y, 0.0);
@@ -394,6 +401,100 @@ namespace ICHNOS {
         uv.x = u;
         uv.y = v;
     }
+
+    void printFailedInverseQuadInfo(vec3 &p, vec3 &p1, vec3 &p2, vec3 &p3, vec3 &p4){
+        std::cout << "Failed to find the parametric coordinates for the point:" << std::endl;
+        std::cout << std::setprecision(5) << std::fixed << p.x << "," << p.y << std::endl;
+        std::cout << "for the following quad:" << std::endl;
+        std::cout << std::setprecision(5) << std::fixed << p1.x << "," << p1.y << std::endl;
+        std::cout << std::setprecision(5) << std::fixed << p2.x << "," << p2.y << std::endl;
+        std::cout << std::setprecision(5) << std::fixed << p3.x << "," << p3.y << std::endl;
+        std::cout << std::setprecision(5) << std::fixed << p4.x << "," << p4.y << std::endl;
+        std::cout << " uv coords were set to the center of element" << std::endl;
+    }
+
+    void QuadInverseMappingV1(vec3 &p, vec3 &p1, vec3 &p2, vec3 &p3, vec3 &p4, vec3 &uv){
+        //DBG::displayVectorMatlab(p);
+        //DBG::displayVectorMatlab(p1);
+        //DBG::displayVectorMatlab(p2);
+        //DBG::displayVectorMatlab(p3);
+        //DBG::displayVectorMatlab(p4);
+        double u = 0;
+        double v = 0;
+        double A = (p1.y - p2.y)*(p3.x - p4.x) - (p3.y - p4.y)*(p1.x - p2.x);
+        //A  = (Y(1)-Y(2))*(X(3)-X(4))-(Y(3)-Y(4))*(X(1)-X(2))
+        double BO = p1.y*p4.x - p2.y*p3.x + p3.y*p2.x - p4.y*p1.x;
+        //BO = Y(1)*X(4)-Y(2)*X(3)+Y(3)*X(2)-Y(4)*X(1)
+        double BX = -p1.y + p2.y - p3.y + p4.y;
+        //BX = -Y(1)+Y(2)-Y(3)+Y(4)
+        double BY = p1.x - p2.x + p3.x - p4.x;
+        //BY = X(1)-X(2)+X(3)-X(4)
+        double B = BO + BX*p.x + BY*p.y;
+        //B  = BO+BX*XP+BY*YP
+        double CO = -(p1.y + p2.y)*(p3.x + p4.x) + (p3.y + p4.y)*(p1.x + p2.x);
+        //CO = -(Y(1)+Y(2))*(X(3)+X(4))+(Y(3)+Y(4))*(X(1)+X(2))
+        double CX = p1.y + p2.y - p3.y - p4.y;
+        //CX = Y(1)+Y(2)-Y(3)-Y(4)
+        double CY = -p1.x - p2.x + p3.x + p4.x;
+        //CY = -X(1)-X(2)+X(3)+X(4)
+        double C = CO + 2.0*(CX*p.x + CY*p.y);
+        //C  = CO+2.0*(CX*XP+CY*YP)
+        if (std::abs(A) < 0.00000001){
+            if (std::abs(B) < 0.00000001){
+                printFailedInverseQuadInfo(p,p1,p2,p3,p4);
+            }
+            else{
+                u = -C/(2.0*B);
+            }
+        }
+        else{
+            double xt = B*B-A*C;
+            if (xt < 0.0){
+                printFailedInverseQuadInfo(p,p1,p2,p3,p4);
+            }
+            else{
+                u = (-B+std::sqrt(xt))/A;
+            }
+        }
+        A = (p2.y - p3.y)*(p1.x - p4.x) - (p1.y - p4.y)*(p2.x - p3.x);
+        //A  = (Y(2)-Y(3))*(X(1)-X(4))-(Y(1)-Y(4))*(X(2)-X(3))
+        BO = p1.y*p2.x - p2.y*p1.x + p3.y*p4.x - p4.y*p3.x;
+        //BO = Y(1)*X(2)-Y(2)*X(1)+Y(3)*X(4)-Y(4)*X(3)
+        BX = -p1.y + p2.y - p3.y + p4.y;
+        //BX = -Y(1)+Y(2)-Y(3)+Y(4)
+        BY = p1.x - p2.x + p3.x - p4.x;
+        //BY = X(1)-X(2)+X(3)-X(4)
+        B = BO + BX*p.x + BY*p.y;
+        //B  = BO+BX*XP+BY*YP
+        CO = -(p1.y + p4.y)*(p2.x + p3.x) + (p2.y + p3.y)*(p1.x + p4.x);
+        //CO = -(Y(1)+Y(4))*(X(2)+X(3))+(Y(2)+Y(3))*(X(1)+X(4))
+        CX = p1.y - p2.y - p3.y + p4.y;
+        //CX = Y(1)-Y(2)-Y(3)+Y(4)
+        CY = -p1.x + p2.x + p3.x - p4.x;
+        //CY = -X(1)+X(2)+X(3)-X(4)
+        C = CO + 2.0*(CX*p.x + CY*p.y);
+        //C  = CO+2.0*(CX*XP+CY*YP)
+        if (std::abs(A) < 0.00000001){
+            if (std::abs(B) < 0.00000001){
+                printFailedInverseQuadInfo(p,p1,p2,p3,p4);
+            }
+            else{
+                v = -C/(2.0*B);
+            }
+        }
+        else{
+            double yt = B*B-A*C;
+            if (yt < 0.0){
+                printFailedInverseQuadInfo(p,p1,p2,p3,p4);
+            }
+            else{
+                v = (-B-std::sqrt(yt))/A;
+            }
+        }
+        uv.x = u;
+        uv.y = v;
+    }
+
 
     std::string getExtension(std::string filename){
         // https://www.fluentcpp.com/2017/04/21/how-to-split-a-string-in-c/

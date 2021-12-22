@@ -99,12 +99,18 @@ namespace ICHNOS{
                 return false;
             }
             else{
-                QuadInverseMapping(p,
-                                  nodes[mesh[elid][0]],
-                                  nodes[mesh[elid][1]],
-                                  nodes[mesh[elid][2]],
-                                  nodes[mesh[elid][3]],
-                                  uv, invtol);
+                QuadInverseMappingV1(p,
+                                     nodes[mesh[elid][0]],
+                                     nodes[mesh[elid][1]],
+                                     nodes[mesh[elid][2]],
+                                     nodes[mesh[elid][3]],
+                                     uv);
+                //QuadInverseMapping(p,
+                //                  nodes[mesh[elid][0]],
+                //                  nodes[mesh[elid][1]],
+                //                  nodes[mesh[elid][2]],
+                //                  nodes[mesh[elid][3]],
+                //                  uv, invtol);
                 return true;
             }
         }

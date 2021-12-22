@@ -40,7 +40,7 @@ namespace ICHNOS {
 		bool RK4Step(const Particle& P, vec3& pnew, vec3& vnew, double& tm, ExitReason& er);
 		bool RK45Step(const Particle& P, vec3& pnew, vec3& vnew, double& tm, ExitReason& er);
 
-		void updateStep();
+		void updateStep(double currentAge);
 
 		const std::vector<std::vector<double> > CF = getRK45coef();
 
@@ -252,7 +252,7 @@ namespace ICHNOS {
 		vec3 p = S.getLastParticle().getP();
 		double tm = S.getLastParticle().getTime();
 		int proc = world.rank();
-		// Check if the particle is in the domain and exit imediately if not
+		// Check if the particle is in the domain and exit immediately if not
 		ExitReason er = CheckNewPoint(p);
 		if (er == ExitReason::EXIT_SIDE || er == ExitReason::EXIT_BOTTOM || er == ExitReason::EXIT_TOP)
 			return ExitReason::INIT_OUT;
@@ -296,7 +296,7 @@ namespace ICHNOS {
 			//}
 			if (popt.UpdateStepSize == 1 && popt.method != SolutionMethods::RK45){
 			    vv = v;
-                updateStep();
+                updateStep(S.getAge());
 			}
 
 			bool foundPoint = findNextPoint(S.getLastParticle(), p, v, tm, er);
@@ -368,7 +368,7 @@ namespace ICHNOS {
             }
             else{
                 VF.calcVelocity(v,ids,weights, tm);
-                VF.getVec3Data(tmp_vec);
+                //VF.getVec3Data(tmp_vec);
             }
 
 			if (v.isInvalid())
@@ -663,7 +663,7 @@ namespace ICHNOS {
 		return true;
 	}
 
-	void ParticleTrace::updateStep() {
+	void ParticleTrace::updateStep(double currentAge) {
         double stepLen, stepTime;
         double dst = ICHNOS::diameter_along_velocity(pp, vv, ll, uu);
 
@@ -683,11 +683,18 @@ namespace ICHNOS {
             }
         }
 
+        double vlen = vv.len();
         if (popt.StepOpt.StepSizeTime > 0){
-            stepTime = vv.len()*popt.StepOpt.StepSizeTime;
+            stepTime = vlen*popt.StepOpt.StepSizeTime;
         }
         else{
             stepTime = 10000000;
+        }
+
+        if (popt.AgeLimit > 0){
+            double rem_age = popt.AgeLimit - currentAge;
+            rem_age = vlen*(rem_age + 0.1);
+            stepTime = std::min<double>(stepTime, rem_age);
         }
         //TODO Add the part of the nStepsTime limit
         actualStep = std::min<double>(stepTime, stepLen);

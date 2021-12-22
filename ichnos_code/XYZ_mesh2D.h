@@ -242,8 +242,10 @@ namespace ICHNOS{
                         tf = isPointInTriangle(p2D,nodes[mesh[el_id][0]],nodes[mesh[el_id][2]],nodes[mesh[el_id][3]], bc);
                     }
                     if (tf){
-                        QuadInverseMapping(p2D, nodes[mesh[el_id][0]], nodes[mesh[el_id][1]],
-                                                    nodes[mesh[el_id][2]], nodes[mesh[el_id][3]], bc, invTranfTol);
+                        QuadInverseMappingV1(p2D, nodes[mesh[el_id][0]], nodes[mesh[el_id][1]],
+                                             nodes[mesh[el_id][2]], nodes[mesh[el_id][3]], bc);
+                        //QuadInverseMapping(p2D, nodes[mesh[el_id][0]], nodes[mesh[el_id][1]],
+                        //                            nodes[mesh[el_id][2]], nodes[mesh[el_id][3]], bc, invTranfTol);
                         if (tf){
                             elem_found = true;
                         }
