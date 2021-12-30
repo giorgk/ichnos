@@ -78,7 +78,7 @@ namespace ICHNOS{
 
         bool bIsInitialized = false;
         //double search_mult = 2.5;
-        ic::vec3 ll, uu, pp, vv;
+        //ic::vec3 ll, uu, pp, vv;
         ic::TimeInterpType timeInterp = ic::TimeInterpType::NEAREST;
 
     };
@@ -106,12 +106,12 @@ namespace ICHNOS{
             ("Velocity.TimeInterp", po::value<std::string>(), "Interpolation type between time steps")
             ("Velocity.RepeatTime", po::value<double>()->default_value(0.0), "The number of days to repeat after the and of time steps")
             ("Velocity.Multiplier", po::value<double>()->default_value(1.0), "This is a multiplier to scale velocity")
-            ("Velocity.SetOnFaces", po::value<int>()->default_value(0), "Is the velocity defined on the element interfaces?")
-            ("Velocity.FaceIdFile", po::value<std::string>(), "Face ids for each element")
+            //("Velocity.SetOnFaces", po::value<int>()->default_value(0), "Is the velocity defined on the element interfaces?")
+            //("Velocity.FaceIdFile", po::value<std::string>(), "Face ids for each element")
             //("Velocity.Scale", po::value<double>()->default_value(1.0), "Scale the domain before velocity calculation")
-            //("Velocity.Power", po::value<double>()->default_value(3.0), "Power of the IDW interpolation")
-            //("Velocity.InitDiameter", po::value<double>()->default_value(5000), "Initial diameter")
-            //("Velocity.InitRatio", po::value<double>()->default_value(1), "Initial ratio")
+            //("CLOUD.Power", po::value<double>()->default_value(3.0), "Power of the IDW interpolation")
+            //("CLOUD.InitDiameter", po::value<double>()->default_value(5000), "Initial diameter")
+            //("CLOUD.InitRatio", po::value<double>()->default_value(1), "Initial ratio")
 
 
 
@@ -471,7 +471,7 @@ namespace ICHNOS{
             porosity = porosityValue;
         vel = vel * (1/porosity);
 
-        vv = vel;
+        //vv = vel;
         tm_data.tm = VEL.getTSvalue(i1) * (1-t) + VEL.getTSvalue(i2)*t;
         tm_data.idx1 = i1;
         tm_data.idx2 = i2;
@@ -486,12 +486,14 @@ namespace ICHNOS{
     }
 
     void CloudVel::getVec3Data(std::vector<ic::vec3> &data) {
-        pp = data[0];
-        ll = data[1];
-        uu = data[2];
+        //pp = data[0];
+        //ll = data[1];
+        //uu = data[2];
     }
 
     void CloudVel::updateStep(double &step) {
+        std::cout << "The Code should never be here!!!" << std::endl;
+        /*
         double stepLen, stepTime;
         double dst = ic::diameter_along_velocity(pp, vv, ll, uu);
 
@@ -549,6 +551,7 @@ namespace ICHNOS{
             }
         }
         step = std::min<double>(stepTime, stepLen);
+        */
     }
 }
 

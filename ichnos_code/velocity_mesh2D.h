@@ -322,10 +322,10 @@ namespace ICHNOS{
     }
 
     bool Mesh2DVel::readFaceIds(std::string filename) {
+        bool getfid = false;
+        std::vector<std::vector<int>> fids;
 #if _USEHF > 0
         std::string ext = ic::getExtension(filename);
-        std::vector<std::vector<int>> fids;
-        bool getfid = false;
         if (ext.compare(".h5") == 0){
             const std::string FIDNameSet("FACEID");
             HighFive::File HDFNfile(filename, HighFive::File::ReadOnly);

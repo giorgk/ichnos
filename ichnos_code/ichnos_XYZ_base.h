@@ -195,9 +195,9 @@ namespace ICHNOS{
                                   << p.x << "," << p.y << "," << p.z
                                   <<") within the initial diameter of " << initial_diameter
                                   << ". Consider increasing the Initial diameter" << std::endl;
-                        //std::cout << "Actual diameter " << diameter << std::endl;
-                        //std::cout << "ll = [" << ll.x << "," << ll.y << "," << ll.z << "];" << std::endl;
-                        //std::cout << "uu = [" << uu.x << "," << uu.y << "," << uu.z << "];" << std::endl;
+                        std::cout << "Actual diameter " << diameter << std::endl;
+                        std::cout << "ll = [" << ll.x << "," << ll.y << "," << ll.z << "];" << std::endl;
+                        std::cout << "uu = [" << uu.x << "," << uu.y << "," << uu.z << "];" << std::endl;
                         if (tmp.size() == 0){
                             out = false;
                             return;

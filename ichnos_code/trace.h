@@ -351,7 +351,7 @@ namespace ICHNOS {
                 }
                 else{
                     VF.calcVelocity(v,ids,weights, tm);
-                    VF.getVec3Data(tmp_vec);
+                    //VF.getVec3Data(tmp_vec);
                 }
 			}
 			else {

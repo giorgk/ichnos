@@ -202,7 +202,7 @@ namespace ICHNOS {
 		po::options_description config_options("Configuration file options");
 		config_options.add_options()
 			// Velocity Options
-			("Velocity.XYZType", po::value<std::string>(), "Type of point coordinates e.g CLOUD/IWFM")
+			("Velocity.XYZType", po::value<std::string>(), "Type of point coordinates e.g CLOUD/MESH2D")
 			("Velocity.Type", po::value<std::string>(), "Type of velocity. (STEADY or TRANS)")
 			("Velocity.ConfigFile", po::value<std::string >(), "Set configuration file for the velocity field")
 
