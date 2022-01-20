@@ -677,7 +677,7 @@ namespace ICHNOS {
 		double BotPower;
 		double AttractRadius;
 		std::string processorDomainFile;
-		std::string expandedDomainFile;
+		//std::string expandedDomainFile;
 		int myRank;
 		int nProc;
 	};

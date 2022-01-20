@@ -387,14 +387,14 @@ namespace ICHNOS {
 			else {// If the point is in the overlapping domain but this processor has greater influence
 				// make sure that the particle is not outside the expanded domain.
 				// If it is change immediately
-				Domain.bisInExpandedPolygon(p, tf);
-				if (!tf) {
-					return ExitReason::CHANGE_PROCESSOR;
-				}
-				else{
+				//Domain.bisInExpandedPolygon(p, tf);
+				//if (!tf) {
+				//	return ExitReason::CHANGE_PROCESSOR;
+				//}
+				//else{
 					//proc = world.rank();
 					return ExitReason::NO_EXIT;
-				}
+				//}
 			}
 		}
 	}

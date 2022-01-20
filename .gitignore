@@ -50,6 +50,10 @@
 /Bin/*
 !/Bin/*.exe
 !/Bin/*.dll
+!/Bin/Dev
+/Bin/Dev/*
+!/Bin/Dev/*.exe
+!/Bin/Dev/*.dll
 
 
 

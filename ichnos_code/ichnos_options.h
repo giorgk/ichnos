@@ -215,7 +215,7 @@ namespace ICHNOS {
 			//("Domain.BottomRadius", po::value<double>()->default_value(1000), "Search Radius for bottom elevation")
 			//("Domain.BottomPower", po::value<double>()->default_value(3), "Search Power for bottom elevation")
 			("Domain.ProcessorPolys", po::value<std::string >(), "A filename that contains the coordinates of each processor polygon")
-			("Domain.ExpandedPolys", po::value<std::string >(), "A filename that contains the coordinates of each Expanded polygon")
+			//("Domain.ExpandedPolys", po::value<std::string >(), "A filename that contains the coordinates of each Expanded polygon")
 
 			// Stopping criteria
 			("StoppingCriteria.MaxIterationsPerStreamline", po::value<int>()->default_value(1000), "Maximum number of steps per streamline")
@@ -326,7 +326,7 @@ namespace ICHNOS {
 					//Dopt.BotRadius = Dopt.BotRadius*Dopt.BotRadius;
 					//Dopt.BotPower = vm_cfg["Domain.BottomPower"].as<double>();
 					Dopt.processorDomainFile = vm_cfg["Domain.ProcessorPolys"].as<std::string>();
-					Dopt.expandedDomainFile = vm_cfg["Domain.ExpandedPolys"].as<std::string>();
+					//Dopt.expandedDomainFile = vm_cfg["Domain.ExpandedPolys"].as<std::string>();
 					Dopt.myRank = world.rank();
 					Dopt.nProc = world.size();
 				}
@@ -369,7 +369,6 @@ namespace ICHNOS {
 				}
 
 				{// Adaptive Step configurations
-
 					Popt.AdaptOpt.MaxStepSize = vm_cfg["AdaptStep.MaxStepSize"].as<double>();
 					Popt.AdaptOpt.MinStepSize = vm_cfg["AdaptStep.MinStepSize"].as<double>();
 					Popt.AdaptOpt.increaseRateChange = vm_cfg["AdaptStep.increaseRateChange"].as<double>();
