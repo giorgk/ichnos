@@ -44,11 +44,15 @@ namespace ICHNOS{
                          std::vector<double>& weights,
                          std::map<int, double>& proc_map,
                          vec3& ll, vec3& uu, bool& out);
+
+
         void reset();
         //void sendVec3Data(std::vector<vec3>& data);
         int getNpnts(){return Tree.size();}
     private:
         search_tree_info Tree;
+        std::vector<Pnt_info> pntDATA;
+        std::vector<vec3> pntCOORD;
         VelType vtype;
 
         double Power;
@@ -61,7 +65,15 @@ namespace ICHNOS{
 
         bool bIsInitialized = false;
         double search_mult = 2.5;
+        bool buseGraph = false;
+        std::vector<std::vector<int>> Graph;
         //vec3 ll, uu, pp, vv;
+
+        void calcWeightsWithGraph(int closestID, vec3& p,
+                                  std::vector<int>& ids,
+                                  std::vector<double>& weights,
+                                  std::map<int, double>& proc_map,
+                                  bool& out);
     };
 
     XYZ_cloud::XYZ_cloud(boost::mpi::communicator& world_in)
@@ -85,6 +97,7 @@ namespace ICHNOS{
             ("Velocity.Scale", po::value<double>()->default_value(1.0), "Scale the domain before velocity calculation")
             ("Velocity.InitDiameter", po::value<double>()->default_value(5000), "Initial diameter")
             ("Velocity.InitRatio", po::value<double>()->default_value(1), "Initial ratio")
+            ("Velocity.UseGraph", po::value<int>()->default_value(0), "Set 1 if a graph file is present")
             ("General.Threshold", po::value<double>()->default_value(0.001), "Threshold of distance of IDW")
             ;
 
@@ -113,6 +126,16 @@ namespace ICHNOS{
             fileXYZ = prefix + "XYZ_" + num2Padstr(/*dbg_rank*/world.rank(), leadZeros) + suffix;
         }
 
+        int tmp = vm_vfo["Velocity.UseGraph"].as<int>();
+        if (tmp != 0){
+            buseGraph = true;
+            std::string fileGraph;
+            fileGraph = prefix + num2Padstr(/*dbg_rank*/world.rank(), leadZeros) + ".grph";
+            bool tf = READ::readGraphFile(fileGraph, Graph);
+            if (!tf)
+                return false;
+        }
+
         Threshold = vm_vfo["General.Threshold"].as<double>();
         Scale = vm_vfo["Velocity.Scale"].as<double>();
         Power = vm_vfo["Velocity.Power"].as<double>();
@@ -120,19 +143,28 @@ namespace ICHNOS{
         initial_ratio = vm_vfo["Velocity.InitRatio"].as<double>();
 
         std::vector<cgal_point_3> pp;
-        std::vector<Pnt_info> dd;
-        bool tf = READ::readXYZfile(fileXYZ, pp, dd);
+        bool tf = READ::readXYZfile(fileXYZ, pp, pntDATA);
         if (!tf)
             return false;
 
         { //Build tree
+            pntCOORD.resize(pp.size());
+            for (int i = 0; i < pp.size(); ++i){
+                pntCOORD[i].x = pp[i].x();
+                pntCOORD[i].y = pp[i].y();
+                pntCOORD[i].z = pp[i].z();
+            }
             auto start = std::chrono::high_resolution_clock::now();
-            Tree.insert(boost::make_zip_iterator(boost::make_tuple( pp.begin(),dd.begin() )),
-                        boost::make_zip_iterator(boost::make_tuple( pp.end(),dd.end() ) )  );
+            Tree.insert(boost::make_zip_iterator(boost::make_tuple( pp.begin(),pntDATA.begin() )),
+                        boost::make_zip_iterator(boost::make_tuple( pp.end(),pntDATA.end() ) )  );
             Tree.build();
             auto finish = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> elapsed = finish - start;
             std::cout << "\tPoint Set Building time: " << elapsed.count() << std::endl;
+
+            //Search_Tree.insert(boost::make_zip_iterator(boost::make_tuple( pp.begin(),dd.begin() )),
+            //                   boost::make_zip_iterator(boost::make_tuple( pp.end(),dd.end() ) )  );
+
         }
         return true;
     }
@@ -146,36 +178,30 @@ namespace ICHNOS{
         weights.clear();
         ll.zero();
         uu.zero();
-        if (!bIsInitialized){
-            calculate_search_box(p,ll,uu,diameter,ratio,search_mult);
-            cgal_point_3 llp(ll.x, ll.y, ll.z);
-            cgal_point_3 uup(uu.x, uu.y, uu.z);
-            Fuzzy_iso_box_info fib(llp, uup, 0.0);
-            std::vector<boost::tuples::tuple<cgal_point_3, Pnt_info>> tmp;
-            Tree.search(std::back_inserter(tmp), fib);
-            if (tmp.size() == 0){
+
+        int ClosestPointId = -9;
+        if (!bIsInitialized || buseGraph){
+            cgal_point_3 query(p.x, p.y, p.z);
+            K_neighbor_search search(Tree, query, 1);
+            for (K_neighbor_search::iterator it = search.begin(); it != search.end(); it++){
+                diameter = boost::get<1>(it->first).diameter;
+                ratio = boost::get<1>(it->first).ratio;
+                bIsInitialized = true;
+                //std::cout << boost::get<0>(it->first) << " " << boost::get<1>(it->first).id << std::endl;
+                ClosestPointId = boost::get<1>(it->first).id;
+                //std::cout << ClosestPointId << std::endl;
+            }
+            if (ClosestPointId == -9){
                 out = false;
                 return;
             }
-            // Find the closest point
-            double mindist = 1000000000;
-            double tmp_diam;
-            double tmp_ratio;
-            Pnt_info closest_point_data;
-            for (unsigned int i = 0; i < tmp.size(); ++i) {
-                double dist = p.distance(tmp[i].get<0>().x(), tmp[i].get<0>().y(), tmp[i].get<0>().z());
-                if (dist < mindist) {
-                    mindist = dist;
-                    tmp_diam = tmp[i].get<1>().diameter;
-                    tmp_ratio = tmp[i].get<1>().ratio;
-                }
-            }
-            diameter = tmp_diam;
-            ratio = tmp_ratio;
-            bIsInitialized = true;
         }
 
-        {
+        if (buseGraph){
+            calcWeightsWithGraph(ClosestPointId,p, ids, weights,proc_map,out);
+            return;
+        }
+        else {
             std::map<int, double>::iterator itd;
             std::vector<boost::tuples::tuple<cgal_point_3, Pnt_info>> tmp;
             while (true){
@@ -254,6 +280,7 @@ namespace ICHNOS{
                     weights.push_back(w);
                 }
             }
+            // TODO I dont understand this
             if (tmp.size() > 50){
                 diameter = tmp_diam;
                 ratio = tmp_ratio;
@@ -266,6 +293,59 @@ namespace ICHNOS{
             out = true;
         }
     }
+
+    void XYZ_cloud::calcWeightsWithGraph(int closestID, vec3& p,
+                                         std::vector<int>& ids,
+                                         std::vector<double>& weights,
+                                         std::map<int, double>& proc_map,
+                                         bool& out){
+
+        std::map<int, double>::iterator itd;
+        double porx, pory, porz, scaled_dist, actual_dist, w;
+        int idx;
+        double sumW = 0;
+        for (int i = 0; i < Graph[closestID].size(); ++i){
+            idx = Graph[closestID][i];
+            //std::cout << pntCOORD[idx].x << "," << pntCOORD[idx].y << "," << pntCOORD[idx].z << std::endl;
+            porx = p.x - pntCOORD[idx].x;
+            pory = p.y - pntCOORD[idx].y;
+            porz = p.z - pntCOORD[idx].z;
+            actual_dist = std::sqrt(porx * porx + pory * pory + porz * porz);
+
+            porz = porz * ratio * Scale + porz*(1 - Scale);
+            scaled_dist = std::sqrt(porx * porx + pory * pory + porz * porz);
+            if (actual_dist < Threshold){
+                ids.clear();
+                weights.clear();
+                ids.push_back(idx);
+                weights.push_back(1.0);
+                proc_map.clear();
+                proc_map.insert(std::pair<int, double>(pntDATA[idx].proc, 1.0));
+                break;
+            }
+            else{
+                w = 1 / std::pow(scaled_dist, Power);
+                itd = proc_map.find(pntDATA[idx].proc);
+                if (itd == proc_map.end()) {
+                    proc_map.insert(std::pair<int, double>(pntDATA[idx].proc, w));
+                }
+                else{
+                    itd->second += w;
+                }
+                sumW += w;
+                ids.push_back(idx);
+                weights.push_back(w);
+            }
+        }
+
+        itd = proc_map.begin();
+        for (; itd != proc_map.end(); ++itd) {
+            itd->second = itd->second / sumW;
+        }
+        out = true;
+    }
+
+
     void XYZ_cloud::reset() {
         bIsInitialized = false;
         diameter = initial_diameter;

@@ -303,6 +303,8 @@ namespace ICHNOS {
     typedef CGAL::Search_traits_adapter<pnt_with_info, CGAL::Nth_of_tuple_property_map<0, pnt_with_info>, Traits_base> search_traits_pnt_info;
     typedef CGAL::Fuzzy_iso_box<search_traits_pnt_info> Fuzzy_iso_box_info;
     typedef CGAL::Kd_tree<search_traits_pnt_info> search_tree_info;
+    typedef CGAL::Orthogonal_k_neighbor_search<search_traits_pnt_info> K_neighbor_search;
+
 
     struct Pnt_IWFM_info{
         int proc = -9;

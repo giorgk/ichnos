@@ -546,6 +546,36 @@ namespace ICHNOS {
 			}
 		}
 
+		bool readGraphFile(std::string fileGraph, std::vector< std::vector<int> >& data){
+            std::cout << "\tReading file " + fileGraph << std::endl;
+
+            std::ifstream datafile(fileGraph.c_str());
+            if (!datafile.good()) {
+                std::cout << "Can't open the file " << fileGraph << std::endl;
+                return false;
+            } else {
+                std::string line;
+                int n, id;
+                int idx = 0;
+                while (getline(datafile, line)){
+                    if (line.size() > 1){
+                        std::istringstream inp(line.c_str());
+                        inp >> n;
+                        std::vector<int>tmp(n+1);
+                        tmp[0] = idx;
+                        for (int i = 0; i < n; ++i) {
+                            inp >> id;
+                            tmp[i+1] = id-1;
+                        }
+                        data.push_back(tmp);
+                        idx++;
+                    }
+                }
+                return true;
+            }
+            return false;
+		}
+
 		bool readXYZfile(std::string fileXYZ, std::vector<cgal_point_3>& pp, std::vector<Pnt_info>& dd) {
             std::cout << "\tReading file " + fileXYZ << std::endl;
 
