@@ -44,6 +44,9 @@
 /WikiExamples/*
 !/WikiExamples/*.m
 !/WikiExamples/*.ini
+!/WikiExamples/CLOUD
+/WikiExamples/CLOUD/*
+!/WikiExamples/CLOUD/*.ini
 
 # Bin
 !/Bin
