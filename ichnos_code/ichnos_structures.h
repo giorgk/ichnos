@@ -1144,6 +1144,7 @@ namespace ICHNOS {
                 }
             }
 
+            std::cout << neighElem.size() << ", " << velids.size() << std::endl;
             auto start = std::chrono::high_resolution_clock::now();
             Tree.insert(boost::make_zip_iterator(boost::make_tuple( pp.begin(), dd.begin() )),
                         boost::make_zip_iterator(boost::make_tuple( pp.end(), dd.end() ) )  );
@@ -1163,20 +1164,32 @@ namespace ICHNOS {
             idx = boost::get<1>(it->first);
         }
         if (idx == -9){
+            std::cout << "idx not found" << std::endl;
             return false;
         }
-        // Add the velocities of the same cell
-        for (int i = 0; i < velids[idx].size(); ++i){
-            outvel.push_back(velids[idx][i]);
-        }
-        // Loop through the neighbor elements and add the velocity ids of those elements
-        for (int i = 0; i < neighElem[idx].size(); ++i){
-            int elid = neighElem[idx][i];
-            for (int j = 0; j < velids[elid].size(); ++j){
-                outvel.push_back(velids[elid][j]);
+        if (idx >= 0 && idx < velids.size()){
+            // Add the velocities of the same cell
+            for (int i = 0; i < velids[idx].size(); ++i){
+                outvel.push_back(velids[idx][i]);
             }
+            // Loop through the neighbor elements and add the velocity ids of those elements
+            for (int i = 0; i < neighElem[idx].size(); ++i){
+                int elid = neighElem[idx][i];
+                if (elid >= 0 && elid < velids.size()){
+                    for (int j = 0; j < velids[elid].size(); ++j){
+                        outvel.push_back(velids[elid][j]);
+                    }
+                }
+                else{
+                    std::cout << "elid " << elid << " out of range " << velids.size() << std::endl;
+                }
+            }
+            return true;
         }
-        return true;
+        else{
+            std::cout << "idx " << idx << " out of range " << velids.size() << std::endl;
+            return false;
+        }
     }
 }
 
