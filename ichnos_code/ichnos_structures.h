@@ -186,11 +186,12 @@ namespace ICHNOS {
 
 	// dD Spatial Searching
 	typedef K::Point_3	cgal_point_3;
-	typedef boost::tuple<cgal_point_3, NPSAT_data> pnt_int;
+	typedef boost::tuple<cgal_point_3, int> pnt_int;
 	typedef CGAL::Search_traits_3<K> Traits_base;
 	typedef CGAL::Search_traits_adapter<pnt_int, CGAL::Nth_of_tuple_property_map<0,pnt_int>, Traits_base> search_traits;
 	typedef CGAL::Fuzzy_iso_box<search_traits> Fuzzy_iso_box;
-	typedef CGAL::Kd_tree<search_traits> search_tree;
+	typedef CGAL::Kd_tree<search_traits> search_tree_int;
+    typedef CGAL::Orthogonal_k_neighbor_search<search_traits> K_neighbor_search_int;
 
 	
 
@@ -1087,6 +1088,96 @@ namespace ICHNOS {
 			return true;
 		}
 	}
+
+
+    class CellGraph{
+    public:
+        CellGraph(){};
+        bool readGraphFile(std::string filename);
+        bool getNearVelocities(vec3& p, std::vector<int>& velIds);
+
+    private:
+        search_tree_int Tree;
+        //std::vector<vec3> XYZ;
+        std::vector<std::vector<int>> neighElem;
+        std::vector<std::vector<int>> velids;
+    };
+
+    bool CellGraph::readGraphFile(std::string filename) {
+        std::cout << "\tReading file " + filename << std::endl;
+
+        std::ifstream datafile(filename.c_str());
+        if (!datafile.good()) {
+            std::cout << "Can't open the file " << filename << std::endl;
+            return false;
+        }
+        else{
+            std::string line;
+            int ncells, id, nvels;
+            int idx = 0;
+            double x, y ,z;
+            std::vector<cgal_point_3> pp;
+            std::vector<int> dd;
+            while (getline(datafile, line)){
+                if (line.size() > 1){
+                    std::istringstream inp(line.c_str());
+                    inp >> x;
+                    inp >> y;
+                    inp >> z;
+                    pp.push_back(cgal_point_3(x, y, z));
+                    dd.push_back(idx);
+                    idx++;
+                    inp >> ncells;
+                    inp >> nvels;
+                    std::vector<int> cells;
+                    for (int i = 0; i < ncells; ++i){
+                        inp >> id;
+                        cells.push_back(id);
+                    }
+                    std::vector<int> vels;
+                    for (int i = 0; i < nvels; ++i){
+                        inp >> id;
+                        vels.push_back(id);
+                    }
+                    neighElem.push_back(cells);
+                    velids.push_back(vels);
+                }
+            }
+
+            auto start = std::chrono::high_resolution_clock::now();
+            Tree.insert(boost::make_zip_iterator(boost::make_tuple( pp.begin(), dd.begin() )),
+                        boost::make_zip_iterator(boost::make_tuple( pp.end(), dd.end() ) )  );
+            Tree.build();
+            auto finish = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double> elapsed = finish - start;
+            std::cout << "\tPoint Set Building time: " << elapsed.count() << std::endl;
+            return true;
+        }
+    }
+
+    bool CellGraph::getNearVelocities(vec3 &p, std::vector<int>& outvel) {
+        cgal_point_3 query(p.x, p.y, p.z);
+        K_neighbor_search_int search(Tree, query, 1);
+        int idx = -9;
+        for (K_neighbor_search_int::iterator it = search.begin(); it != search.end(); it++){
+            idx = boost::get<1>(it->first);
+        }
+        if (idx == -9){
+            return false;
+        }
+        // Add the velocities of the same cell
+        for (int i = 0; i < velids[idx].size(); ++i){
+            outvel.push_back(velids[idx][i]);
+        }
+        // Loop through the neighbor elements and add the velocity ids of those elements
+        for (int i = 0; i < neighElem[idx].size(); ++i){
+            int elid = neighElem[idx][i];
+            for (int j = 0; j < velids[elid].size(); ++j){
+                outvel.push_back(velids[elid][j]);
+            }
+        }
+        return true;
+    }
 }
 
 

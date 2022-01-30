@@ -41,7 +41,7 @@ namespace NPSAT {
 		void updateStep(double& step);
 	private:
 
-		ic::search_tree Tree;
+		//ic::search_tree Tree;
 
 		//ic::cgal_Delaunay T;
 		//ic::cell_handle cellhandle;
@@ -156,9 +156,9 @@ namespace NPSAT {
 
 		{//Build tree
 			auto start = std::chrono::high_resolution_clock::now();
-			Tree.insert(boost::make_zip_iterator(boost::make_tuple( pp.begin(),dd.begin() )),
-    					boost::make_zip_iterator(boost::make_tuple( pp.end(),dd.end() ) )  );
-			Tree.build();
+			//Tree.insert(boost::make_zip_iterator(boost::make_tuple( pp.begin(),dd.begin() )),
+    		//			boost::make_zip_iterator(boost::make_tuple( pp.end(),dd.end() ) )  );
+			//Tree.build();
 			auto finish = std::chrono::high_resolution_clock::now();
 			std::chrono::duration<double> elapsed = finish - start;
 			std::cout << "Point Set Building time: " << elapsed.count() << std::endl;
@@ -209,7 +209,7 @@ namespace NPSAT {
 			ic::Fuzzy_iso_box fib(llp,uup, 0.0);
 			std::vector<boost::tuples::tuple<ic::cgal_point_3, ic::NPSAT_data>> tmp;
 			//std::back_insert_iterator<std::vector<std::tuple<ic::cgal_point_3, ic::NPSAT_data>>> tmp_it(tmp);
-			Tree.search(std::back_inserter(tmp), fib);
+			//Tree.search(std::back_inserter(tmp), fib);
 			if (tmp.size() == 0){
 				vel = ic::vec3(-99999,-99999,-99999);
 				return;
@@ -243,7 +243,7 @@ namespace NPSAT {
 				ic::cgal_point_3 llp(ll.x, ll.y, ll.z);
 				ic::cgal_point_3 uup(uu.x, uu.y, uu.z);
 				ic::Fuzzy_iso_box fib(llp,uup, 0.0);
-				Tree.search(std::back_inserter(tmp), fib);
+				//Tree.search(std::back_inserter(tmp), fib);
 				if (tmp.size() >= 3){
 					break;
 				}

@@ -48,7 +48,7 @@ namespace ICHNOS{
 
         void reset();
         //void sendVec3Data(std::vector<vec3>& data);
-        int getNpnts(){return Tree.size();}
+        int getNpnts(){return pntDATA.size();}
     private:
         search_tree_info Tree;
         std::vector<Pnt_info> pntDATA;
@@ -66,14 +66,15 @@ namespace ICHNOS{
         bool bIsInitialized = false;
         double search_mult = 2.5;
         bool buseGraph = false;
-        std::vector<std::vector<int>> Graph;
+        //std::vector<std::vector<int>> Graph;
         //vec3 ll, uu, pp, vv;
+        CellGraph CGRAPH;
 
-        void calcWeightsWithGraph(int closestID, vec3& p,
+        void calcWeightsWithGraph(vec3& p,
                                   std::vector<int>& ids,
                                   std::vector<double>& weights,
                                   std::map<int, double>& proc_map,
-                                  bool& out);
+                                  int& closestVelId, bool& out);
     };
 
     XYZ_cloud::XYZ_cloud(boost::mpi::communicator& world_in)
@@ -131,7 +132,7 @@ namespace ICHNOS{
             buseGraph = true;
             std::string fileGraph;
             fileGraph = prefix + num2Padstr(/*dbg_rank*/world.rank(), leadZeros) + ".grph";
-            bool tf = READ::readGraphFile(fileGraph, Graph);
+            bool tf = CGRAPH.readGraphFile(fileGraph);
             if (!tf)
                 return false;
         }
@@ -147,13 +148,14 @@ namespace ICHNOS{
         if (!tf)
             return false;
 
-        { //Build tree
-            pntCOORD.resize(pp.size());
-            for (int i = 0; i < pp.size(); ++i){
-                pntCOORD[i].x = pp[i].x();
-                pntCOORD[i].y = pp[i].y();
-                pntCOORD[i].z = pp[i].z();
-            }
+        pntCOORD.resize(pp.size());
+        for (int i = 0; i < pp.size(); ++i){
+            pntCOORD[i].x = pp[i].x();
+            pntCOORD[i].y = pp[i].y();
+            pntCOORD[i].z = pp[i].z();
+        }
+
+        if (!buseGraph){ //Build tree
             auto start = std::chrono::high_resolution_clock::now();
             Tree.insert(boost::make_zip_iterator(boost::make_tuple( pp.begin(),pntDATA.begin() )),
                         boost::make_zip_iterator(boost::make_tuple( pp.end(),pntDATA.end() ) )  );
@@ -161,10 +163,6 @@ namespace ICHNOS{
             auto finish = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> elapsed = finish - start;
             std::cout << "\tPoint Set Building time: " << elapsed.count() << std::endl;
-
-            //Search_Tree.insert(boost::make_zip_iterator(boost::make_tuple( pp.begin(),dd.begin() )),
-            //                   boost::make_zip_iterator(boost::make_tuple( pp.end(),dd.end() ) )  );
-
         }
         return true;
     }
@@ -179,29 +177,35 @@ namespace ICHNOS{
         ll.zero();
         uu.zero();
 
-        int ClosestPointId = -9;
-        if (!bIsInitialized || buseGraph){
-            cgal_point_3 query(p.x, p.y, p.z);
-            K_neighbor_search search(Tree, query, 1);
-            for (K_neighbor_search::iterator it = search.begin(); it != search.end(); it++){
-                diameter = boost::get<1>(it->first).diameter;
-                ratio = boost::get<1>(it->first).ratio;
-                bIsInitialized = true;
-                //std::cout << boost::get<0>(it->first) << " " << boost::get<1>(it->first).id << std::endl;
-                ClosestPointId = boost::get<1>(it->first).id;
-                //std::cout << ClosestPointId << std::endl;
-            }
-            if (ClosestPointId == -9){
-                out = false;
-                return;
-            }
-        }
-
         if (buseGraph){
-            calcWeightsWithGraph(ClosestPointId,p, ids, weights,proc_map,out);
+            int closestVelId = -9;
+            calcWeightsWithGraph(p, ids, weights,proc_map, closestVelId, out);
+            if (out){
+                diameter = pntDATA[closestVelId].diameter;
+                ratio = pntDATA[closestVelId].ratio;
+                calculate_search_box(p,ll,uu, diameter, ratio, search_mult);
+            }
             return;
         }
-        else {
+        else{
+            int ClosestPointId = -9;
+            if (!bIsInitialized){
+                cgal_point_3 query(p.x, p.y, p.z);
+                K_neighbor_search search(Tree, query, 1);
+                for (K_neighbor_search::iterator it = search.begin(); it != search.end(); it++){
+                    diameter = boost::get<1>(it->first).diameter;
+                    ratio = boost::get<1>(it->first).ratio;
+                    bIsInitialized = true;
+                    //std::cout << boost::get<0>(it->first) << " " << boost::get<1>(it->first).id << std::endl;
+                    ClosestPointId = boost::get<1>(it->first).id;
+                    //std::cout << ClosestPointId << std::endl;
+                }
+                if (ClosestPointId == -9){
+                    out = false;
+                    return;
+                }
+            }
+
             std::map<int, double>::iterator itd;
             std::vector<boost::tuples::tuple<cgal_point_3, Pnt_info>> tmp;
             while (true){
@@ -234,7 +238,6 @@ namespace ICHNOS{
                     }
                 }
             }
-
             // por_xyz refers to point translated to origin
             double porx, pory, porz, scaled_dist, actual_dist, w;
             bool calc_average = true;
@@ -294,50 +297,63 @@ namespace ICHNOS{
         }
     }
 
-    void XYZ_cloud::calcWeightsWithGraph(int closestID, vec3& p,
+    void XYZ_cloud::calcWeightsWithGraph(vec3& p,
                                          std::vector<int>& ids,
                                          std::vector<double>& weights,
                                          std::map<int, double>& proc_map,
-                                         bool& out){
+                                         int& closestVelId, bool& out){
 
         std::map<int, double>::iterator itd;
-        double porx, pory, porz, scaled_dist, actual_dist, w;
-        int idx;
         double sumW = 0;
-        for (int i = 0; i < Graph[closestID].size(); ++i){
-            idx = Graph[closestID][i];
-            //std::cout << pntCOORD[idx].x << "," << pntCOORD[idx].y << "," << pntCOORD[idx].z << std::endl;
-            porx = p.x - pntCOORD[idx].x;
-            pory = p.y - pntCOORD[idx].y;
-            porz = p.z - pntCOORD[idx].z;
-            actual_dist = std::sqrt(porx * porx + pory * pory + porz * porz);
-
-            porz = porz * ratio * Scale + porz*(1 - Scale);
-            scaled_dist = std::sqrt(porx * porx + pory * pory + porz * porz);
-            if (actual_dist < Threshold){
-                ids.clear();
-                weights.clear();
-                ids.push_back(idx);
-                weights.push_back(1.0);
-                proc_map.clear();
-                proc_map.insert(std::pair<int, double>(pntDATA[idx].proc, 1.0));
-                break;
-            }
-            else{
-                w = 1 / std::pow(scaled_dist, Power);
-                itd = proc_map.find(pntDATA[idx].proc);
-                if (itd == proc_map.end()) {
-                    proc_map.insert(std::pair<int, double>(pntDATA[idx].proc, w));
+        std::vector<int> velIds;
+        int idx;
+        double dx, dy ,dz, actual_dist, scaled_dist, w;
+        bool tf = CGRAPH.getNearVelocities(p, velIds);
+        double min_dst = 100000000;
+        if (!tf){
+            out = false;
+            return;
+        }
+        else{
+            double diam = pntDATA[velIds[0]].diameter;
+            double ratio = pntDATA[velIds[0]].ratio;
+            for (int i = 0; i < velIds.size(); ++i){
+                idx = velIds[i];
+                dx =  pntCOORD[idx].x - p.x;
+                dy =  pntCOORD[idx].y - p.y;
+                dz =  pntCOORD[idx].z - p.z;
+                actual_dist = std::sqrt(dx * dx + dy * dy + dz * dz);
+                if (actual_dist < min_dst){
+                    min_dst = actual_dist;
+                    closestVelId = idx;
+                }
+                dz = dz * ratio * Scale + dz*(1 - Scale);
+                scaled_dist = std::sqrt(dx * dx + dy * dy + dz * dz);
+                if (actual_dist < Threshold){
+                    ids.clear();
+                    weights.clear();
+                    ids.push_back(idx);
+                    weights.push_back(1.0);
+                    proc_map.clear();
+                    proc_map.insert(std::pair<int, double>(pntDATA[idx].proc, 1.0));
+                    break;
                 }
                 else{
-                    itd->second += w;
+                    w = 1 / std::pow(scaled_dist, Power);
+                    itd = proc_map.find(pntDATA[idx].proc);
+                    if (itd == proc_map.end()) {
+                        proc_map.insert(std::pair<int, double>(pntDATA[idx].proc, w));
+                    }
+                    else{
+                        itd->second += w;
+                    }
+                    sumW += w;
+                    ids.push_back(idx);
+                    weights.push_back(w);
+
                 }
-                sumW += w;
-                ids.push_back(idx);
-                weights.push_back(w);
             }
         }
-
         itd = proc_map.begin();
         for (; itd != proc_map.end(); ++itd) {
             itd->second = itd->second / sumW;
