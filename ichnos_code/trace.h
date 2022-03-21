@@ -1,6 +1,8 @@
 #pragma once
 #include <boost/mpi.hpp>
 
+#include <thread>
+
 #include "ichnos_structures.h"
 #include "velocity_base.h"
 #include "ichnos_domain.h"
@@ -13,13 +15,15 @@ namespace ICHNOS {
 	public:
 		ParticleTrace(
 			boost::mpi::communicator& world_in,
-            XYZ_base &XYZ_in,
+            //XYZ_base &XYZ_in,
 			velocityField &VF_in,
 			DomainBase &dom_in,
 			ParticleOptions& popt_in);
 
 		void Trace();
 		void Trace(int ireal);
+		void multi_threading_trace();
+		void run_thread(int id);
 
 		bool readInputFiles(std::vector<Streamline>& S);
 
@@ -27,54 +31,57 @@ namespace ICHNOS {
 		const ParticleOptions popt;
 		velocityField& VF;
 		DomainBase& Domain;
-        XYZ_base& XYZ;
+        //XYZ_base& XYZ;
 		boost::mpi::communicator world;
-		bool findNextPoint(const Particle& P, vec3& pnew, vec3& vnew, double& tm, ExitReason& er);
+		bool findNextPoint(const Particle& P, vec3& pnew, vec3& vnew, double& tm, helpVars& pvlu,  ExitReason& er);
 		ExitReason traceInner(Streamline& S);
 		void traceOuter(std::vector<Streamline>& S, int iter, int ireal);
 		ExitReason CheckNewPoint(vec3& p);
-		ExitReason CheckNewPointAndCalcVelocity(vec3& p, vec3& v/*, int &proc*/, double tm = 0);
+		ExitReason CheckNewPointAndCalcVelocity(vec3& p, vec3& v,helpVars& pvlu/*, int &proc*/, double tm = 0);
 
-		bool EulerStep(const Particle& P, vec3& pnew, vec3& vnew, double& tm, ExitReason& er);
-		bool RK2Step(const Particle& P, vec3& pnew, vec3& vnew, double& tm, ExitReason& er);
-		bool RK4Step(const Particle& P, vec3& pnew, vec3& vnew, double& tm, ExitReason& er);
-		bool RK45Step(const Particle& P, vec3& pnew, vec3& vnew, double& tm, ExitReason& er);
+		bool EulerStep(const Particle& P, vec3& pnew, vec3& vnew, double& tm, helpVars& pvlu, ExitReason& er);
+		bool RK2Step(const Particle& P, vec3& pnew, vec3& vnew, double& tm, helpVars& pvlu, ExitReason& er);
+		bool RK4Step(const Particle& P, vec3& pnew, vec3& vnew, double& tm, helpVars& pvlu, ExitReason& er);
+		bool RK45Step(const Particle& P, vec3& pnew, vec3& vnew, double& tm, helpVars& pvlu, ExitReason& er);
 
-		void updateStep(double currentAge);
+		void updateStep(double currentAge, helpVars& pvlu);
 
 		const std::vector<std::vector<double> > CF = getRK45coef();
 
-		double adaptStepSize;
-		double actualStep;
-		double actualStepTime;
-		vec3 pp, vv, ll, uu;
+		//double adaptStepSize;
+		//double actualStep;
+		//double actualStepTime;
+		//vec3 pp, vv, ll, uu;
+
+        std::vector<Streamline> Streamlines4thread;
+
 	};
 
 	ParticleTrace::ParticleTrace(
 		boost::mpi::communicator& world_in,
-        XYZ_base &XYZ_in,
+        //XYZ_base &XYZ_in,
 		velocityField& VF_in,
 		DomainBase& dom_in,
 		ParticleOptions &popt_in)
 		:
 		world(world_in),
-        XYZ(XYZ_in),
+        //XYZ(XYZ_in),
 		VF(VF_in),
 		Domain(dom_in),
 		popt(popt_in)
 	{
-		adaptStepSize = popt.StepOpt.StepSize;
+		//adaptStepSize = popt.StepOpt.StepSize;
 	}
 
 	bool ParticleTrace::readInputFiles(std::vector <Streamline>& S) {
 		bool tfw = false;
 		bool tfp = false;
 		if (!popt.WellFile.empty()) {
-			tfw = READ::readWellFile(popt.WellFile, S, VF.getVelType());
+			tfw = READ::readWellFile(popt.WellFile, S, VF.isVelTransient());
 		}
 
 		if (!popt.ParticleFile.empty()) {
-			tfp = READ::readParticleFile(popt.ParticleFile, S, VF.getVelType());
+			tfp = READ::readParticleFile(popt.ParticleFile, S, VF.isVelTransient());
 		}
 
 		if (tfw || tfp)
@@ -84,7 +91,14 @@ namespace ICHNOS {
 	}
 
 	void ParticleTrace::Trace() {
-		Trace(0);
+	    if (world.size() == 1 ){
+	        multi_threading_trace();
+	    }
+	    else{
+            for (int ireal = 0; ireal < popt.Nrealizations; ++ireal){
+                Trace(ireal);
+            }
+	    }
 	}
 
 	void ParticleTrace::Trace(int ireal) {
@@ -243,11 +257,11 @@ namespace ICHNOS {
 
 	ExitReason ParticleTrace::traceInner(Streamline& S) {
 		// Reset the step size
-		adaptStepSize = popt.StepOpt.StepSize;
-		actualStep = popt.StepOpt.StepSize;
-		actualStepTime = popt.StepOpt.StepSizeTime;
+		S.PVLU.adaptStepSize = popt.StepOpt.StepSize;
+        S.PVLU.actualStep = popt.StepOpt.StepSize;
+        S.PVLU.actualStepTime = popt.StepOpt.StepSizeTime;
 		VF.reset();
-		XYZ.reset();
+		VF.XYZ.reset();
 		vec3 v;
 		vec3 p = S.getLastParticle().getP();
 		double tm = S.getLastParticle().getTime();
@@ -264,12 +278,13 @@ namespace ICHNOS {
             std::map<int, double> proc_map;
             std::vector<vec3> tmp_data;
             bool tf;
-            pp = p;
-            XYZ.calcWeights(p,ids,weights,proc_map,ll,uu,tf);
-            if (!tf) {
-                return ExitReason::FAR_AWAY;
-            }
-            VF.calcVelocity(v,ids,weights,tm);
+            S.PVLU.pp = p;
+
+            //VF.XYZ.calcWeights(p,ids,weights,proc_map,S.PVLU,tf);
+            //if (!tf) {
+            //    return ExitReason::FAR_AWAY;
+            //}
+            VF.calcVelocity(p, v, proc_map, S.PVLU, tf, tm);
             //VF.getVec3Data(tmp_data);
         }
 
@@ -295,11 +310,11 @@ namespace ICHNOS {
 			//	double angle = v_prev.angle(v_curr);
 			//}
 			if (popt.UpdateStepSize == 1 && popt.method != SolutionMethods::RK45){
-			    vv = v;
-                updateStep(S.getAge());
+			    S.PVLU.vv = v;
+                updateStep(S.getAge(), S.PVLU);
 			}
 
-			bool foundPoint = findNextPoint(S.getLastParticle(), p, v, tm, er);
+			bool foundPoint = findNextPoint(S.getLastParticle(), p, v, tm, S.PVLU, er);
 			if (foundPoint) {
 				//er = CheckNewPointAndCalcVelocity(p, v/*, proc*/, tm);
 				//ICHNOS::DBG::displayPVasVex(p, v);
@@ -330,7 +345,7 @@ namespace ICHNOS {
 		return er;
 	}
 
-	ExitReason ParticleTrace::CheckNewPointAndCalcVelocity(vec3& p, vec3& v/*, int& proc*/, double tm) {
+	ExitReason ParticleTrace::CheckNewPointAndCalcVelocity(vec3& p, vec3& v, helpVars& pvlu/*, int& proc*/, double tm) {
 		// This function checks only if the point is still inside the domain
 		// It does not check if its in the velocity field owned by this processor
 		ExitReason exitreason = CheckNewPoint(p);
@@ -343,16 +358,17 @@ namespace ICHNOS {
 		// the velocity field allows it. However the particle tracking will be terminated
 		if (exitreason != ExitReason::NO_EXIT) {
 			if (VF.InterpolateOutsideDomain) {
-			    pp = p;
-			    XYZ.calcWeights(p,ids,weights,proc_map, ll, uu, tf);
+                pvlu.pp = p;
+			    //VF.XYZ.calcWeights(p,ids,weights,proc_map, pvlu, tf);
 			    //XYZ.sendVec3Data(tmp_vec);
+                VF.calcVelocity(p, v, proc_map, pvlu, tf, tm);
                 if (!tf) {
                     v = vec3();
                 }
-                else{
-                    VF.calcVelocity(v,ids,weights, tm);
+                //else{
+
                     //VF.getVec3Data(tmp_vec);
-                }
+                //}
 			}
 			else {
 				v = vec3();
@@ -360,16 +376,17 @@ namespace ICHNOS {
 			return exitreason;
 		}
 		else {
-		    pp = p;
-            XYZ.calcWeights(p, ids, weights, proc_map, ll, uu, tf);
+            pvlu.pp = p;
+            //VF.XYZ.calcWeights(p, ids, weights, proc_map, pvlu, tf);
             //XYZ.sendVec3Data(tmp_vec);
+            VF.calcVelocity(p, v, proc_map, pvlu, tf, tm);
             if (!tf) {
                 v = vec3(-99999, -99999, -99999);
             }
-            else{
-                VF.calcVelocity(v,ids,weights, tm);
+            //else{
+
                 //VF.getVec3Data(tmp_vec);
-            }
+            //}
 
 			if (v.isInvalid())
 				return ExitReason::FAR_AWAY;
@@ -418,125 +435,125 @@ namespace ICHNOS {
 		return ExitReason::NO_EXIT;
 	}
 
-	bool ParticleTrace::findNextPoint(const Particle& P, vec3& pnew, vec3& vnew, double& tm, ExitReason& er) {
+	bool ParticleTrace::findNextPoint(const Particle& P, vec3& pnew, vec3& vnew, double& tm, helpVars& pvlu, ExitReason& er) {
 		switch (popt.method)
 		{
 		case SolutionMethods::Euler:
-			return EulerStep(P, pnew, vnew, tm, er);
+			return EulerStep(P, pnew, vnew, tm, pvlu, er);
 			break;
 		case SolutionMethods::RK2:
-			return RK2Step(P, pnew, vnew, tm, er);
+			return RK2Step(P, pnew, vnew, tm, pvlu, er);
 			break;
 		case SolutionMethods::RK4:
-			return RK4Step(P, pnew, vnew, tm, er);
+			return RK4Step(P, pnew, vnew, tm, pvlu, er);
 			break;
 		case SolutionMethods::RK45:
-			return RK45Step(P, pnew, vnew, tm, er);
+			return RK45Step(P, pnew, vnew, tm, pvlu, er);
 			break;
 		default:
-			return EulerStep(P, pnew, vnew, tm, er);
+			return EulerStep(P, pnew, vnew, tm, pvlu, er);
 			break;
 		}
 	}
 
-	bool ParticleTrace::EulerStep(const Particle& P, vec3& pnew, vec3& vnew, double& tm, ExitReason& er) {
+	bool ParticleTrace::EulerStep(const Particle& P, vec3& pnew, vec3& vnew, double& tm, helpVars& pvlu, ExitReason& er) {
 	    double init_tm = tm;
 		//DEBUG::displayParticleasVex(P, true);
-		pnew = P.getP() + P.getV().normalize() * actualStep * popt.Direction;
+		pnew = P.getP() + P.getV().normalize() * pvlu.actualStep * popt.Direction;
 		//DEBUG::displayVectorasVex(pnew);
-        tm += actualStep*popt.Direction / P.getV().len();
+        tm += pvlu.actualStep*popt.Direction / P.getV().len();
 
-        er = CheckNewPointAndCalcVelocity(pnew, vnew/*, proc*/, tm);
-        if (actualStep > popt.StepOpt.minExitStepSize){
+        er = CheckNewPointAndCalcVelocity(pnew, vnew, pvlu/*, proc*/, tm);
+        if (pvlu.actualStep > popt.StepOpt.minExitStepSize && popt.UpdateStepSize == 1){
             if (er == ExitReason::EXIT_SIDE || er == ExitReason::EXIT_BOTTOM || er == ExitReason::EXIT_TOP ){
-                actualStep = actualStep * 0.45;
+                pvlu.actualStep = pvlu.actualStep * 0.45;
                 tm = init_tm;
-                return EulerStep(P, pnew, vnew, tm, er);
+                return EulerStep(P, pnew, vnew, tm, pvlu, er);
             }
         }
 		return true;
 	}
 
-	bool ParticleTrace::RK2Step(const Particle& P, vec3& pnew, vec3& vnew, double& tm, ExitReason& er) {
+	bool ParticleTrace::RK2Step(const Particle& P, vec3& pnew, vec3& vnew, double& tm, helpVars& pvlu, ExitReason& er) {
         double init_tm = tm;
 		//DEBUG::displayParticleasVex(P, true);
 		int proc = world.rank();
 		// Find the new position using the velocity of the current point
-		vec3 p1 = P.getV().normalize() * actualStep * popt.Direction + P.getP();
-        double tm1 = tm + actualStep*popt.Direction / P.getV().len();
+		vec3 p1 = P.getV().normalize() * pvlu.actualStep * popt.Direction + P.getP();
+        double tm1 = tm + pvlu.actualStep*popt.Direction / P.getV().len();
 		
 		// Find the velocity on that point
 		vec3 v1;
-		er = CheckNewPointAndCalcVelocity(p1, v1/*, proc*/, tm1);
+		er = CheckNewPointAndCalcVelocity(p1, v1, pvlu/*, proc*/, tm1);
 		//DEBUG::displayPVasVex(p1, v1);
 		if (v1.isZero()) return false;
 		// Take a step with the average velocity
 		vec3 v_m = v1 * 0.5 + P.getV() * 0.5;
-		pnew = P.getP() + v_m.normalize() * actualStep* popt.Direction;
+		pnew = P.getP() + v_m.normalize() * pvlu.actualStep* popt.Direction;
 		//DEBUG::displayVectorasVex(pnew);
-        tm += actualStep*popt.Direction / v_m.len();
-        er = CheckNewPointAndCalcVelocity(pnew, vnew/*, proc*/, tm);
-        if (actualStep > popt.StepOpt.minExitStepSize){
+        tm += pvlu.actualStep*popt.Direction / v_m.len();
+        er = CheckNewPointAndCalcVelocity(pnew, vnew, pvlu/*, proc*/, tm);
+        if (pvlu.actualStep > popt.StepOpt.minExitStepSize){
             if (er == ExitReason::EXIT_SIDE || er == ExitReason::EXIT_BOTTOM || er == ExitReason::EXIT_TOP ){
-                actualStep = actualStep * 0.45;
+                pvlu.actualStep = pvlu.actualStep * 0.45;
                 tm = init_tm;
-                return RK2Step(P, pnew, vnew, tm, er);
+                return RK2Step(P, pnew, vnew, tm, pvlu, er);
             }
         }
 		return true;
 	}
 
-	bool ParticleTrace::RK4Step(const Particle& P, vec3& pnew, vec3& vnew, double& tm, ExitReason& er) {
+	bool ParticleTrace::RK4Step(const Particle& P, vec3& pnew, vec3& vnew, double& tm, helpVars& pvlu, ExitReason& er) {
         double init_tm = tm;
 		//DEBUG::displayParitcleasVex(P, true);
 		// See RK2Step
 		int proc = world.rank();
 		// Step 1 ----------------------------
 		// take a half step from the current point using the velocity of that point
-		vec3 p2 = P.getV().normalize() * (actualStep/2) * popt.Direction + P.getP();
-        double tm2 = tm + (actualStep/2)*popt.Direction / P.getV().len();
+		vec3 p2 = P.getV().normalize() * (pvlu.actualStep/2) * popt.Direction + P.getP();
+        double tm2 = tm + (pvlu.actualStep/2)*popt.Direction / P.getV().len();
 		// Find the velocity on point p2 that point
 		vec3 v2;
-		er = CheckNewPointAndCalcVelocity(p2, v2/*, proc*/, tm2);
+		er = CheckNewPointAndCalcVelocity(p2, v2, pvlu/*, proc*/, tm2);
 		//DEBUG::displayPVasVex(p2, v2);
 		if (v2.isZero()) return false;
 
 		// Step 2 ----------------------------
 		// take a half step from the current point using the v2 velocity
-		vec3 p3 = v2.normalize() * (actualStep/2) * popt.Direction + P.getP();
-        double tm3 = tm + (actualStep/2)*popt.Direction / v2.len();
+		vec3 p3 = v2.normalize() * (pvlu.actualStep/2) * popt.Direction + P.getP();
+        double tm3 = tm + (pvlu.actualStep/2)*popt.Direction / v2.len();
 		// Find the velocity on point p3 that point
 		vec3 v3;
-		er = CheckNewPointAndCalcVelocity(p3, v3/*, proc*/, tm3);
+		er = CheckNewPointAndCalcVelocity(p3, v3, pvlu/*, proc*/, tm3);
 		//DEBUG::displayPVasVex(p3, v3);
 		if (v3.isZero()) return false;
 
 		// Step 3 ----------------------------
 		// take a full step from the current point using the v3 velocity
-		vec3 p4 = v3.normalize() * actualStep * popt.Direction + P.getP();
-        double tm4 = tm + actualStep*popt.Direction / v3.len();
+		vec3 p4 = v3.normalize() * pvlu.actualStep * popt.Direction + P.getP();
+        double tm4 = tm + pvlu.actualStep*popt.Direction / v3.len();
 		// Find the velocity on point p4 that point
 		vec3 v4;
-		er = CheckNewPointAndCalcVelocity(p4, v4/*, proc*/, tm4);
+		er = CheckNewPointAndCalcVelocity(p4, v4, pvlu/*, proc*/, tm4);
 		//DEBUG::displayPVasVex(p4, v4);
 		if (v4.isZero()) return false;
 
 		vec3 v_m = (P.getV() + v2 * 2.0 + v3 * 2.0 + v4)*(1.0/6.0);
-		pnew = v_m.normalize() * actualStep * popt.Direction + P.getP();
+		pnew = v_m.normalize() * pvlu.actualStep * popt.Direction + P.getP();
 		//DEBUG::displayVectorasVex(pnew);
-        tm += actualStep*popt.Direction / v_m.len();
-        er = CheckNewPointAndCalcVelocity(pnew, vnew/*, proc*/, tm);
-        if (actualStep > popt.StepOpt.minExitStepSize){
+        tm += pvlu.actualStep*popt.Direction / v_m.len();
+        er = CheckNewPointAndCalcVelocity(pnew, vnew, pvlu/*, proc*/, tm);
+        if (pvlu.actualStep > popt.StepOpt.minExitStepSize){
             if (er == ExitReason::EXIT_SIDE || er == ExitReason::EXIT_BOTTOM || er == ExitReason::EXIT_TOP ){
-                actualStep = actualStep * 0.45;
+                pvlu.actualStep = pvlu.actualStep * 0.45;
                 tm = init_tm;
-                return RK4Step(P, pnew, vnew, tm, er);
+                return RK4Step(P, pnew, vnew, tm, pvlu, er);
             }
         }
 		return true;
 	}
 
-	bool ParticleTrace::RK45Step(const Particle& P, vec3& pnew, vec3& vnew, double& tm, ExitReason& er) {
+	bool ParticleTrace::RK45Step(const Particle& P, vec3& pnew, vec3& vnew, double& tm, helpVars& pvlu, ExitReason& er) {
         double init_tm = tm;
 		//DEBUG::displayParticleasVex(P, true);
 		// See RK2Step
@@ -544,21 +561,21 @@ namespace ICHNOS {
 		vec3 v_m, p2, p3, p4, p5, p6, v2, v3, v4, v5, v6, yn, zn;
 		vec3 v1 = P.getV();
 
-		double ssdir = adaptStepSize * popt.Direction;
+		double ssdir = pvlu.adaptStepSize * popt.Direction;
 
 		//Runge-Kutta-Fehlberg Method (RKF45)
 		// Step 1 ----------------------------
 		int istep = 0;
 		p2 = v1.normalize() * CF[istep][0] * ssdir + P.getP();
 		double tm2 = tm + CF[istep][0] * ssdir * v1.len();
-		er = CheckNewPointAndCalcVelocity(p2, v2/*, proc*/, tm2);
+		er = CheckNewPointAndCalcVelocity(p2, v2, pvlu/*, proc*/, tm2);
 		//DEBUG::displayPVasVex(p2, v2);
 		if (v2.isZero()) { return false; }
-		if (adaptStepSize > popt.StepOpt.minExitStepSize)
+		if (pvlu.adaptStepSize > popt.StepOpt.minExitStepSize)
 			if (er == ExitReason::EXIT_SIDE || er == ExitReason::EXIT_BOTTOM || er == ExitReason::EXIT_TOP) {
-				adaptStepSize = adaptStepSize * 0.24;
+                pvlu.adaptStepSize = pvlu.adaptStepSize * 0.24;
                 tm = init_tm;
-				return RK45Step(P, pnew, vnew, tm, er);
+				return RK45Step(P, pnew, vnew, tm, pvlu, er);
 			}
 
 		// Step 2 ----------------------------
@@ -566,14 +583,14 @@ namespace ICHNOS {
 		v_m = v1 * CF[istep][1] + v2 * CF[istep][2];
 		p3 = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
 		double tm3 = tm + CF[istep][0] * ssdir * v_m.len();
-		er = CheckNewPointAndCalcVelocity(p3, v3/*, proc*/, tm3);
+		er = CheckNewPointAndCalcVelocity(p3, v3, pvlu/*, proc*/, tm3);
 		//DEBUG::displayPVasVex(p3, v3);
 		if (v3.isZero()) return false;
-		if (adaptStepSize > popt.StepOpt.minExitStepSize)
+		if (pvlu.adaptStepSize > popt.StepOpt.minExitStepSize)
 			if (er == ExitReason::EXIT_SIDE || er == ExitReason::EXIT_BOTTOM || er == ExitReason::EXIT_TOP) {
-				adaptStepSize = adaptStepSize * 0.37;
+                pvlu.adaptStepSize = pvlu.adaptStepSize * 0.37;
                 tm = init_tm;
-                return RK45Step(P, pnew, vnew, tm, er);
+                return RK45Step(P, pnew, vnew, tm, pvlu, er);
 			}
 
 		// Step 3 ----------------------------
@@ -581,7 +598,7 @@ namespace ICHNOS {
 		v_m = v1 * CF[istep][1] + v2 * CF[istep][2] + v3 * CF[istep][3];
 		p4 = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
 		double tm4 = tm + CF[istep][0] * ssdir * v_m.len();
-		er = CheckNewPointAndCalcVelocity(p4, v4/*, proc*/, tm4);
+		er = CheckNewPointAndCalcVelocity(p4, v4, pvlu/*, proc*/, tm4);
 		//DEBUG::displayPVasVex(p4, v4);
 		if (v4.isZero()) return false;
 
@@ -590,7 +607,7 @@ namespace ICHNOS {
 		v_m = v1 * CF[istep][1] + v2 * CF[istep][2] + v3 * CF[istep][3] + v4 * CF[istep][4];
 		p5 = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
         double tm5 = tm + CF[istep][0] * ssdir * v_m.len();
-		er = CheckNewPointAndCalcVelocity(p5, v5/*, proc*/, P.getTime());
+		er = CheckNewPointAndCalcVelocity(p5, v5, pvlu/*, proc*/, P.getTime());
 		//DEBUG::displayPVasVex(p5, v5);
 		if (v5.isZero()) return false;
 
@@ -599,14 +616,14 @@ namespace ICHNOS {
 		v_m = v1 * CF[istep][1] + v2 * CF[istep][2] + v3 * CF[istep][3] + v4 * CF[istep][4] + v5 * CF[istep][5];
 		p6 = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
         double tm6 = tm + CF[istep][0] * ssdir * v_m.len();
-		er = CheckNewPointAndCalcVelocity(p6, v6/*, proc*/, tm6);
+		er = CheckNewPointAndCalcVelocity(p6, v6, pvlu/*, proc*/, tm6);
 		//DEBUG::displayPVasVex(p6, v6);
 		if (v6.isZero()) return false;
-		if ( adaptStepSize > popt.StepOpt.minExitStepSize )
+		if ( pvlu.adaptStepSize > popt.StepOpt.minExitStepSize )
 			if (er == ExitReason::EXIT_SIDE || er == ExitReason::EXIT_BOTTOM || er == ExitReason::EXIT_TOP ) {
-				adaptStepSize = adaptStepSize * 0.45;
+                pvlu.adaptStepSize = pvlu.adaptStepSize * 0.45;
                 tm = init_tm;
-                return RK45Step(P, pnew, vnew, tm, er);
+                return RK45Step(P, pnew, vnew, tm, pvlu, er);
 			}
 
 		//// Calculate the point using two different paths
@@ -624,16 +641,16 @@ namespace ICHNOS {
 		if (q >= 1) {
 			q = std::min(q, popt.AdaptOpt.increaseRateChange);
 			// We can increase the step size
-			adaptStepSize = adaptStepSize * q;
-			if (adaptStepSize > popt.AdaptOpt.MaxStepSize)
-				adaptStepSize = popt.AdaptOpt.MaxStepSize;
+            pvlu.adaptStepSize = pvlu.adaptStepSize * q;
+			if (pvlu.adaptStepSize > popt.AdaptOpt.MaxStepSize)
+                pvlu.adaptStepSize = popt.AdaptOpt.MaxStepSize;
 			//if (adaptStepSize < popt.MinStepSize)
 			//	adaptStepSize = popt.MinStepSize;
 			pnew = yn;
             tm += CF[istep][0] * ssdir / v_m.len();
 		}
 		else {
-			if (adaptStepSize <= popt.AdaptOpt.MinStepSize) {
+			if (pvlu.adaptStepSize <= popt.AdaptOpt.MinStepSize) {
 				pnew = yn;
                 tm += CF[istep][0] * ssdir / v_m.len();
 				if (R > popt.AdaptOpt.ToleranceStepSize){
@@ -645,27 +662,27 @@ namespace ICHNOS {
 			}
 			else {
 				q = std::min(q, popt.AdaptOpt.limitUpperDecreaseStep);
-				adaptStepSize = adaptStepSize * q;
+                pvlu.adaptStepSize = pvlu.adaptStepSize * q;
 				if (R > popt.AdaptOpt.ToleranceStepSize){
                     tm = init_tm;
-                    return RK45Step(P, pnew, vnew, tm, er);
+                    return RK45Step(P, pnew, vnew, tm, pvlu, er);
 				}
 			}
 		}
-        er = CheckNewPointAndCalcVelocity(pnew, vnew/*, proc*/, tm);
-        if (adaptStepSize > popt.StepOpt.minExitStepSize){
+        er = CheckNewPointAndCalcVelocity(pnew, vnew, pvlu/*, proc*/, tm);
+        if (pvlu.adaptStepSize > popt.StepOpt.minExitStepSize){
             if (er == ExitReason::EXIT_SIDE || er == ExitReason::EXIT_BOTTOM || er == ExitReason::EXIT_TOP ){
-                adaptStepSize = adaptStepSize * 0.45;
+                pvlu.adaptStepSize = pvlu.adaptStepSize * 0.45;
                 tm = init_tm;
-                return RK45Step(P, pnew, vnew, tm, er);
+                return RK45Step(P, pnew, vnew, tm, pvlu, er);
             }
         }
 		return true;
 	}
 
-	void ParticleTrace::updateStep(double currentAge) {
+	void ParticleTrace::updateStep(double currentAge, helpVars& pvlu) {
         double stepLen, stepTime;
-        double dst = ICHNOS::diameter_along_velocity(pp, vv, ll, uu);
+        double dst = ICHNOS::diameter_along_velocity(pvlu.pp, pvlu.vv, pvlu.ll, pvlu.uu);
 
         if (popt.StepOpt.nSteps > 0){
             // This is the length that respects the nSteps
@@ -683,7 +700,7 @@ namespace ICHNOS {
             }
         }
 
-        double vlen = vv.len();
+        double vlen = pvlu.vv.len();
         if (popt.StepOpt.StepSizeTime > 0){
             stepTime = vlen*popt.StepOpt.StepSizeTime;
         }
@@ -697,6 +714,53 @@ namespace ICHNOS {
             stepTime = std::min<double>(stepTime, rem_age);
         }
         //TODO Add the part of the nStepsTime limit
-        actualStep = std::min<double>(stepTime, stepLen);
+        pvlu.actualStep = std::min<double>(stepTime, stepLen);
+	}
+
+	void ParticleTrace::multi_threading_trace() {
+
+        bool tf = readInputFiles(Streamlines4thread);
+
+        std::vector<std::thread> T;
+        for (int i = 0; i < popt.Nthreads; ++i){
+            T.push_back(std::thread(&ParticleTrace::run_thread, this, i));
+        }
+
+        for (int i = 0; i < popt.Nthreads; ++i){
+            T[i].join();
+        }
+	}
+
+	void ParticleTrace::run_thread(int ithread) {
+
+	    // Find out the range of this thread
+
+        for (int ireal = 0; ireal < popt.Nrealizations; ++ireal){
+            const std::string log_file_name = (popt.OutputFile + "_ithread_" + num2Padstr(ithread, 4) + "_ireal_" + num2Padstr(ireal, 4) + ".traj");
+            std::ofstream log_file;
+            log_file.open(log_file_name.c_str());
+
+	        for (int i = ithread; i < Streamlines4thread.size(); i = i + popt.Nthreads){
+	            //std::cout << ithread << ": " << i << std::endl;
+                //Streamline S(Streamlines4thread[i].getEid(), Streamlines4thread[i].getSid(),Streamlines4thread[i].getLastParticle());
+                bool tf;
+                Domain.bisInProcessorPolygon(Streamlines4thread[i].getLastParticle().getP(),tf);
+                if (!tf)
+                    continue;
+
+                ExitReason er = traceInner(Streamlines4thread[i]);
+
+                if (er == ExitReason::FIRST_POINT_GHOST || er == ExitReason::FAR_AWAY){
+                    WRITE::PrintExitReason(log_file, Streamlines4thread[i], er);
+                    continue;
+                }
+                for (unsigned int j = 0; j < Streamlines4thread[i].size()-1; ++j) {
+                    WRITE::PrintParticle2Log(log_file, Streamlines4thread[i], j);
+                }
+                WRITE::PrintParticle2Log(log_file, Streamlines4thread[i], Streamlines4thread[i].size() - 1);
+                WRITE::PrintExitReason(log_file, Streamlines4thread[i], er);
+	        }
+            log_file.close();
+	    }
 	}
 }

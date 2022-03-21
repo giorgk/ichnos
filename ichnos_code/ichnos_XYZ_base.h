@@ -21,7 +21,7 @@ namespace ICHNOS{
                                  std::vector<int>& ids,
                                  std::vector<double>& weights,
                                  std::map<int, double>& proc_map,
-                                 vec3& ll, vec3& uu, bool& out){}
+                                 helpVars& pvlu, bool& out){}
         virtual void reset(){}
         //virtual void sendVec3Data(std::vector<vec3>& data){};
 
@@ -43,7 +43,7 @@ namespace ICHNOS{
                          std::vector<int>& ids,
                          std::vector<double>& weights,
                          std::map<int, double>& proc_map,
-                         vec3& ll, vec3& uu, bool& out);
+                         helpVars& pvlu, bool& out);
 
 
         void reset();
@@ -93,7 +93,8 @@ namespace ICHNOS{
             ("Velocity.Prefix", po::value<std::string>(), "Prefix for the filename")
             ("Velocity.LeadingZeros", po::value<int>()->default_value(4), "e.g 0002->4, 000->3")
             ("Velocity.Suffix", po::value<std::string>(), "ending of file after procid")
-            ("Velocity.Type", po::value<std::string>(), "Type of velocity. (STEADY or TRANS)")
+            ("Velocity.Type", po::value<std::string>(), "Type of velocity.")
+            ("Velocity.Trans", po::value<int>()->default_value(0), "0->steady state, 1->Transient state")
             ("Velocity.Power", po::value<double>()->default_value(3.0), "Power of the IDW interpolation")
             ("Velocity.Scale", po::value<double>()->default_value(1.0), "Scale the domain before velocity calculation")
             ("Velocity.InitDiameter", po::value<double>()->default_value(5000), "Initial diameter")
@@ -120,10 +121,12 @@ namespace ICHNOS{
         }
         std::string fileXYZ;
 
-        if (vtype == VelType::STEADY || suffix.compare(".h5") == 0){
+        bool istrans  = vm_vfo["Velocity.Trans"].as<int>() != 0;
+
+        if (!istrans || suffix.compare(".h5") == 0){
             fileXYZ = prefix + num2Padstr(/*dbg_rank*/world.rank(), leadZeros) + suffix;
         }
-        else if (vtype == VelType::TRANS){
+        else if (istrans){
             fileXYZ = prefix + "XYZ_" + num2Padstr(/*dbg_rank*/world.rank(), leadZeros) + suffix;
         }
 
@@ -171,11 +174,11 @@ namespace ICHNOS{
                                 std::vector<int> &ids,
                                 std::vector<double> &weights,
                                 std::map<int, double>& proc_map,
-                                vec3& ll, vec3& uu, bool& out) {
+                                helpVars& pvlu, bool& out) {
         ids.clear();
         weights.clear();
-        ll.zero();
-        uu.zero();
+        pvlu.ll.zero();
+        pvlu.uu.zero();
 
         if (buseGraph){
             int closestVelId = -9;
@@ -183,7 +186,7 @@ namespace ICHNOS{
             if (out){
                 diameter = pntDATA[closestVelId].diameter;
                 ratio = pntDATA[closestVelId].ratio;
-                calculate_search_box(p,ll,uu, diameter, ratio, search_mult);
+                calculate_search_box(p, pvlu.ll, pvlu.uu, diameter, ratio, search_mult);
             }
             return;
         }
@@ -210,9 +213,9 @@ namespace ICHNOS{
             std::vector<boost::tuples::tuple<cgal_point_3, Pnt_info>> tmp;
             while (true){
                 tmp.clear();
-                calculate_search_box(p,ll,uu, diameter, ratio,search_mult);
-                cgal_point_3 llp(ll.x, ll.y, ll.z);
-                cgal_point_3 uup(uu.x, uu.y, uu.z);
+                calculate_search_box(p,pvlu.ll,pvlu.uu, diameter, ratio,search_mult);
+                cgal_point_3 llp(pvlu.ll.x, pvlu.ll.y, pvlu.ll.z);
+                cgal_point_3 uup(pvlu.uu.x, pvlu.uu.y, pvlu.uu.z);
                 Fuzzy_iso_box_info fib(llp, uup, 0.0);
                 Tree.search(std::back_inserter(tmp), fib);
                 if (tmp.size() >= 3){
@@ -226,8 +229,8 @@ namespace ICHNOS{
                                   <<") within the initial diameter of " << initial_diameter
                                   << ". Consider increasing the Initial diameter" << std::endl;
                         std::cout << "Actual diameter " << diameter << std::endl;
-                        std::cout << "ll = [" << ll.x << "," << ll.y << "," << ll.z << "];" << std::endl;
-                        std::cout << "uu = [" << uu.x << "," << uu.y << "," << uu.z << "];" << std::endl;
+                        std::cout << "ll = [" << pvlu.ll.x << "," << pvlu.ll.y << "," << pvlu.ll.z << "];" << std::endl;
+                        std::cout << "uu = [" << pvlu.uu.x << "," << pvlu.uu.y << "," << pvlu.uu.z << "];" << std::endl;
                         if (tmp.size() == 0){
                             out = false;
                             return;

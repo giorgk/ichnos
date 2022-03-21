@@ -20,6 +20,7 @@
 #include "TransientVelocity.h"
 #include "velocity_mesh2D.h"
 #include "XYZ_mesh2D.h"
+#include "ichnos_rwpt.h"
 
 
 ICHNOS::SingletonGenerator* ICHNOS::SingletonGenerator::_instance = nullptr;
@@ -57,6 +58,10 @@ int main(int argc, char* argv[])
     ICHNOS::options OPT(world);
     if (!OPT.readInput(argc, argv))
         return 0;
+    if (OPT.Popt.Nthreads > 1 && world.size() > 1){
+        std::cout << "You cannot have both: number of threads and number of cores greater than 1 at the same time" << std::endl;
+        return 0;
+    }
 
     if (OPT.gatherMode) {
         ICHNOS::gather_particles(OPT);
@@ -73,15 +78,15 @@ int main(int argc, char* argv[])
                 if (!tf){return 0;}
 
                 switch (OPT.velocityFieldType) {
-                    case ICHNOS::VelType::TRANS:
+                    case ICHNOS::VelType::DETRM:
                     {
                         world.barrier();
-                        ICHNOS::CloudVel VF(world);
+                        ICHNOS::CloudVel VF(world, XYZ);
                         tf = VF.readVelocityField(OPT.getVelFname(), XYZ.getNpnts());
                         if (!tf){return 0;}
                         VF.SetStepOptions(OPT.Popt.StepOpt);
 
-                        ICHNOS::ParticleTrace pt(world, XYZ, VF, domain, OPT.Popt);
+                        ICHNOS::ParticleTrace pt(world, VF, domain, OPT.Popt);
                         world.barrier();
                         if (world.rank() == 0)
                             std::cout << "Tracing particles..." << std::endl;
@@ -92,10 +97,23 @@ int main(int argc, char* argv[])
                     {
                         break;
                     }
+                    case ICHNOS::VelType::RWPT:
+                    {
+                        world.barrier();
+                        ICHNOS::CloudRWVel VF(world, XYZ);
+                        tf = VF.readVelocityField(OPT.getVelFname(), XYZ.getNpnts());
+                        if (!tf){return 0;}
+                        VF.SetStepOptions(OPT.Popt.StepOpt);
+                        OPT.Popt.UpdateStepSize = 0;
+                        ICHNOS::ParticleTrace pt(world, VF, domain, OPT.Popt);
+                        world.barrier();
+                        if (world.rank() == 0)
+                            std::cout << "Tracing particles..." << std::endl;
+                        pt.Trace();
+                        break;
+                    }
 
                 }
-
-
                 break;
             }
             case ICHNOS::XYZType::MESH2D:
@@ -105,13 +123,14 @@ int main(int argc, char* argv[])
                 if (!tf){return 0;}
 
                 switch (OPT.velocityFieldType){
-                    case ICHNOS::VelType::TRANS:
+                    case ICHNOS::VelType::DETRM:
                     {
-                        ICHNOS::Mesh2DVel VF(world);
+                        ICHNOS::Mesh2DVel VF(world, XYZ);
                         tf = VF.readVelocityField(OPT.getVelFname(), XYZ.getNpnts());
+                        if (!tf){return 0;}
                         XYZ.SetInterpType(VF.getInterpType());
 
-                        ICHNOS::ParticleTrace pt(world, XYZ, VF, domain, OPT.Popt);
+                        ICHNOS::ParticleTrace pt(world, VF, domain, OPT.Popt);
                         world.barrier();
                         if (world.rank() == 0)
                             std::cout << "Tracing particles..." << std::endl;
@@ -121,79 +140,6 @@ int main(int argc, char* argv[])
 
                 break;
             }
-
-            case ICHNOS::XYZType::IWFM:
-            {
-                ICHNOS::XYZ_IWFM XYZ(world);
-                tf = XYZ.readXYZdata(OPT.getVelFname());
-                if (!tf){return 0;}
-
-                switch (OPT.velocityFieldType) {
-                    case ICHNOS::VelType::TRANS:
-                    {
-                        ICHNOS::CloudVel VF(world);
-                        tf = VF.readVelocityField(OPT.getVelFname(), XYZ.getNpnts());
-                        if (!tf){return 0;}
-                        VF.SetStepOptions(OPT.Popt.StepOpt);
-
-                        ICHNOS::ParticleTrace pt(world, XYZ, VF, domain, OPT.Popt);
-                        if (world.rank() == 0)
-                            std::cout << "Tracing particles..." << std::endl;
-                        pt.Trace();
-                        break;
-                    }
-                    case ICHNOS::VelType::STOCH:
-                    {
-                        break;
-                    }
-
-
-                break;
-            }
-        }
-
-//        switch (OPT.velocityFieldType) {
-//        case ICHNOS::VelType::STEADY:
-//        {
-//            NPSAT::npsatVel VF(world, ICHNOS::VelType::STEADY);
-//            VF.readVelocityField(OPT.getVelFname());
-//            ICHNOS::Domain2D domain(OPT.Dopt);
-//            ICHNOS::ParticleTrace pt(world, VF, domain, OPT.Popt);
-//            if (world.rank() == 0)
-//                std::cout << "Tracing particles..." << std::endl;
-//            pt.Trace();
-//            break;
-//        }
-//        case ICHNOS::VelType::TRANS:
-//        {
-//            TRANS::CloudVel VF(world, ICHNOS::VelType::TRANS);
-//            VF.readVelocityField(OPT.getVelFname());
-//            ICHNOS::Domain2D domain(OPT.Dopt);
-//            OPT.Popt.bIsTransient = true;
-//            ICHNOS::ParticleTrace pt(world, VF, domain, OPT.Popt);
-//            if (world.rank() == 0)
-//                std::cout << "Tracing particles..." << std::endl;
-//            pt.Trace();
-//            break;
-//        }
-//        case ICHNOS::VelType::STOCH:
-//        {
-//            STOCH::MarkovChainVel VF(world, ICHNOS::VelType::STOCH);
-//            ICHNOS::Domain2D domain(OPT.Dopt);
-//            VF.readVelocityField(OPT.getVelFname());
-//            ICHNOS::ParticleTrace pt(world, VF, domain, OPT.Popt);
-//            for (int i = 0; i < OPT.Popt.Nrealizations; ++i) {
-//                if (world.rank() == 0)
-//                    std::cout << "||======Realization " << i << "======" << std::endl;
-//                pt.Trace(i);
-//            }
-//            break;
-//        }
-//        default:
-//        {
-//            std::cout << "Invalid velocity type" << std::endl;
-//            break;
-//        }
        }
     }
     

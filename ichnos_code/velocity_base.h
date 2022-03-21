@@ -7,27 +7,33 @@
 
 #include "ichnos_structures.h"
 #include "ichnos_utils.h"
+#include "ichnos_XYZ_base.h"
 
 
 namespace ICHNOS {
 	
 	class velocityField {
 	public:
-		velocityField(boost::mpi::communicator& world_in);
+		velocityField(boost::mpi::communicator& world_in, XYZ_base &XYZ_in);
 		virtual bool readVelocityField(std::string vf_file, int nPnts){return true;}
-		virtual void calcVelocity(vec3 &vel,
-                                  std::vector<int> &ids,
-                                  std::vector<double> &weights,
+		virtual void calcVelocity(vec3& p, vec3& vel,
+                                  std::map<int, double>& proc_map,
+                                  helpVars& pvlu,
+                                  bool& out,
+                                  //std::vector<int> &ids,
+                                  //std::vector<double> &weights,
                                   double tm = 0) {}
 		virtual void reset(){}
 		virtual void updateStep(double& step){}
 		virtual void getVec3Data(std::vector<vec3>& data){}
 		
 		bool bIsInGhostArea(std::map<int, double> proc_map);
-		VelType getVelType(){return Vtype;};
+		VelType getVelType(){return Vtype;}
+        bool isVelTransient(){return isVeltrans;}
 		int calcProcID(std::map<int, double> proc_map);
 		bool InterpolateOutsideDomain = true;
 		void SetStepOptions(StepOptions stepOpt_in);
+        XYZ_base& XYZ;
 
 	protected:
 		boost::mpi::communicator world;
@@ -38,12 +44,14 @@ namespace ICHNOS {
 		std::string Suffix;
 		int leadingZeros;
         double multiplier = 1.0;
+        bool isVeltrans;
 
 	};
 
-	velocityField::velocityField(boost::mpi::communicator& world_in)
+	velocityField::velocityField(boost::mpi::communicator& world_in, XYZ_base &XYZ_in)
 		:
-		world(world_in)
+		world(world_in),
+        XYZ(XYZ_in)
 	{}
 
 	void velocityField::SetStepOptions(StepOptions stepOpt_in) {

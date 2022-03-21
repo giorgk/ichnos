@@ -241,7 +241,7 @@ namespace ICHNOS {
             switch (Bot_interpolation_type) {
                 case type::CONST:
                 {
-                    top = bot_value;
+                    bot = bot_value;
                     bot_tf = true;
                     break;
                 }

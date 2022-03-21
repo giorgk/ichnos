@@ -4,6 +4,7 @@
 
 #include "ichnos_structures.h"
 #include "velocity_base.h"
+#include "ichnos_XYZ_base.h"
 
 namespace po = boost::program_options;
 namespace ic = ICHNOS;
@@ -12,7 +13,7 @@ namespace STOCH {
 
 	class MarkovChainVel : public ICHNOS::velocityField {
 	public:
-		MarkovChainVel(boost::mpi::communicator& world_in);
+		MarkovChainVel(boost::mpi::communicator& world_in, ic::XYZ_base &XYZ_in);
 		bool readVelocityField(std::string vf_file, int nPnts);
 		void calcVelocity(ic::vec3& vel,
                           std::vector<int>& ids,
@@ -57,9 +58,9 @@ namespace STOCH {
 
 	};
 
-	MarkovChainVel::MarkovChainVel(boost::mpi::communicator& world_in)
+	MarkovChainVel::MarkovChainVel(boost::mpi::communicator& world_in, ic::XYZ_base &XYZ_in)
 		:
-		velocityField(world_in)
+		velocityField(world_in, XYZ_in)
 	{}
 
 	void MarkovChainVel::reset() {

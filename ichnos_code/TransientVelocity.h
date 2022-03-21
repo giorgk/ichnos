@@ -32,17 +32,20 @@ namespace ic = ICHNOS;
 namespace ICHNOS{
     class CloudVel : public ic::velocityField{
     public:
-        CloudVel(boost::mpi::communicator& world_in);
+        CloudVel(boost::mpi::communicator& world_in, XYZ_base &XYZ_in);
         bool readVelocityField(std::string vf_file, int nPnts);
-        void calcVelocity(ic::vec3& vel,
-                          std::vector<int>& ids,
-                          std::vector<double>& weights,
+        void calcVelocity(vec3& p, vec3& vel,
+                          std::map<int, double>& proc_map,
+                          helpVars& pvlu,
+                          bool& out,
+                          //std::vector<int>& ids,
+                          //std::vector<double>& weights,
                           double time = 0);
         void reset();
         void updateStep(double& step);
         void getVec3Data(std::vector<ic::vec3>& data);
 
-    private:
+    protected:
         //bool readXYZfile(std::string prefix, std::string suffix, int ld_zero);
         bool readVelocityFiles();
         bool readVfile(std::string filename, int nPoints, int nSteps, ic::coordDim dim);
@@ -83,9 +86,9 @@ namespace ICHNOS{
 
     };
 
-    CloudVel::CloudVel(boost::mpi::communicator &world_in)
+    CloudVel::CloudVel(boost::mpi::communicator &world_in, XYZ_base &XYZ_in)
         :
-        velocityField(world_in)
+        velocityField(world_in, XYZ_in)
     {
         InterpolateOutsideDomain = true;
     }
@@ -101,7 +104,8 @@ namespace ICHNOS{
             ("Velocity.Prefix", po::value<std::string>(), "Prefix for the filename")
             ("Velocity.LeadingZeros", po::value<int>()->default_value(4), "e.g 0002->4, 000->3")
             ("Velocity.Suffix", po::value<std::string>(), "ending of file after procid")
-            ("Velocity.Type", po::value<std::string>(), "Type of velocity. (STEADY or TRANS)")
+            ("Velocity.Type", po::value<std::string>(), "Type of velocity.")
+            ("Velocity.Trans", po::value<int>()->default_value(0), "0->steady state, 1->Transient state")
             ("Velocity.TimeStepFile", po::value<std::string>(), "This filename with the time steps")
             ("Velocity.TimeInterp", po::value<std::string>(), "Interpolation type between time steps")
             ("Velocity.RepeatTime", po::value<double>()->default_value(0.0), "The number of days to repeat after the and of time steps")
@@ -147,9 +151,10 @@ namespace ICHNOS{
             //initial_diameter = vm_vfo["Velocity.InitDiameter"].as<double>();
             //initial_ratio = vm_vfo["Velocity.InitRatio"].as<double>();
 
+            isVeltrans  = vm_vfo["Velocity.Trans"].as<int>() != 0;
             // Read the time step
             std::vector<double> TimeSteps;
-            if (Vtype == ic::VelType::TRANS){
+            if (isVeltrans){
                 std::string TSfile = vm_vfo["Velocity.TimeStepFile"].as<std::string>();
 
                 bool tf = ic::READ::readTimeStepFile(TSfile, TimeSteps);
@@ -222,7 +227,7 @@ namespace ICHNOS{
 #endif
         bool tf = false;
         auto start = std::chrono::high_resolution_clock::now();
-        if (Vtype == ic::VelType::TRANS){
+        if (isVeltrans){
             std::string fileVX = Prefix + "VX_" + ic::num2Padstr(/*dbg_rank*/world.rank(), leadingZeros) + Suffix;
             tf = readVfile(fileVX, nPoints, nSteps, ic::coordDim::vx);
             if (tf){
@@ -234,7 +239,7 @@ namespace ICHNOS{
                 tf = readVfile(fileVZ, nPoints, nSteps, ic::coordDim::vz);
             }
         }
-        else if (Vtype == ic::VelType::STEADY){
+        else {
             std::string fileVX = Prefix + ic::num2Padstr(world.rank(), leadingZeros) + Suffix;
             tf = readSteadyVfile(fileVX, nPoints);
         }
@@ -251,7 +256,7 @@ namespace ICHNOS{
     bool CloudVel::readVH5file(std::string filename, int nPoints, int nSteps){
         std::cout << "\tReading file " + filename << std::endl;
 #if _USEHF > 0
-        if (Vtype == ic::VelType::STEADY){
+        if (!isVeltrans){
             const std::string VXYZNameSet("VXYZ");
             HighFive::File HDFNfile(filename, HighFive::File::ReadOnly);
             HighFive::DataSet datasetVXYZ = HDFNfile.getDataSet(VXYZNameSet);
@@ -267,7 +272,7 @@ namespace ICHNOS{
                 VEL.setVELvalue(VXYZ[2][i]*multiplier, i, 0, ic::coordDim::vz);
             }
         }
-        else if (Vtype == ic::VelType::TRANS){
+        else {
             const std::string VXNameSet("VX");
             const std::string VYNameSet("VY");
             const std::string VZNameSet("VZ");
@@ -431,10 +436,19 @@ namespace ICHNOS{
 //        return true;
 //    }
 
-    void CloudVel::calcVelocity(ic::vec3& vel,
-                                std::vector<int>& ids,
-                                std::vector<double>& weights,
+    void CloudVel::calcVelocity(vec3& p, vec3& vel,
+                                std::map<int, double>& proc_map,
+                                helpVars& pvlu,
+                                bool& out,
+                                //std::vector<int>& ids,
+                                //std::vector<double>& weights,
                                 double tm){
+
+        std::vector<int> ids;
+        std::vector<double> weights;
+        XYZ.calcWeights(p, ids,weights, proc_map, pvlu, out);
+        if (!out)
+            return;
 
 
         // Find the time step

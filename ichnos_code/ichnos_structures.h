@@ -663,6 +663,8 @@ namespace ICHNOS {
 		std::string configfile;
 		// Number of realizations
 		int Nrealizations;
+		int Nthreads;
+		bool RunAsThread;
 
 		bool bIsTransient = false;
 	};
@@ -751,6 +753,16 @@ namespace ICHNOS {
 		std::cout << std::endl;
 	}
 
+	struct helpVars{
+        vec3 pp;
+        vec3 vv;
+        vec3 ll;
+        vec3 uu;
+        double adaptStepSize;
+        double actualStep;
+        double actualStepTime;
+	};
+
 
 	class Streamline {
 	public:
@@ -778,7 +790,7 @@ namespace ICHNOS {
 		unsigned int size() { return SL.size(); }
 		Particle getParticle(int i) { return SL.at(i); }
 		double getAge() { return age; }
-
+        helpVars PVLU;
 
 	private:
 		int Eid;
@@ -960,6 +972,7 @@ namespace ICHNOS {
 		}
 
 		boost::random::uniform_real_distribution<float> uniformDistribution;
+		boost::random::normal_distribution<float> normalDistribution;
 		boost::mt19937 generetor;
 
 	public:
@@ -992,6 +1005,9 @@ namespace ICHNOS {
 			//}
 
 			//return rint;
+		}
+		float randomNormal(){
+            return  normalDistribution(generetor);
 		}
 	};
 

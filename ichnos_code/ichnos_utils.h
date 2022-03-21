@@ -834,7 +834,7 @@ namespace ICHNOS {
 		}
 
 
-		bool readParticleFile(std::string filename, std::vector <Streamline>& S, VelType vt) {
+		bool readParticleFile(std::string filename, std::vector <Streamline>& S, bool isTransient) {
 			std::ifstream datafile(filename.c_str());
 			if (!datafile.good()) {
 				std::cout << "Can't open the file " << filename << std::endl;
@@ -859,7 +859,7 @@ namespace ICHNOS {
 					inp >> pp.x;
 					inp >> pp.y;
 					inp >> pp.z;
-					if (vt == VelType::TRANS)
+					if (isTransient)
 					    inp >> rt;
 					//P.push_back(Particle<T>(pp));
 					S.push_back(Streamline(eid, sid, Particle(pp, rt)));
@@ -869,7 +869,7 @@ namespace ICHNOS {
 			}
 		}
 
-		bool readWellFile(std::string filename, std::vector <Streamline>& S, VelType vt) {
+		bool readWellFile(std::string filename, std::vector <Streamline>& S, bool isTransient) {
 			std::ifstream datafile(filename.c_str());
 			if (!datafile.good()) {
 				std::cout << "Can't open the file" << filename << std::endl;
@@ -906,7 +906,7 @@ namespace ICHNOS {
 					inp >> y;
 					inp >> top;
 					inp >> bot;
-                    if (vt == VelType::TRANS)
+                    if (isTransient)
                         inp >> rt;
 					distributeParticlesAroundWellLayered(eid, x, y, top, bot, S, wopt, rt);
 					//distributeParticlesAroundWell(eid, x, y, top, bot, S, wopt);

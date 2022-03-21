@@ -19,12 +19,15 @@ namespace ic = ICHNOS;
 namespace ICHNOS{
     class Mesh2DVel : public ic::velocityField{
     public:
-        Mesh2DVel(boost::mpi::communicator& world_in);
+        Mesh2DVel(boost::mpi::communicator& world_in, XYZ_base &XYZ_in);
 
         bool readVelocityField(std::string vf_file, int nPnts);
-        void calcVelocity(vec3 &vel,
-                          std::vector<int> &ids,
-                          std::vector<double> &weights,
+        void calcVelocity(vec3& p, vec3 &vel,
+                          std::map<int, double>& proc_map,
+                          helpVars& pvlu,
+                          bool& out,
+                          //std::vector<int> &ids,
+                          //std::vector<double> &weights,
                           double time = 0);
         void reset();
         void updateStep(double &step);
@@ -40,6 +43,7 @@ namespace ICHNOS{
 
         std::vector<vec3> nds;
         std::vector<std::vector<int>> msh;
+
 
 
 
@@ -72,9 +76,9 @@ namespace ICHNOS{
                                int i1, int i2, double t);
     };
 
-    Mesh2DVel::Mesh2DVel(boost::mpi::communicator &world_in)
+    Mesh2DVel::Mesh2DVel(boost::mpi::communicator &world_in, XYZ_base &XYZ_in)
             :
-            velocityField(world_in)
+            velocityField(world_in, XYZ_in)
     {
         InterpolateOutsideDomain = false;
     }
@@ -91,7 +95,8 @@ namespace ICHNOS{
                 ("Velocity.Prefix", po::value<std::string>(), "Prefix for the filename")
                 ("Velocity.LeadingZeros", po::value<int>()->default_value(4), "e.g 0002->4, 000->3")
                 ("Velocity.Suffix", po::value<std::string>(), "ending of file after procid")
-                ("Velocity.Type", po::value<std::string>(), "Type of velocity. (STEADY or TRANS)")
+                ("Velocity.Type", po::value<std::string>(), "Type of velocity.")
+                ("Velocity.Trans", po::value<int>()->default_value(0), "0->steady state, 1->Transient state")
                 ("Velocity.INTERP", po::value<std::string>(), "Type of interpolation. (ELEMENT, NODE or FACE)")
                 ("Velocity.Nlayers", po::value<int>()->default_value(4), "e.g 0002->4, 000->3")
                 ("Velocity.TimeStepFile", po::value<std::string>(), "This filename with the time steps")
@@ -160,9 +165,11 @@ namespace ICHNOS{
             nFaces = vm_vfo["MESH2D.Nfaces"].as<int>();
             nTotalFaces = nFaces*nLayers;
 
+            isVeltrans  = vm_vfo["Velocity.Trans"].as<int>() != 0;
+
             // Read the time step
             std::vector<double> TimeSteps;
-            if (Vtype == ic::VelType::TRANS){
+            if (isVeltrans){
                 std::string TSfile = vm_vfo["Velocity.TimeStepFile"].as<std::string>();
                 bool tf = ic::READ::readTimeStepFile(TSfile, TimeSteps);
                 if (!tf){return false;}
@@ -350,7 +357,18 @@ namespace ICHNOS{
         return true;
     }
 
-    void Mesh2DVel::calcVelocity(vec3 &vel, std::vector<int> &ids, std::vector<double> &weights, double tm) {
+    void Mesh2DVel::calcVelocity(vec3& p, vec3 &vel,
+                                 std::map<int, double>& proc_map,
+                                 helpVars& pvlu,
+                                 bool& out,
+                                 //std::vector<int> &ids,
+                                 //std::vector<double> &weights,
+                                 double tm) {
+        std::vector<int> ids;
+        std::vector<double> weights;
+        XYZ.calcWeights(p, ids,weights, proc_map, pvlu, out);
+
+
         if (ids[0] == -9 || ids[1] == -9){
             vel = 99999;
             return;
@@ -547,100 +565,89 @@ namespace ICHNOS{
     }
 
     bool Mesh2DVel::readXYZVelocity() {
-        switch (Vtype) {
-            case ic::VelType::STEADY:
-            {
-                std::string filename = Prefix + ic::num2Padstr(world.rank(), leadingZeros) + Suffix;
-                if (Suffix.compare(".h5") == 0){
-                    //TODO
-                    std::cout << "MESH2D xyz - Steady State - H5 input is not implemented yet" << std::endl;
-                    return false;
-                }
-                std::cout << "\tReading file " + filename << std::endl;
-                std::ifstream datafile(filename.c_str());
-                if (!datafile.good()){
-                    std::cout << "Can't open the file " << filename << std::endl;
-                    return false;
-                }
-                else{
-                    std::string line;
-                    double vx, vy, vz;
-                    std::vector<ic::vec3> tmp_vel;
-                    while (getline(datafile, line)){
-                        if (line.size() > 1){
-                            std::istringstream inp(line.c_str());
-                            inp >> vx;
-                            inp >> vy;
-                            inp >> vz;
-                            tmp_vel.push_back(ic::vec3(vx, vy, vz));
-                        }
-                    }
-                    datafile.close();
-                    nPoints = tmp_vel.size();
-                    VEL.init(nPoints, nSteps);
-                    for (unsigned int i = 0; i < tmp_vel.size(); ++i){
-                        VEL.setVELvalue(tmp_vel[i].x * multiplier, i, 0, ic::coordDim::vx);
-                        VEL.setVELvalue(tmp_vel[i].y * multiplier, i, 0, ic::coordDim::vy);
-                        VEL.setVELvalue(tmp_vel[i].z * multiplier, i, 0, ic::coordDim::vz);
-                    }
-                    return true;
-                }
-                break;
-            }
-            case ic::VelType::TRANS:
-            {
-                //TODO
-                break;
-            }
 
+        if (!isVeltrans){
+            std::string filename = Prefix + ic::num2Padstr(world.rank(), leadingZeros) + Suffix;
+            if (Suffix.compare(".h5") == 0){
+                //TODO
+                std::cout << "MESH2D xyz - Steady State - H5 input is not implemented yet" << std::endl;
+                return false;
+            }
+            std::cout << "\tReading file " + filename << std::endl;
+            std::ifstream datafile(filename.c_str());
+            if (!datafile.good()){
+                std::cout << "Can't open the file " << filename << std::endl;
+                return false;
+            }
+            else{
+                std::string line;
+                double vx, vy, vz;
+                std::vector<ic::vec3> tmp_vel;
+                while (getline(datafile, line)){
+                    if (line.size() > 1){
+                        std::istringstream inp(line.c_str());
+                        inp >> vx;
+                        inp >> vy;
+                        inp >> vz;
+                        tmp_vel.push_back(ic::vec3(vx, vy, vz));
+                    }
+                }
+                datafile.close();
+                nPoints = tmp_vel.size();
+                VEL.init(nPoints, nSteps);
+                for (unsigned int i = 0; i < tmp_vel.size(); ++i){
+                    VEL.setVELvalue(tmp_vel[i].x * multiplier, i, 0, ic::coordDim::vx);
+                    VEL.setVELvalue(tmp_vel[i].y * multiplier, i, 0, ic::coordDim::vy);
+                    VEL.setVELvalue(tmp_vel[i].z * multiplier, i, 0, ic::coordDim::vz);
+                }
+                return true;
+            }
+        }
+        else{
+            //TODO
         }
         return false;
     }
 
     bool Mesh2DVel::readFaceVelocity() {
         bool out = false;
-        switch (Vtype){
-            case ic::VelType::STEADY:
-            {
-                std::string filename = Prefix + ic::num2Padstr(world.rank(), leadingZeros) + Suffix;
-                if (Suffix.compare(".h5") == 0){
-                    //TODO
-                    std::cout << "MESH2D for Faces - Steady State - H5 input is not implemented yet" << std::endl;
-                    return false;
-                }
-                std::cout << "\tReading file " + filename << std::endl;
-                std::ifstream datafile(filename.c_str());
-                if (!datafile.good()){
-                    std::cout << "Can't open the file " << filename << std::endl;
-                    return false;
-                }
-                else{
-                    std::string line;
-                    double vf;
-                    std::vector<double> tmp;
-                    while (getline(datafile, line)){
-                        if (line.size() > 1){
-                            std::istringstream inp(line.c_str());
-                            inp >> vf;
-                            tmp.push_back(vf);
-                        }
-                    }
-                    datafile.close();
-                    nPoints = tmp.size();
-                    VEL.init(nPoints, nSteps, 1);
-                    for (unsigned int i = 0; i < tmp.size(); ++i){
-                        VEL.setVELvalue(tmp[i] * multiplier, i, 0, ic::coordDim::vx);
-                    }
-                    out = true;
-                }
-                break;
-            }
-            case ic::VelType::TRANS:
-            {
+        if (!isVeltrans){
+            std::string filename = Prefix + ic::num2Padstr(world.rank(), leadingZeros) + Suffix;
+            if (Suffix.compare(".h5") == 0){
                 //TODO
-                break;
+                std::cout << "MESH2D for Faces - Steady State - H5 input is not implemented yet" << std::endl;
+                return false;
+            }
+            std::cout << "\tReading file " + filename << std::endl;
+            std::ifstream datafile(filename.c_str());
+            if (!datafile.good()){
+                std::cout << "Can't open the file " << filename << std::endl;
+                return false;
+            }
+            else{
+                std::string line;
+                double vf;
+                std::vector<double> tmp;
+                while (getline(datafile, line)){
+                    if (line.size() > 1){
+                        std::istringstream inp(line.c_str());
+                        inp >> vf;
+                        tmp.push_back(vf);
+                    }
+                }
+                datafile.close();
+                nPoints = tmp.size();
+                VEL.init(nPoints, nSteps, 1);
+                for (unsigned int i = 0; i < tmp.size(); ++i){
+                    VEL.setVELvalue(tmp[i] * multiplier, i, 0, ic::coordDim::vx);
+                }
+                out = true;
             }
         }
+        else{
+            // TODO
+        }
+
         return out;
     }
 

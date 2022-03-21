@@ -16,9 +16,11 @@ namespace ICHNOS {
      * VelType is a list of velocity field types
      */
 	enum class VelType {
-		STEADY, /// This is a velocity type where a single value for the velocity is defined
-		TRANS, /// This is a velocity type where for its point the velocity is defined as a time series
+	    DETRM, /// The velocity is deterministic
+		//STEADY, /// This is a velocity type where a single value for the velocity is defined
+		//TRANS, /// This is a velocity type where for its point the velocity is defined as a time series
 		STOCH, /// (Experimental) This is a velocity type where the velocity is defined in some stochastic manner
+		RWPT, /// (Experimental) This is for random walk particle tracking
 		INVALID /// This is used for any velocity type that does not make any sense
 	};
 
@@ -31,9 +33,11 @@ namespace ICHNOS {
 		std::map <VelType, std::string> vtMap;
 		std::map <VelType, std::string>::iterator it;
 		//vtMap.insert(std::pair<VelType, std::string>(VelType::Cloud3d, "Cloud3d"));
-        vtMap.insert(std::pair<VelType, std::string>(VelType::STEADY, "STEADY"));
-		vtMap.insert(std::pair<VelType, std::string>(VelType::TRANS, "TRANS"));
+        //vtMap.insert(std::pair<VelType, std::string>(VelType::STEADY, "STEADY"));
+		//vtMap.insert(std::pair<VelType, std::string>(VelType::TRANS, "TRANS"));
+        vtMap.insert(std::pair<VelType, std::string>(VelType::DETRM, "DETRM"));
 		vtMap.insert(std::pair<VelType, std::string>(VelType::STOCH, "STOCH"));
+        vtMap.insert(std::pair<VelType, std::string>(VelType::RWPT, "RWPT"));
 		it = vtMap.find(vt);
 		if (it != vtMap.end())
 			return it->second;
@@ -50,9 +54,11 @@ namespace ICHNOS {
 		std::map < std::string, VelType> vtMap;
 		std::map < std::string, VelType>::iterator it;
 		//vtMap.insert(std::pair<std::string, VelType>("Cloud3d", VelType::Cloud3d));
-		vtMap.insert(std::pair<std::string, VelType>("STEADY", VelType::STEADY));
-        vtMap.insert(std::pair<std::string, VelType>("TRANS", VelType::TRANS));
+		//vtMap.insert(std::pair<std::string, VelType>("STEADY", VelType::STEADY));
+        //vtMap.insert(std::pair<std::string, VelType>("TRANS", VelType::TRANS));
+        vtMap.insert(std::pair<std::string, VelType>("DETRM", VelType::DETRM));
 		vtMap.insert(std::pair<std::string, VelType>("STOCH", VelType::STOCH));
+        vtMap.insert(std::pair<std::string, VelType>("RWPT", VelType::RWPT));
 		it = vtMap.find(vt);
 		if (it != vtMap.end())
 			return it->second;
@@ -155,10 +161,7 @@ namespace ICHNOS {
 		:
 		world(world_in)
 	{
-        Version = "0.3.01";
-		//if (world.size() > 1) {
-		//	bIsMultiThreaded = false;
-		//}
+        Version = "0.4.01";
 	}
 
 	bool options::readInput(int argc, char* argv[]) {
@@ -252,10 +255,10 @@ namespace ICHNOS {
 
 			// Other
 			("Other.Nrealizations", po::value<int>()->default_value(1), "Number of realizations")
+            ("Other.nThreads", po::value<int>()->default_value(1), "Number of threads")
+            ("Other.RunAsThread", po::value<int>()->default_value(0), "Run multi Core as multiThread")
 			("Other.Version", po::value<std::string >(), "The version of the Ichnos. (Check ichnos.exe -v)")
 
-			// Unsued
-			//("Unused.nThreads", po::value<int>()->default_value(1), "Number of threads")
 		;
 
 		if (vm_cmd.count("help")) {
@@ -292,6 +295,8 @@ namespace ICHNOS {
                         return false;
                     }
                     Popt.Nrealizations = vm_cfg["Other.Nrealizations"].as<int>();
+                    Popt.Nthreads = vm_cfg["Other.nThreads"].as<int>();
+                    Popt.RunAsThread = vm_cfg["Other.RunAsThread"].as<int>() != 0;
                 }
 
 				{// Velocity Options
@@ -299,9 +304,6 @@ namespace ICHNOS {
 					if (velocityFieldType == VelType::INVALID) {
 						std::cout << vm_cfg["Velocity.Type"].as<std::string>() << " is an invalid velocity type" << std::endl;
 						return false;
-					}
-					else if (velocityFieldType == VelType::STEADY){// Steady flow field is essentially an one-step transient. The only difference is the input file for XYZ and velocity format
-                        velocityFieldType = VelType::TRANS;
 					}
 
 					xyztype = castXYZType2Enum(vm_cfg["Velocity.XYZType"].as<std::string>());
@@ -390,10 +392,6 @@ namespace ICHNOS {
 					Popt.OutputFile = vm_cfg["InputOutput.OutputFile"].as<std::string>();
 					Popt.ParticlesInParallel = vm_cfg["InputOutput.ParticlesInParallel"].as<int>(); 
 				}
-				//{// Unsued
-					//nThreads = vm_cfg["Unused.nThreads"].as<int>();
-				//}
-			
 			}
 			catch (std::exception& E)
 			{
