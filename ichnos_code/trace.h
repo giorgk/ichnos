@@ -1,7 +1,10 @@
 #pragma once
 #include <boost/mpi.hpp>
+#include <boost/multi_array.hpp>
 
 #include <thread>
+
+#include <highfive/H5File.hpp>
 
 #include "ichnos_structures.h"
 #include "velocity_base.h"
@@ -729,6 +732,52 @@ namespace ICHNOS {
         for (int i = 0; i < popt.Nthreads; ++i){
             T[i].join();
         }
+
+        { //print with Highfive
+            const std::string FILE_NAME(popt.OutputFile + ".h5");
+            const std::string DATASET_NAME("PVA");
+            std::vector<std::vector<double>> alldata;
+            //boost::multi_array<double, 2> my_array(boost::extents[size_x][size_y]);
+            for (unsigned int i = 0; i < Streamlines4thread.size(); ++i){
+                std::vector<double> tmp_data(9,0);
+                for (unsigned int j = 0; j < Streamlines4thread[i].size(); ++j){
+                    tmp_data[0] = Streamlines4thread[i].getEid();
+                    tmp_data[1] = Streamlines4thread[i].getSid();
+                    Particle pp = Streamlines4thread[i].getParticle(j);
+                    tmp_data[2] = pp.getP().x;
+                    tmp_data[3] = pp.getP().y;
+                    tmp_data[4] = pp.getP().z;
+                    tmp_data[5] = pp.getV().x;
+                    tmp_data[6] = pp.getV().y;
+                    tmp_data[7] = pp.getV().z;
+                    tmp_data[8] = pp.getTime();
+                    alldata.push_back(tmp_data);
+                }
+            }
+            HighFive::File file(FILE_NAME, HighFive::File::ReadWrite | HighFive::File::Create | HighFive::File::Truncate);
+            HighFive::DataSet dataset = file.createDataSet<double>(DATASET_NAME, HighFive::DataSpace::From(alldata));
+            dataset.write(alldata);
+        }
+
+        /* //Print to file
+        {
+            const std::string log_file_name = (popt.OutputFile + ".traj");
+            std::cout << "Printing Output to " << log_file_name << std::endl;
+            std::ofstream log_file;
+            log_file.open(log_file_name.c_str());
+            for (unsigned int i = 0; i < Streamlines4thread.size(); ++i){
+                for (unsigned int j = 0; j < Streamlines4thread[i].size()-1; ++j) {
+                    WRITE::PrintParticle2Log(log_file, Streamlines4thread[i], j);
+                }
+                WRITE::PrintParticle2Log(log_file, Streamlines4thread[i], Streamlines4thread[i].size() - 1);
+                WRITE::PrintExitReason(log_file, Streamlines4thread[i], Streamlines4thread[i].getExitReason());
+            }
+            log_file.close();
+        }
+         */
+
+
+
 	}
 
 	void ParticleTrace::run_thread(int ithread) {
@@ -736,9 +785,9 @@ namespace ICHNOS {
 	    // Find out the range of this thread
 
         for (int ireal = 0; ireal < popt.Nrealizations; ++ireal){
-            const std::string log_file_name = (popt.OutputFile + "_ithread_" + num2Padstr(ithread, 4) + "_ireal_" + num2Padstr(ireal, 4) + ".traj");
-            std::ofstream log_file;
-            log_file.open(log_file_name.c_str());
+            ///// const std::string log_file_name = (popt.OutputFile + "_ithread_" + num2Padstr(ithread, 4) + "_ireal_" + num2Padstr(ireal, 4) + ".traj");
+            ///// std::ofstream log_file;
+            ///// log_file.open(log_file_name.c_str());
 
 	        for (int i = ithread; i < Streamlines4thread.size(); i = i + popt.Nthreads){
 	            //std::cout << ithread << ": " << i << std::endl;
@@ -751,16 +800,16 @@ namespace ICHNOS {
                 ExitReason er = traceInner(Streamlines4thread[i]);
 
                 if (er == ExitReason::FIRST_POINT_GHOST || er == ExitReason::FAR_AWAY){
-                    WRITE::PrintExitReason(log_file, Streamlines4thread[i], er);
+                    ///// WRITE::PrintExitReason(log_file, Streamlines4thread[i], er);
                     continue;
                 }
                 for (unsigned int j = 0; j < Streamlines4thread[i].size()-1; ++j) {
-                    WRITE::PrintParticle2Log(log_file, Streamlines4thread[i], j);
+                    ///// WRITE::PrintParticle2Log(log_file, Streamlines4thread[i], j);
                 }
-                WRITE::PrintParticle2Log(log_file, Streamlines4thread[i], Streamlines4thread[i].size() - 1);
-                WRITE::PrintExitReason(log_file, Streamlines4thread[i], er);
+                ///// WRITE::PrintParticle2Log(log_file, Streamlines4thread[i], Streamlines4thread[i].size() - 1);
+                ///// WRITE::PrintExitReason(log_file, Streamlines4thread[i], er);
 	        }
-            log_file.close();
+            ///// log_file.close();
 	    }
 	}
 }

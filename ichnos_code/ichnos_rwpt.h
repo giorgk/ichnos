@@ -125,28 +125,28 @@ namespace ICHNOS{
         double vz_partial = (vz1.z - vz2.z)/(2*Ds);
 
         double vlen = v.len();
-        double vxy = std::sqrt(v.x*v.x + v.y*v.y);
+        double v2xy = std::sqrt(v.x * v.x + v.y * v.y);
         double v2x = v.x*v.x;
         double v2y = v.y*v.y;
         double v2z = v.z*v.z;
         double v3 = vlen * vlen * vlen;
         // Calculate derivatives of dispersion coefficients
-        double Dxx_p = v.x * vx_partial * (aL*(2/vlen - (v2x)/v3) - aT*((v2y+v2z)/v3));
-        double Dxy_p = (aL - aT) * (vy_partial * v.x / vlen - vy_partial * (v.x * v2y) / v3);
-        double Dxz_p = (aL - aT) * (vz_partial * v.x / vlen - vz_partial * (v.x * v2z) / v3);
+        double Dxx_p = v.x * vx_partial * (aL*(2/vlen - v2x / v3) - aT*((v2y+v2z)/v3));
+        double Dxy_p = (aL - aT) * (vy_partial * v.x / vlen - vy_partial * v.x * v2y / v3);
+        double Dxz_p = (aL - aT) * (vz_partial * v.x / vlen - vz_partial * v.x * v2z / v3);
 
-        double Dyy_p = v.y * vy_partial * (aL * (2 / vlen - (v2y) / v3) - aT * ((v2x + v2z) / v3));
-        double Dyx_p = (aL - aT) * (vx_partial * v.y / vlen - vx_partial * (v.y * v2x) / v3);
-        double Dyz_p = (aL - aT) * (vz_partial * v.y / vlen - vz_partial * (v.y * v2z) / v3);
+        double Dyy_p = v.y * vy_partial * (aL * (2 / vlen - v2y / v3) - aT * ((v2x + v2z) / v3));
+        double Dyx_p = (aL - aT) * (vx_partial * v.y / vlen - vx_partial * v.y * v2x / v3);
+        double Dyz_p = (aL - aT) * (vz_partial * v.y / vlen - vz_partial * v.y * v2z / v3);
 
         double Dzz_p = v.z * vz_partial * (aL * (2 / vlen - (v2z) / v3) - aT * ((v2x + v2y) / v3));
-        double Dzx_p = (aL - aT) * (vx_partial * v.z / vlen - vx_partial * (v.z * v2x) / v3);
-        double Dzy_p = (aL - aT) * (vy_partial * v.z / vlen - vy_partial * (v.z * v2y) / v3);
+        double Dzx_p = (aL - aT) * (vx_partial * v.z / vlen - vx_partial * v.z * v2x / v3);
+        double Dzy_p = (aL - aT) * (vy_partial * v.z / vlen - vy_partial * v.z * v2y / v3);
 
-        double DL = aL*vlen;
-        double DT = aT*vlen;
-        double sqDL = std::sqrt(6*DL);
-        double sqDT = std::sqrt(6*DT);
+        //double DL = aL*vlen;
+        //double DT = aT*vlen;
+        double sqaL = std::sqrt(2*(aL*vlen + Dm));
+        double sqaT = std::sqrt(2*(aT*vlen + Dm));
         double sqDTime = std::sqrt(Dt);
 /*
         double Dxx = aT*vlen + (aL - aT)*(v2x/vlen) + Dm;
@@ -162,23 +162,24 @@ namespace ICHNOS{
         double Dzz = aT*vlen + (aL - aT)*(v2z/vlen) + Dm;
 */
 
-        double Z1 = static_cast<double>(RG->randomNormal());
-        double Z2 = static_cast<double>(RG->randomNormal());
-        double Z3 = static_cast<double>(RG->randomNormal());
+        auto Z1 = static_cast<double>(RG->randomNormal());
+        auto Z2 = static_cast<double>(RG->randomNormal());
+        auto Z3 = static_cast<double>(RG->randomNormal());
         double xnew = p.x + (v.x + Dxx_p + Dxy_p + Dxz_p) * Dt +
-                (Z1*sqDL * v.x/vlen - Z2*sqDT*v.y/vxy - Z3*sqDT* (v.z/vlen)*(v.x/vxy))*sqDTime;
+                      (Z1*sqaL * v.x/vlen - Z2 * sqaT * v.y / v2xy - Z3 * sqaT * (v.x * v.z) / (vlen * v2xy)) * sqDTime;
                 //std::sqrt(2*Dxx*Dt)*Z1 + std::sqrt(2 * Dxy * Dt) * Z2 + std::sqrt(2 * Dxz * Dt) * Z3;
         double ynew = p.y + (v.y + Dyx_p + Dyy_p + Dyz_p) * Dt +
-                (Z1*sqDL*v.y/vlen + Z2*sqDT*v.x/vxy - Z3*sqDT*(v.z/vlen)*(v.y/vxy))*sqDTime;
+                      (Z1*sqaL*v.y/vlen + Z2 * sqaT * v.x / v2xy - Z3 * sqaT * (v.y * v.z) / (vlen * v2xy)) * sqDTime;
                       //std::sqrt(2 * Dyx * Dt) * Z1 + std::sqrt(2 * Dyy * Dt) * Z2 + std::sqrt(2 * Dyz * Dt) * Z3;
         double znew = p.z + (v.z + Dzx_p + Dzy_p + Dzz_p) * Dt +
-                (Z1*sqDL*v.z/vlen + Z3*sqDT*vxy/vlen)*sqDTime;
+                      (Z1*sqaL*v.z/vlen + Z3 * sqaT * v2xy / vlen) * sqDTime;
                       //std::sqrt(2 * Dzx * Dt) * Z1 + std::sqrt(2 * Dzy * Dt) * Z2 + std::sqrt(2 * Dzz * Dt) * Z3;
 
         vel.x = xnew - p.x;
         vel.y = ynew - p.y;
         vel.z = znew - p.z;
         pvlu.actualStep = vel.len();
+        vel = vel.normalize();
     }
 }
 

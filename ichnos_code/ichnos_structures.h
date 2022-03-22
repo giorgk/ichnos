@@ -791,6 +791,7 @@ namespace ICHNOS {
 		Particle getParticle(int i) { return SL.at(i); }
 		double getAge() { return age; }
         helpVars PVLU;
+        ExitReason getExitReason(){return exitreason;}
 
 	private:
 		int Eid;
@@ -969,6 +970,9 @@ namespace ICHNOS {
 
 		SingletonGenerator() {
 			generetor.seed(std::time(0));
+			//std::cout << "constructor" << std::endl;
+            //std::cout << normalDistribution.mean() << std::endl;
+            //std::cout << normalDistribution.sigma() << std::endl;
 		}
 
 		boost::random::uniform_real_distribution<float> uniformDistribution;
@@ -1007,6 +1011,8 @@ namespace ICHNOS {
 			//return rint;
 		}
 		float randomNormal(){
+            //std::cout << normalDistribution.mean() << std::endl;
+            //std::cout << normalDistribution.sigma() << std::endl;
             return  normalDistribution(generetor);
 		}
 	};
