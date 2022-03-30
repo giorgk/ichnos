@@ -24,15 +24,15 @@ namespace ICHNOS{
                          std::vector<int>& ids,
                          std::vector<double>& weights,
                          std::map<int, double>& proc_map,
-                         vec3& ll, vec3& uu, bool& out);
-        void reset();
+                         helpVars& pvlu, bool& out);
+        void reset(Streamline& S);
         void sendVec3Data(std::vector<vec3>& data){};
         int getNpnts(){return static_cast<int>(mesh.size());}
         void SetInterpType(MeshVelInterpType tp){velInterpType = tp;};
 
     private:
         int nLay;
-        double diameter;
+        //double diameter;
         double initial_diameter = 640;
 
         //Mesh2D MSH;
@@ -44,7 +44,7 @@ namespace ICHNOS{
         bool readNodes(std::string filename);
         bool readElev(std::string filename);
         bool readMesh(std::string filename);
-        bool readFaceIds(std::string filename);
+        //bool readFaceIds(std::string filename);
         MeshVelInterpType velInterpType = MeshVelInterpType::UNKNOWN;
 
         const double Threshold = 0.01;
@@ -81,7 +81,6 @@ namespace ICHNOS{
         nLay = vm_vfo["MESH2D.Nlayers"].as<int>();
         initial_diameter = vm_vfo["MESH2D.SearchDiameter"].as<double>();
         //initial_diameter = initial_diameter*initial_diameter;
-        diameter = initial_diameter;
 
         bool tf = readNodes(nodefile);
         if (!tf){return false;}
@@ -193,7 +192,7 @@ namespace ICHNOS{
                                  std::vector<int> &ids,
                                  std::vector<double> &weights,
                                  std::map<int, double>& proc_map,
-                                 vec3& ll, vec3& uu, bool& out){
+                                 helpVars& pvlu, bool& out){
         out = false;
         ids.clear();
         weights.clear();
@@ -203,14 +202,14 @@ namespace ICHNOS{
         std::vector<boost::tuples::tuple<cgal_point_3, Pnt_IWFM_info>> tmp;
         while (true){
             tmp.clear();
-            Fuzzy_sphere_iwfm fc(cgal_point_3(p2D.x, p2D.y, p2D.z), diameter);
+            Fuzzy_sphere_iwfm fc(cgal_point_3(p2D.x, p2D.y, p2D.z), pvlu.diameter);
             Tree.search(std::back_inserter(tmp), fc);
             if (tmp.size() >= 1){
                 break;
             }
             else{
-                diameter = diameter*1.5;
-                if (diameter > initial_diameter){
+                pvlu.diameter = pvlu.diameter*1.5;
+                if (pvlu.diameter > initial_diameter){
                     std::cout << "I cant find any point around ("
                               << p2D.x << "," << p2D.y << "," << p2D.z
                               <<") within the initial diameter of " << initial_diameter
@@ -331,28 +330,29 @@ namespace ICHNOS{
             for (; itd != proc_map.end(); ++itd) {
                 itd->second = itd->second / sumW;
             }
-            ll = 999999999999;
-            uu = -999999999999;
+
+            pvlu.ll = 999999999999;
+            pvlu.uu = -999999999999;
             for (unsigned int i = 0; i < mesh[elem_id].size(); ++i){
-                if (ll.x > nodes[mesh[elem_id][i]].x){ll.x = nodes[mesh[elem_id][i]].x;}
-                if (ll.y > nodes[mesh[elem_id][i]].y){ll.y = nodes[mesh[elem_id][i]].y;}
-                if (ll.z > elev[mesh[elem_id][i]][iLay+1]){ll.z = elev[mesh[elem_id][i]][iLay+1];}
-                if (uu.x < nodes[mesh[elem_id][i]].x){uu.x = nodes[mesh[elem_id][i]].x;}
-                if (uu.y < nodes[mesh[elem_id][i]].y){uu.y = nodes[mesh[elem_id][i]].y;}
-                if (uu.z < elev[mesh[elem_id][i]][iLay]){uu.z = elev[mesh[elem_id][i]][iLay];}
+                if (pvlu.ll.x > nodes[mesh[elem_id][i]].x){pvlu.ll.x = nodes[mesh[elem_id][i]].x;}
+                if (pvlu.ll.y > nodes[mesh[elem_id][i]].y){pvlu.ll.y = nodes[mesh[elem_id][i]].y;}
+                if (pvlu.ll.z > elev[mesh[elem_id][i]][iLay+1]){pvlu.ll.z = elev[mesh[elem_id][i]][iLay+1];}
+                if (pvlu.uu.x < nodes[mesh[elem_id][i]].x){pvlu.uu.x = nodes[mesh[elem_id][i]].x;}
+                if (pvlu.uu.y < nodes[mesh[elem_id][i]].y){pvlu.uu.y = nodes[mesh[elem_id][i]].y;}
+                if (pvlu.uu.z < elev[mesh[elem_id][i]][iLay]){pvlu.uu.z = elev[mesh[elem_id][i]][iLay];}
             }
         }
         else{
             weights.push_back(1.0);
             ids.push_back(-9);
             ids.push_back(-9);
-            ll.zero();
-            uu.zero();
+            pvlu.ll.zero();
+            pvlu.uu.zero();
         }
     }
 
-    void XYZ_MESH2D::reset() {
-
+    void XYZ_MESH2D::reset(Streamline& S) {
+        S.PVLU.diameter = initial_diameter;
     }
 
 }

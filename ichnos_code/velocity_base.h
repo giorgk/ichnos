@@ -23,7 +23,8 @@ namespace ICHNOS {
                                   //std::vector<int> &ids,
                                   //std::vector<double> &weights,
                                   double tm = 0) {}
-		virtual void reset(){}
+		virtual void reset(Streamline& S){}
+		virtual double stepTimeupdate(helpVars& pvlu){return 0;}
 		virtual void updateStep(double& step){}
 		virtual void getVec3Data(std::vector<vec3>& data){}
 		

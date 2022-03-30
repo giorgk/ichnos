@@ -94,7 +94,7 @@ namespace ICHNOS {
 	}
 
 	void ParticleTrace::Trace() {
-	    if (world.size() == 1 ){
+	    if (world.size() == 1 || popt.RunAsThread){
 	        multi_threading_trace();
 	    }
 	    else{
@@ -187,10 +187,10 @@ namespace ICHNOS {
 		int n_proc = world.size();
 
 		boostPolygon thisDomainPolygon = Domain.getProcessorDomain();
-		const std::string log_file_name = (popt.OutputFile + "_ireal_" + num2Padstr(ireal, 4) + "_iter_" + num2Padstr(iter, 4) + "_proc_" + num2Padstr(my_rank, 4) + ".traj");
+		//const std::string log_file_name = (popt.OutputFile + "_ireal_" + num2Padstr(ireal, 4) + "_iter_" + num2Padstr(iter, 4) + "_proc_" + num2Padstr(my_rank, 4) + ".traj");
 
-		std::ofstream log_file;
-		log_file.open(log_file_name.c_str());
+		//std::ofstream log_file;
+		//log_file.open(log_file_name.c_str());
 
 		int trace_iter = 0;
 		std::vector<Streamline> Snew;
@@ -203,28 +203,19 @@ namespace ICHNOS {
 					continue;
 				//std::cout << "Proc " << world.rank() << " :Particle id: " << S[i].getSid() << std::endl;
 				ExitReason er = traceInner(S[i]);
+				S[i].Close(er);
                 //std::cout << "Proc " << world.rank() << " :Particle id: " << S[i].getSid() << " " << castExitReasons2String(er) << std::endl;
-
-				if (er == ExitReason::FIRST_POINT_GHOST || er == ExitReason::FAR_AWAY){
-                    WRITE::PrintExitReason(log_file, S[i], er);
-                    continue;
-				}
-
-				for (unsigned int j = 0; j < S[i].size()-1; ++j) {
-					WRITE::PrintParticle2Log(log_file, S[i], j);
-				}
 
 				if (er == ExitReason::CHANGE_PROCESSOR) {
 					Snew.push_back(Streamline(
 						S[i].getEid(), S[i].getSid(), S[i].getLastParticle(), S[i].getBBlow(), S[i].getBBupp(), S[i].StuckIter(), S[i].getAge()));
 				}
-				else {
-					WRITE::PrintParticle2Log(log_file, S[i], S[i].size() - 1);
-					WRITE::PrintExitReason(log_file, S[i], er);
-				}
-			}
 
-			world.barrier();
+			}
+            const std::string out_file_name = (popt.OutputFile + "_ireal_" + num2Padstr(ireal, 4) + "_iter_" + num2Padstr(iter, 4) + "_proc_" + num2Padstr(my_rank, 4));
+            WRITE::writeStreamlines(S, out_file_name, popt.printH5, popt.printASCII);
+
+            world.barrier();
 			//std::cout << "Proc " << my_rank << " will send " << Snew.size() << " particles" << std::endl;
 			int N_part2track = Snew.size();
 			//std::cout << "Proc " << my_rank << " N_part2send = " << N_part2send << std::endl;
@@ -254,17 +245,20 @@ namespace ICHNOS {
 				break;
 			}
 		}
-		log_file.close();
+		//log_file.close();
 		//std::cout << "Is here" << std::endl;
 	}
 
 	ExitReason ParticleTrace::traceInner(Streamline& S) {
+	    //if (S.getSid() == 2){
+	    //    std::cout << "Hi" << std::endl;
+	    //}
 		// Reset the step size
 		S.PVLU.adaptStepSize = popt.StepOpt.StepSize;
         S.PVLU.actualStep = popt.StepOpt.StepSize;
         S.PVLU.actualStepTime = popt.StepOpt.StepSizeTime;
-		VF.reset();
-		VF.XYZ.reset();
+		VF.reset(S);
+		VF.XYZ.reset(S);
 		vec3 v;
 		vec3 p = S.getLastParticle().getP();
 		double tm = S.getLastParticle().getTime();
@@ -344,7 +338,6 @@ namespace ICHNOS {
 					return ExitReason::MAX_AGE;
 			}
 		}
-		S.Close(er);
 		return er;
 	}
 
@@ -687,7 +680,7 @@ namespace ICHNOS {
         double stepLen, stepTime;
         double dst = ICHNOS::diameter_along_velocity(pvlu.pp, pvlu.vv, pvlu.ll, pvlu.uu);
 
-        if (popt.StepOpt.nSteps > 0){
+        if (popt.StepOpt.nSteps >= 1.0){
             // This is the length that respects the nSteps
             stepLen = dst/popt.StepOpt.nSteps;
         }
@@ -696,7 +689,7 @@ namespace ICHNOS {
         }
 
         if (popt.StepOpt.StepSize > 0){
-            // If the length of the user step is smaller than the step defined by the nSteps.
+            // If the length of the user step is smaller than the step calculated by the nSteps.
             // Use the used defined that is smaller
             if (popt.StepOpt.StepSize < stepLen){
                 stepLen = popt.StepOpt.StepSize;
@@ -716,100 +709,114 @@ namespace ICHNOS {
             rem_age = vlen*(rem_age + 0.1);
             stepTime = std::min<double>(stepTime, rem_age);
         }
-        //TODO Add the part of the nStepsTime limit
+
+        if (popt.StepOpt.nStepsTime > 0){
+            double stepTimetrans = VF.stepTimeupdate(pvlu);
+            if (stepTimetrans < stepTime){
+                stepTime = stepTimetrans;
+            }
+        }
         pvlu.actualStep = std::min<double>(stepTime, stepLen);
 	}
 
 	void ParticleTrace::multi_threading_trace() {
+        std::vector<Streamline> AllStreamlines;
+        bool tf = readInputFiles(AllStreamlines);
 
-        bool tf = readInputFiles(Streamlines4thread);
-
-        std::vector<std::thread> T;
-        for (int i = 0; i < popt.Nthreads; ++i){
-            T.push_back(std::thread(&ParticleTrace::run_thread, this, i));
-        }
-
-        for (int i = 0; i < popt.Nthreads; ++i){
-            T[i].join();
-        }
-
-        { //print with Highfive
-            const std::string FILE_NAME(popt.OutputFile + ".h5");
-            const std::string DATASET_NAME("PVA");
-            std::vector<std::vector<double>> alldata;
-            //boost::multi_array<double, 2> my_array(boost::extents[size_x][size_y]);
-            for (unsigned int i = 0; i < Streamlines4thread.size(); ++i){
-                std::vector<double> tmp_data(9,0);
-                for (unsigned int j = 0; j < Streamlines4thread[i].size(); ++j){
-                    tmp_data[0] = Streamlines4thread[i].getEid();
-                    tmp_data[1] = Streamlines4thread[i].getSid();
-                    Particle pp = Streamlines4thread[i].getParticle(j);
-                    tmp_data[2] = pp.getP().x;
-                    tmp_data[3] = pp.getP().y;
-                    tmp_data[4] = pp.getP().z;
-                    tmp_data[5] = pp.getV().x;
-                    tmp_data[6] = pp.getV().y;
-                    tmp_data[7] = pp.getV().z;
-                    tmp_data[8] = pp.getTime();
-                    alldata.push_back(tmp_data);
-                }
+        int particle_index_start = 0;
+        int particle_index_end = 0;
+        int iter = 0;
+        double Simulation_time = 0;
+        while (true){
+            Streamlines4thread.clear();
+            particle_index_end = particle_index_start + popt.ParticlesInParallel;
+            if (particle_index_end + static_cast<int>(static_cast<double>(popt.ParticlesInParallel)*0.3) > static_cast<int>(AllStreamlines.size())){
+                particle_index_end = AllStreamlines.size();
             }
-            HighFive::File file(FILE_NAME, HighFive::File::ReadWrite | HighFive::File::Create | HighFive::File::Truncate);
-            HighFive::DataSet dataset = file.createDataSet<double>(DATASET_NAME, HighFive::DataSpace::From(alldata));
-            dataset.write(alldata);
-        }
 
-        /* //Print to file
-        {
-            const std::string log_file_name = (popt.OutputFile + ".traj");
-            std::cout << "Printing Output to " << log_file_name << std::endl;
-            std::ofstream log_file;
-            log_file.open(log_file_name.c_str());
-            for (unsigned int i = 0; i < Streamlines4thread.size(); ++i){
-                for (unsigned int j = 0; j < Streamlines4thread[i].size()-1; ++j) {
-                    WRITE::PrintParticle2Log(log_file, Streamlines4thread[i], j);
+            for (int ireal = 0; ireal < popt.Nrealizations; ++ireal){
+                auto start = std::chrono::high_resolution_clock::now();
+                if (world.size() > 1){
+                    for (int i = particle_index_start; i < particle_index_end; i = i + world.size()){
+                        Streamlines4thread.push_back(AllStreamlines[i]);
+                    }
+                    run_thread(world.rank());
+
+                    auto finish = std::chrono::high_resolution_clock::now();
+                    std::chrono::duration<double> elapsed = finish - start;
+                    Simulation_time = Simulation_time + elapsed.count();
+
+                    std::string filename;
+                    if (popt.Nrealizations > 1)
+                        filename = popt.OutputFile + "_iter_" + num2Padstr(iter, 4) + "_ireal_" + num2Padstr(ireal, 4) + "_iproc_" + num2Padstr(world.rank(), 4);
+                    else
+                        filename = popt.OutputFile+ "_iter_" + num2Padstr(iter, 4) + "_iproc_" + num2Padstr(world.rank(), 4);
+                    WRITE::writeStreamlines(Streamlines4thread, filename, popt.printH5, popt.printASCII);
+                    world.barrier();
                 }
-                WRITE::PrintParticle2Log(log_file, Streamlines4thread[i], Streamlines4thread[i].size() - 1);
-                WRITE::PrintExitReason(log_file, Streamlines4thread[i], Streamlines4thread[i].getExitReason());
+                else{
+                    for (int i = particle_index_start; i < particle_index_end; ++i){
+                        Streamlines4thread.push_back(AllStreamlines[i]);
+                    }
+                    std::vector<std::thread> T;
+                    for (int i = 0; i < popt.Nthreads; ++i){
+                        T.push_back(std::thread(&ParticleTrace::run_thread, this, i));
+                    }
+
+                    for (int i = 0; i < popt.Nthreads; ++i){
+                        if (T[i].joinable()){
+                            T[i].join();
+                            //std::cout << "Join" << i << std::endl;
+                        }
+                    }
+                    auto finish = std::chrono::high_resolution_clock::now();
+                    std::chrono::duration<double> elapsed = finish - start;
+                    Simulation_time = Simulation_time + elapsed.count();
+                    std::cout << "Printing files" << std::endl;
+                    std::string filename;
+                    if (popt.Nrealizations > 1)
+                        filename = popt.OutputFile + "_iter_" + num2Padstr(iter, 4) + "_ireal_" + num2Padstr(ireal, 4);
+                    else
+                        filename = popt.OutputFile+ "_iter_" + num2Padstr(iter, 4);
+                    WRITE::writeStreamlines(Streamlines4thread, filename, popt.printH5, popt.printASCII);
+                }
+
+
             }
-            log_file.close();
+            if (particle_index_end >= AllStreamlines.size() - 1){
+                break;
+            }
+            particle_index_start = particle_index_end;
+            iter++;
         }
-         */
-
-
-
-	}
+        std::cout << "Total simulation Time : " << Simulation_time << std::endl;
+    }
 
 	void ParticleTrace::run_thread(int ithread) {
+	    //if (ithread != 0){
+	    //    bool stop= true;
+	    //    std::cout << "Stop Here" << std::endl;
+	    //}
+	    double show_every = 10.0;
+	    double cnt = 0.0;
+	    double Nsize = static_cast<double>(Streamlines4thread.size());
+        for (int i = ithread; i < Streamlines4thread.size(); i = i + popt.Nthreads){
+            //if (popt.Nthreads == 1){
+            //    if (100*cnt/Nsize > show_every){
+            //        std::cout << "-" << show_every << " %" << std::endl;
+            //        show_every = show_every + 10.0;
+            //    }
+            //}
+            //std::cout << ithread << ": " << i << std::endl;
+            //Streamline S(Streamlines4thread[i].getEid(), Streamlines4thread[i].getSid(),Streamlines4thread[i].getLastParticle());
+            bool tf;
+            Domain.bisInProcessorPolygon(Streamlines4thread[i].getLastParticle().getP(),tf);
+            if (!tf)
+                continue;
 
-	    // Find out the range of this thread
-
-        for (int ireal = 0; ireal < popt.Nrealizations; ++ireal){
-            ///// const std::string log_file_name = (popt.OutputFile + "_ithread_" + num2Padstr(ithread, 4) + "_ireal_" + num2Padstr(ireal, 4) + ".traj");
-            ///// std::ofstream log_file;
-            ///// log_file.open(log_file_name.c_str());
-
-	        for (int i = ithread; i < Streamlines4thread.size(); i = i + popt.Nthreads){
-	            //std::cout << ithread << ": " << i << std::endl;
-                //Streamline S(Streamlines4thread[i].getEid(), Streamlines4thread[i].getSid(),Streamlines4thread[i].getLastParticle());
-                bool tf;
-                Domain.bisInProcessorPolygon(Streamlines4thread[i].getLastParticle().getP(),tf);
-                if (!tf)
-                    continue;
-
-                ExitReason er = traceInner(Streamlines4thread[i]);
-
-                if (er == ExitReason::FIRST_POINT_GHOST || er == ExitReason::FAR_AWAY){
-                    ///// WRITE::PrintExitReason(log_file, Streamlines4thread[i], er);
-                    continue;
-                }
-                for (unsigned int j = 0; j < Streamlines4thread[i].size()-1; ++j) {
-                    ///// WRITE::PrintParticle2Log(log_file, Streamlines4thread[i], j);
-                }
-                ///// WRITE::PrintParticle2Log(log_file, Streamlines4thread[i], Streamlines4thread[i].size() - 1);
-                ///// WRITE::PrintExitReason(log_file, Streamlines4thread[i], er);
-	        }
-            ///// log_file.close();
-	    }
+            ExitReason er = traceInner(Streamlines4thread[i]);
+            Streamlines4thread[i].Close(er);
+            cnt++;
+        }
 	}
 }

@@ -29,7 +29,7 @@ namespace ICHNOS{
                           //std::vector<int> &ids,
                           //std::vector<double> &weights,
                           double time = 0);
-        void reset();
+        void reset(Streamline& S);
         void updateStep(double &step);
         void getVec3Data(std::vector<ic::vec3> &data);
         ic::MeshVelInterpType getInterpType(){return interp_type;};
@@ -55,7 +55,7 @@ namespace ICHNOS{
         int nElements;
         int nNodes;
         int nTotalFaces;
-        ic::TimeData tm_data;
+        //ic::TimeData tm_data;
 
         bool readVelocityFiles();
         bool readVH5file(std::string filename, int nPoints, int nSteps);
@@ -402,10 +402,10 @@ namespace ICHNOS{
             porosity = porosityValue;
         vel = vel * (1/porosity);
 
-        tm_data.tm = VEL.getTSvalue(i1) * (1-t) + VEL.getTSvalue(i2)*t;
-        tm_data.idx1 = i1;
-        tm_data.idx2 = i2;
-        tm_data.t = t;
+        //tm_data.tm = VEL.getTSvalue(i1) * (1-t) + VEL.getTSvalue(i2)*t;
+        //tm_data.idx1 = i1;
+        //tm_data.idx2 = i2;
+        //tm_data.t = t;
     }
 
     void Mesh2DVel::updateStep(double& step) {
@@ -416,7 +416,7 @@ namespace ICHNOS{
 
     }
 
-    void Mesh2DVel::reset() {
+    void Mesh2DVel::reset(Streamline& S) {
 
     }
 
@@ -565,9 +565,13 @@ namespace ICHNOS{
     }
 
     bool Mesh2DVel::readXYZVelocity() {
+        int proc_id = world.rank();
+        if (XYZ.runAsThread){
+            proc_id = 0;
+        }
 
         if (!isVeltrans){
-            std::string filename = Prefix + ic::num2Padstr(world.rank(), leadingZeros) + Suffix;
+            std::string filename = Prefix + ic::num2Padstr(proc_id, leadingZeros) + Suffix;
             if (Suffix.compare(".h5") == 0){
                 //TODO
                 std::cout << "MESH2D xyz - Steady State - H5 input is not implemented yet" << std::endl;
@@ -610,9 +614,13 @@ namespace ICHNOS{
     }
 
     bool Mesh2DVel::readFaceVelocity() {
+        int proc_id = world.rank();
+        if (XYZ.runAsThread){
+            proc_id = 0;
+        }
         bool out = false;
         if (!isVeltrans){
-            std::string filename = Prefix + ic::num2Padstr(world.rank(), leadingZeros) + Suffix;
+            std::string filename = Prefix + ic::num2Padstr(proc_id, leadingZeros) + Suffix;
             if (Suffix.compare(".h5") == 0){
                 //TODO
                 std::cout << "MESH2D for Faces - Steady State - H5 input is not implemented yet" << std::endl;

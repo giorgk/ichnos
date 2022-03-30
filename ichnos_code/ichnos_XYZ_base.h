@@ -22,11 +22,12 @@ namespace ICHNOS{
                                  std::vector<double>& weights,
                                  std::map<int, double>& proc_map,
                                  helpVars& pvlu, bool& out){}
-        virtual void reset(){}
+        virtual void reset(Streamline& S){}
         //virtual void sendVec3Data(std::vector<vec3>& data){};
-
+        bool runAsThread;
     protected:
         boost::mpi::communicator world;
+
     };
 
     XYZ_base::XYZ_base(boost::mpi::communicator& world_in)
@@ -46,7 +47,7 @@ namespace ICHNOS{
                          helpVars& pvlu, bool& out);
 
 
-        void reset();
+        void reset(Streamline& S);
         //void sendVec3Data(std::vector<vec3>& data);
         int getNpnts(){return pntDATA.size();}
     private:
@@ -57,14 +58,12 @@ namespace ICHNOS{
 
         double Power;
         double Scale = 1.0;
-        double diameter;
-        double ratio;
         double Threshold;
         double initial_diameter = 640;
         double initial_ratio = 20;
 
-        bool bIsInitialized = false;
-        double search_mult = 2.5;
+        //bool bIsInitialized = false;
+        const double search_mult = 2.5;
         bool buseGraph = false;
         //std::vector<std::vector<int>> Graph;
         //vec3 ll, uu, pp, vv;
@@ -123,18 +122,24 @@ namespace ICHNOS{
 
         bool istrans  = vm_vfo["Velocity.Trans"].as<int>() != 0;
 
+        int proc_id = world.rank();
+        if (runAsThread){
+            proc_id = 0;
+        }
+
         if (!istrans || suffix.compare(".h5") == 0){
-            fileXYZ = prefix + num2Padstr(/*dbg_rank*/world.rank(), leadZeros) + suffix;
+
+            fileXYZ = prefix + num2Padstr(/*dbg_rank*/proc_id, leadZeros) + suffix;
         }
         else if (istrans){
-            fileXYZ = prefix + "XYZ_" + num2Padstr(/*dbg_rank*/world.rank(), leadZeros) + suffix;
+            fileXYZ = prefix + "XYZ_" + num2Padstr(/*dbg_rank*/proc_id, leadZeros) + suffix;
         }
 
         int tmp = vm_vfo["Velocity.UseGraph"].as<int>();
         if (tmp != 0){
             buseGraph = true;
             std::string fileGraph;
-            fileGraph = prefix + num2Padstr(/*dbg_rank*/world.rank(), leadZeros) + ".grph";
+            fileGraph = prefix + num2Padstr(/*dbg_rank*/proc_id, leadZeros) + ".grph";
             bool tf = CGRAPH.readGraphFile(fileGraph);
             if (!tf)
                 return false;
@@ -184,21 +189,21 @@ namespace ICHNOS{
             int closestVelId = -9;
             calcWeightsWithGraph(p, ids, weights,proc_map, closestVelId, out);
             if (out){
-                diameter = pntDATA[closestVelId].diameter;
-                ratio = pntDATA[closestVelId].ratio;
-                calculate_search_box(p, pvlu.ll, pvlu.uu, diameter, ratio, search_mult);
+                pvlu.diameter = pntDATA[closestVelId].diameter;
+                pvlu.ratio = pntDATA[closestVelId].ratio;
+                calculate_search_box(p, pvlu.ll, pvlu.uu, pvlu.diameter, pvlu.ratio, search_mult);
             }
             return;
         }
         else{
             int ClosestPointId = -9;
-            if (!bIsInitialized){
+            if (!pvlu.bIsInitialized){
                 cgal_point_3 query(p.x, p.y, p.z);
                 K_neighbor_search search(Tree, query, 1);
                 for (K_neighbor_search::iterator it = search.begin(); it != search.end(); it++){
-                    diameter = boost::get<1>(it->first).diameter;
-                    ratio = boost::get<1>(it->first).ratio;
-                    bIsInitialized = true;
+                    pvlu.diameter = boost::get<1>(it->first).diameter;
+                    pvlu.ratio = boost::get<1>(it->first).ratio;
+                    pvlu.bIsInitialized = true;
                     //std::cout << boost::get<0>(it->first) << " " << boost::get<1>(it->first).id << std::endl;
                     ClosestPointId = boost::get<1>(it->first).id;
                     //std::cout << ClosestPointId << std::endl;
@@ -213,7 +218,7 @@ namespace ICHNOS{
             std::vector<boost::tuples::tuple<cgal_point_3, Pnt_info>> tmp;
             while (true){
                 tmp.clear();
-                calculate_search_box(p,pvlu.ll,pvlu.uu, diameter, ratio,search_mult);
+                calculate_search_box(p,pvlu.ll,pvlu.uu, pvlu.diameter, pvlu.ratio,search_mult);
                 cgal_point_3 llp(pvlu.ll.x, pvlu.ll.y, pvlu.ll.z);
                 cgal_point_3 uup(pvlu.uu.x, pvlu.uu.y, pvlu.uu.z);
                 Fuzzy_iso_box_info fib(llp, uup, 0.0);
@@ -222,13 +227,13 @@ namespace ICHNOS{
                     break;
                 }
                 else{
-                    diameter = diameter*1.5;
-                    if (diameter > initial_diameter){
+                    pvlu.diameter = pvlu.diameter*1.5;
+                    if (pvlu.diameter > initial_diameter){
                         std::cout << "I have found " << tmp.size() << " points around ("
                                   << p.x << "," << p.y << "," << p.z
                                   <<") within the initial diameter of " << initial_diameter
                                   << ". Consider increasing the Initial diameter" << std::endl;
-                        std::cout << "Actual diameter " << diameter << std::endl;
+                        std::cout << "Actual diameter " << pvlu.diameter << std::endl;
                         std::cout << "ll = [" << pvlu.ll.x << "," << pvlu.ll.y << "," << pvlu.ll.z << "];" << std::endl;
                         std::cout << "uu = [" << pvlu.uu.x << "," << pvlu.uu.y << "," << pvlu.uu.z << "];" << std::endl;
                         if (tmp.size() == 0){
@@ -261,7 +266,7 @@ namespace ICHNOS{
                     tmp_ratio = tmp[i].get<1>().ratio;
                 }
 
-                porz = porz * ratio * Scale + porz*(1 - Scale);
+                porz = porz * pvlu.ratio * Scale + porz*(1 - Scale);
                 scaled_dist = std::sqrt(porx * porx + pory * pory + porz * porz);
                 if (actual_dist < Threshold){
                     ids.clear();
@@ -288,8 +293,8 @@ namespace ICHNOS{
             }
             // TODO I dont understand this
             if (tmp.size() > 50){
-                diameter = tmp_diam;
-                ratio = tmp_ratio;
+                pvlu.diameter = tmp_diam;
+                pvlu.ratio = tmp_ratio;
             }
 
             itd = proc_map.begin();
@@ -365,10 +370,10 @@ namespace ICHNOS{
     }
 
 
-    void XYZ_cloud::reset() {
-        bIsInitialized = false;
-        diameter = initial_diameter;
-        ratio = initial_ratio;
+    void XYZ_cloud::reset(Streamline& S) {
+        S.PVLU.bIsInitialized = false;
+        S.PVLU.diameter = initial_diameter;
+        S.PVLU.ratio = initial_ratio;
     }
 
     //void XYZ_cloud::sendVec3Data(std::vector<vec3> &data) {
@@ -378,6 +383,7 @@ namespace ICHNOS{
     //    data.push_back(uu);
     //}
 
+    /*
     class XYZ_IWFM : public XYZ_base {
     public:
         XYZ_IWFM(boost::mpi::communicator& world_in);
@@ -581,8 +587,10 @@ namespace ICHNOS{
         calculate_search_box(p, ll, uu, diam, ratio, search_mult);
     }
 
-    void XYZ_IWFM::reset() {
-
+    void XYZ_IWFM::reset(Streamline& S) {
+        S.PVLU.diameter = initial_diameter;
+        S.PVLU.ratio - initial_diameter;
+        S.PVLU.bIsInitialized = false;
     }
 
     //void XYZ_IWFM::sendVec3Data(std::vector<vec3> &data) {
@@ -711,6 +719,7 @@ namespace ICHNOS{
         }
         return true;
     }
+     */
 
 
 }

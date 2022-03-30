@@ -23,6 +23,7 @@ namespace ICHNOS{
                           bool& out,
                           double time = 0);
         //void reset();
+        double stepTimeupdate(helpVars& pvlu);
         //void updateStep(double& step);
         //void getVec3Data(std::vector<ic::vec3>& data);
 
@@ -180,6 +181,10 @@ namespace ICHNOS{
         vel.z = znew - p.z;
         pvlu.actualStep = vel.len();
         vel = vel.normalize();
+    }
+
+    double CloudRWVel::stepTimeupdate(helpVars &pvlu) {
+        return CloudVel::stepTimeupdate(pvlu);
     }
 }
 

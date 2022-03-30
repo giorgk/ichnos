@@ -92,7 +92,7 @@ namespace ICHNOS {
 		domainPoly.readfromFile(Dopt.polygonFile);
 		nProc = Dopt_in.nProc;
 
-		if (nProc > 1){
+		if (nProc > 1 & !Dopt_in.RunAsThread){
             READ::readProcessorDomain(Dopt.processorDomainFile, ProcessorDomain, /*dbg_rank*/ Dopt.myRank);
             //READ::readProcessorDomain(Dopt.expandedDomainFile, ExpandedDomain, Dopt.myRank);
 		}
@@ -164,7 +164,7 @@ namespace ICHNOS {
 	}
 
 	void Domain2D::bisInProcessorPolygon(vec3 p, bool& tf) {
-        if (nProc == 1){
+        if (nProc == 1 || Dopt.RunAsThread){
             tf = true;
             return;
         }

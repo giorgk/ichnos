@@ -41,7 +41,8 @@ namespace ICHNOS{
                           //std::vector<int>& ids,
                           //std::vector<double>& weights,
                           double time = 0);
-        void reset();
+        void reset(Streamline& S);
+        double stepTimeupdate(helpVars& pvlu);
         void updateStep(double& step);
         void getVec3Data(std::vector<ic::vec3>& data);
 
@@ -72,14 +73,14 @@ namespace ICHNOS{
         //double ratio;
 
         //double Threshold;
-        int FrequencyStat;
-        double calc_time = 0.0;
-        double max_calc_time = 0.0;
-        int count_times = 0;
+        //int FrequencyStat;
+        //double calc_time = 0.0;
+        //double max_calc_time = 0.0;
+        //int count_times = 0;
 
-        ic::TimeData tm_data;
+        //ic::TimeData tm_data;
 
-        bool bIsInitialized = false;
+        //bool bIsInitialized = false;
         //double search_mult = 2.5;
         //ic::vec3 ll, uu, pp, vv;
         ic::TimeInterpType timeInterp = ic::TimeInterpType::NEAREST;
@@ -133,7 +134,7 @@ namespace ICHNOS{
         { // General
             OwnerThreshold = vm_vfo["General.OwnerThreshold"].as<double>();
             //Threshold = vm_vfo["General.Threshold"].as<double>();
-            FrequencyStat = vm_vfo["General.FrequencyStat"].as<int>();
+            //FrequencyStat = vm_vfo["General.FrequencyStat"].as<int>();
         }
 
         {// Velocity parameters
@@ -168,7 +169,6 @@ namespace ICHNOS{
             }
             else{
                 TimeSteps.push_back(0);
-                nSteps = TimeSteps.size();
                 timeInterp = ic::TimeInterpType::NEAREST;
                 VEL.setNrepeatDays(0);
                 VEL.setTimeInterpolationType(timeInterp);
@@ -184,9 +184,8 @@ namespace ICHNOS{
             leadingZeros = vm_vfo["Velocity.LeadingZeros"].as<int>();
 
 
-
-
             nPoints = nPnts;
+            nSteps = TimeSteps.size();
             VEL.init(nPoints, nSteps);
             VEL.setTSvalue(TimeSteps);
 
@@ -218,9 +217,13 @@ namespace ICHNOS{
     }
 
     bool CloudVel::readVelocityFiles(){
+        int proc_id = world.rank();
+        if (XYZ.runAsThread){
+            proc_id = 0;
+        }
 #if _USEHF > 0
         if (Suffix.compare(".h5") == 0){
-            std::string fileVXYZ = Prefix + ic::num2Padstr(world.rank(), leadingZeros) + Suffix;
+            std::string fileVXYZ = Prefix + ic::num2Padstr(proc_id, leadingZeros) + Suffix;
             bool tf1 = readVH5file(fileVXYZ, nPoints, nSteps);
             return tf1;
         }
@@ -228,19 +231,19 @@ namespace ICHNOS{
         bool tf = false;
         auto start = std::chrono::high_resolution_clock::now();
         if (isVeltrans){
-            std::string fileVX = Prefix + "VX_" + ic::num2Padstr(/*dbg_rank*/world.rank(), leadingZeros) + Suffix;
+            std::string fileVX = Prefix + "VX_" + ic::num2Padstr(/*dbg_rank*/proc_id, leadingZeros) + Suffix;
             tf = readVfile(fileVX, nPoints, nSteps, ic::coordDim::vx);
             if (tf){
-                std::string fileVY = Prefix + "VY_" + ic::num2Padstr(/*dbg_rank*/world.rank(), leadingZeros) + Suffix;
+                std::string fileVY = Prefix + "VY_" + ic::num2Padstr(/*dbg_rank*/proc_id, leadingZeros) + Suffix;
                 tf = readVfile(fileVY, nPoints, nSteps, ic::coordDim::vy);
             }
             if (tf){
-                std::string fileVZ = Prefix + "VZ_" + ic::num2Padstr(/*dbg_rank*/world.rank(), leadingZeros) + Suffix;
+                std::string fileVZ = Prefix + "VZ_" + ic::num2Padstr(/*dbg_rank*/proc_id, leadingZeros) + Suffix;
                 tf = readVfile(fileVZ, nPoints, nSteps, ic::coordDim::vz);
             }
         }
         else {
-            std::string fileVX = Prefix + ic::num2Padstr(world.rank(), leadingZeros) + Suffix;
+            std::string fileVX = Prefix + ic::num2Padstr(proc_id, leadingZeros) + Suffix;
             tf = readSteadyVfile(fileVX, nPoints);
         }
 
@@ -455,6 +458,10 @@ namespace ICHNOS{
         int i1, i2;
         double t;
         VEL.findIIT(tm, i1, i2, t);
+        pvlu.td.idx1 = i1;
+        pvlu.td.idx2 = i2;
+        pvlu.td.t = t;
+        pvlu.td.tm = tm;
 
         double sumW = 0;
         ic::vec3 sumWVal;
@@ -486,23 +493,56 @@ namespace ICHNOS{
         vel = vel * (1/porosity);
 
         //vv = vel;
-        tm_data.tm = VEL.getTSvalue(i1) * (1-t) + VEL.getTSvalue(i2)*t;
-        tm_data.idx1 = i1;
-        tm_data.idx2 = i2;
-        tm_data.t = t;
+        //tm_data.tm = VEL.getTSvalue(i1) * (1-t) + VEL.getTSvalue(i2)*t;
+        //tm_data.idx1 = i1;
+        //tm_data.idx2 = i2;
+        //tm_data.t = t;
 
 //        count_times++;
 //        ic::PrintStat(count_times, FrequencyStat, calc_time, max_calc_time);
     }
 
-    void CloudVel::reset() {
-        bIsInitialized = false;
+    void CloudVel::reset(Streamline& S) {
+        //bIsInitialized = false;
     }
 
     void CloudVel::getVec3Data(std::vector<ic::vec3> &data) {
         //pp = data[0];
         //ll = data[1];
         //uu = data[2];
+    }
+
+    double CloudVel::stepTimeupdate(helpVars &pvlu) {
+        double stepTime;
+        if (pvlu.td.idx1 != pvlu.td.idx2){
+            double dt = 1/stepOpt.nStepsTime;
+            double tm_1 = VEL.getTSvalue(pvlu.td.idx1);
+            double tm_2 = VEL.getTSvalue(pvlu.td.idx2);
+            double tmp_step = dt*(tm_2 - tm_1);
+            double end_time = pvlu.td.tm + stepOpt.dir*tmp_step;
+            if (stepOpt.dir > 0){
+                if (std::abs(pvlu.td.tm - tm_2) < 0.25*tmp_step){
+                    if (pvlu.td.idx2 + 1 < nSteps){
+                        tm_2 = VEL.getTSvalue(pvlu.td.idx2+1);
+                    }
+                }
+                if (end_time > tm_2 && pvlu.td.idx2 < nSteps - 1){
+                    stepTime = pvlu.vv.len() * (tm_2 - pvlu.td.tm);
+                }
+                else{
+                    stepTime = pvlu.vv.len() * tmp_step;
+                }
+            }
+            else{
+                if (end_time < tm_1 && pvlu.td.idx1 > 0){
+                    stepTime = pvlu.vv.len() * (pvlu.td.tm - tm_1);
+                }
+                else{
+                    stepTime = pvlu.vv.len() * tmp_step;
+                }
+            }
+        }
+        return stepTime;
     }
 
     void CloudVel::updateStep(double &step) {

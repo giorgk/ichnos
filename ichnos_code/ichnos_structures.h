@@ -606,9 +606,9 @@ namespace ICHNOS {
         /// This is the step size with units of Time. For RK45 this is the initial step size
         double StepSizeTime;
         /// This is the number of steps to divide the size of an element
-        int nSteps;
+        double nSteps;
         /// This is the number of steps to take within a time step
-        int nStepsTime;
+        double nStepsTime;
         /// This is the minimum step size at the exit side of the particles
         double minExitStepSize;
         /// The direction of particle tracking
@@ -657,6 +657,8 @@ namespace ICHNOS {
 		std::string WellFile;
 		int ParticlesInParallel;
 		std::string OutputFile;
+		bool printH5;
+		bool printASCII;
 		// During gathering puut all streamlines into one file.
 		// If false each file will contain ParticlesInParallel streamlines per file
 		bool gatherOneFile;
@@ -683,6 +685,7 @@ namespace ICHNOS {
 		//std::string expandedDomainFile;
 		int myRank;
 		int nProc;
+		bool RunAsThread;
 	};
 
 
@@ -761,6 +764,11 @@ namespace ICHNOS {
         double adaptStepSize;
         double actualStep;
         double actualStepTime;
+        double diameter;
+        double ratio;
+        bool bIsInitialized;
+        TimeData td;
+
 	};
 
 

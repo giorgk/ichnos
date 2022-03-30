@@ -1133,6 +1133,69 @@ namespace ICHNOS {
 			}
 			out_file.close();
 		}
+
+		/**
+		 *
+		 * @param S
+		 * @param filename The name of the file without the extension
+		 */
+		void writeStreamlines(std::vector<Streamline>& S, std::string filename, bool printH5, bool printASCI){
+#if _USEHF > 0
+            if (printH5){ //print with Highfive
+                const std::string FILE_NAME(filename + ".h5");
+                const std::string DATASET_NAME("PVA");
+                const std::string DATASET_IDS("ESID");
+                const std::string DATASET_EXIT("EXIT");
+                std::vector<std::vector<float>> alldata;
+                std::vector<std::vector<int>> ids;
+                std::vector<std::string> ExitReason;
+                //boost::multi_array<double, 2> my_array(boost::extents[size_x][size_y]);
+                for (unsigned int i = 0; i < S.size(); ++i){
+                    std::vector<float> tmp_data(10,0);
+                    std::vector<int> tmp_ids(2,0);
+                    for (unsigned int j = 0; j < S[i].size(); ++j){
+                        tmp_data[0] = static_cast<float>(S[i].getEid());
+                        tmp_data[1] = static_cast<float>(S[i].getSid());
+                        Particle pp = S[i].getParticle(j);
+                        tmp_data[2] = static_cast<float>(pp.getPid());
+                        tmp_data[3] = static_cast<float>(pp.getP().x);
+                        tmp_data[4] = static_cast<float>(pp.getP().y);
+                        tmp_data[5] = static_cast<float>(pp.getP().z);
+                        tmp_data[6] = static_cast<float>(pp.getV().x);
+                        tmp_data[7] = static_cast<float>(pp.getV().y);
+                        tmp_data[8] = static_cast<float>(pp.getV().z);
+                        tmp_data[9] = static_cast<float>(pp.getTime());
+                        alldata.push_back(tmp_data);
+                    }
+                    tmp_ids[0] = S[i].getEid();
+                    tmp_ids[1] = S[i].getSid();
+                    ids.push_back(tmp_ids);
+                    ExitReason.push_back(castExitReasons2String(S[i].getExitReason()));
+                }
+                HighFive::File file(FILE_NAME, HighFive::File::ReadWrite | HighFive::File::Create | HighFive::File::Truncate);
+                HighFive::DataSet dataset = file.createDataSet<float>(DATASET_NAME, HighFive::DataSpace::From(alldata));
+                HighFive::DataSet datasetIDS = file.createDataSet<int>(DATASET_IDS, HighFive::DataSpace::From(ids));
+                HighFive::DataSet datasetEXIT = file.createDataSet<std::string>(DATASET_EXIT, HighFive::DataSpace::From(ExitReason));
+                dataset.write(alldata);
+                datasetIDS.write(ids);
+                datasetEXIT.write(ExitReason);
+            }
+#endif
+            if (printASCI){
+                const std::string log_file_name = (filename + ".traj");
+                std::cout << "Printing Output to " << log_file_name << std::endl;
+                std::ofstream log_file;
+                log_file.open(log_file_name.c_str());
+                for (unsigned int i = 0; i < S.size(); ++i){
+                    for (unsigned int j = 0; j < S[i].size()-1; ++j) {
+                        WRITE::PrintParticle2Log(log_file, S[i], j);
+                    }
+                    WRITE::PrintParticle2Log(log_file, S[i], S[i].size() - 1);
+                    WRITE::PrintExitReason(log_file, S[i], S[i].getExitReason());
+                }
+                log_file.close();
+            }
+		}
 	}
 
 	void gather_particles(ICHNOS::options& opt) {

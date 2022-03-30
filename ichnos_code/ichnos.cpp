@@ -73,16 +73,17 @@ int main(int argc, char* argv[])
             case ICHNOS::XYZType::CLOUD:
             {
                 world.barrier();
-                ICHNOS::XYZ_cloud XYZ(world);
-                tf = XYZ.readXYZdata(OPT.getVelFname());
+                ICHNOS::XYZ_cloud XYZcloud(world);
+                XYZcloud.runAsThread = OPT.Popt.RunAsThread;
+                tf = XYZcloud.readXYZdata(OPT.getVelFname());
                 if (!tf){return 0;}
 
                 switch (OPT.velocityFieldType) {
                     case ICHNOS::VelType::DETRM:
                     {
                         world.barrier();
-                        ICHNOS::CloudVel VF(world, XYZ);
-                        tf = VF.readVelocityField(OPT.getVelFname(), XYZ.getNpnts());
+                        ICHNOS::CloudVel VF(world, XYZcloud);
+                        tf = VF.readVelocityField(OPT.getVelFname(), XYZcloud.getNpnts());
                         if (!tf){return 0;}
                         VF.SetStepOptions(OPT.Popt.StepOpt);
 
@@ -100,8 +101,8 @@ int main(int argc, char* argv[])
                     case ICHNOS::VelType::RWPT:
                     {
                         world.barrier();
-                        ICHNOS::CloudRWVel VF(world, XYZ);
-                        tf = VF.readVelocityField(OPT.getVelFname(), XYZ.getNpnts());
+                        ICHNOS::CloudRWVel VF(world, XYZcloud);
+                        tf = VF.readVelocityField(OPT.getVelFname(), XYZcloud.getNpnts());
                         if (!tf){return 0;}
                         VF.SetStepOptions(OPT.Popt.StepOpt);
                         OPT.Popt.UpdateStepSize = 0;
@@ -118,17 +119,18 @@ int main(int argc, char* argv[])
             }
             case ICHNOS::XYZType::MESH2D:
             {
-                ICHNOS::XYZ_MESH2D XYZ(world);
-                tf = XYZ.readXYZdata(OPT.getVelFname());
+                ICHNOS::XYZ_MESH2D XYZmesh(world);
+                XYZmesh.runAsThread = OPT.Popt.RunAsThread;
+                tf = XYZmesh.readXYZdata(OPT.getVelFname());
                 if (!tf){return 0;}
 
                 switch (OPT.velocityFieldType){
                     case ICHNOS::VelType::DETRM:
                     {
-                        ICHNOS::Mesh2DVel VF(world, XYZ);
-                        tf = VF.readVelocityField(OPT.getVelFname(), XYZ.getNpnts());
+                        ICHNOS::Mesh2DVel VF(world, XYZmesh);
+                        tf = VF.readVelocityField(OPT.getVelFname(), XYZmesh.getNpnts());
                         if (!tf){return 0;}
-                        XYZ.SetInterpType(VF.getInterpType());
+                        XYZmesh.SetInterpType(VF.getInterpType());
 
                         ICHNOS::ParticleTrace pt(world, VF, domain, OPT.Popt);
                         world.barrier();

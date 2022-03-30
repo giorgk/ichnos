@@ -161,7 +161,7 @@ namespace ICHNOS {
 		:
 		world(world_in)
 	{
-        Version = "0.4.01";
+        Version = "0.4.02";
 	}
 
 	bool options::readInput(int argc, char* argv[]) {
@@ -233,8 +233,8 @@ namespace ICHNOS {
 			("StepConfig.Direction", po::value<double>()->default_value(1), "Backward or forward particle tracking")
 			("StepConfig.StepSize", po::value<double>()->default_value(1), "Step Size in units of length")
             ("StepConfig.StepSizeTime", po::value<double>()->default_value(10000), "Step Size in units of time")
-            ("StepConfig.nSteps", po::value<int>()->default_value(4), "The number of steps to take within the BBox or the element")
-            ("StepConfig.nStepsTime", po::value<int>()->default_value(2), "The number of steps to take within a time step")
+            ("StepConfig.nSteps", po::value<double>()->default_value(4.0), "The number of steps to take within the BBox or the element")
+            ("StepConfig.nStepsTime", po::value<double>()->default_value(2.0), "The number of steps to take within a time step")
 			("StepConfig.minExitStepSize", po::value<double>()->default_value(0.1), "Minimum Step Size at the exit")
             //("StepConfig.UpdateStepSize", po::value<int>()->default_value(1), "Update step size wrt bbox")
 
@@ -250,13 +250,15 @@ namespace ICHNOS {
 			("InputOutput.ParticleFile", po::value<std::string >(), "A filename with the initial positions of particles")
 			("InputOutput.WellFile", po::value<std::string >(), "A filename with the well locations")
 			("InputOutput.OutputFile", po::value<std::string >(), "Prefix for the output file")
+            ("InputOutput.printH5", po::value<int>()->default_value(0), "Print output as hdf5")
+            ("InputOutput.printASCII", po::value<int>()->default_value(1), "Print output as ASCII")
 			("InputOutput.ParticlesInParallel", po::value<int>()->default_value(1000), "Maximum number run in parallel")
 			("InputOutput.GatherOneFile", po::value<int>()->default_value(1), "Put all streamlines into one file")
 
 			// Other
 			("Other.Nrealizations", po::value<int>()->default_value(1), "Number of realizations")
             ("Other.nThreads", po::value<int>()->default_value(1), "Number of threads")
-            ("Other.RunAsThread", po::value<int>()->default_value(0), "Run multi Core as multiThread")
+            ("Other.RunAsThread", po::value<int>()->default_value(0), "Run multi Core as multi-Thread")
 			("Other.Version", po::value<std::string >(), "The version of the Ichnos. (Check ichnos.exe -v)")
 
 		;
@@ -297,6 +299,7 @@ namespace ICHNOS {
                     Popt.Nrealizations = vm_cfg["Other.Nrealizations"].as<int>();
                     Popt.Nthreads = vm_cfg["Other.nThreads"].as<int>();
                     Popt.RunAsThread = vm_cfg["Other.RunAsThread"].as<int>() != 0;
+                    Dopt.RunAsThread = Popt.RunAsThread;
                 }
 
 				{// Velocity Options
@@ -359,8 +362,8 @@ namespace ICHNOS {
 					Popt.StepOpt.dir = Popt.Direction;
 					Popt.StepOpt.StepSize = vm_cfg["StepConfig.StepSize"].as<double>();
 					Popt.StepOpt.StepSizeTime = vm_cfg["StepConfig.StepSizeTime"].as<double>();
-					Popt.StepOpt.nSteps = std::max(vm_cfg["StepConfig.nSteps"].as<int>(),1);
-                    Popt.StepOpt.nStepsTime = vm_cfg["StepConfig.nStepsTime"].as<int>();
+					Popt.StepOpt.nSteps = vm_cfg["StepConfig.nSteps"].as<double>();
+                    Popt.StepOpt.nStepsTime = vm_cfg["StepConfig.nStepsTime"].as<double>();
 					Popt.StepOpt.minExitStepSize = vm_cfg["StepConfig.minExitStepSize"].as<double>();
 
                     //Popt.UpdateStepSize = vm_cfg["StepConfig.UpdateStepSize"].as<int>();
@@ -390,8 +393,10 @@ namespace ICHNOS {
 					Popt.ParticleFile = vm_cfg["InputOutput.ParticleFile"].as<std::string>();
 					Popt.WellFile = vm_cfg["InputOutput.WellFile"].as<std::string>();
 					Popt.OutputFile = vm_cfg["InputOutput.OutputFile"].as<std::string>();
-					Popt.ParticlesInParallel = vm_cfg["InputOutput.ParticlesInParallel"].as<int>(); 
-				}
+					Popt.ParticlesInParallel = vm_cfg["InputOutput.ParticlesInParallel"].as<int>();
+                    Popt.printH5 = vm_cfg["InputOutput.printH5"].as<int>() != 0;
+                    Popt.printASCII = vm_cfg["InputOutput.printASCII"].as<int>() !=0;
+                }
 			}
 			catch (std::exception& E)
 			{
