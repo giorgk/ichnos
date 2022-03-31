@@ -98,7 +98,7 @@ namespace ICHNOS{
             ("Velocity.Scale", po::value<double>()->default_value(1.0), "Scale the domain before velocity calculation")
             ("Velocity.InitDiameter", po::value<double>()->default_value(5000), "Initial diameter")
             ("Velocity.InitRatio", po::value<double>()->default_value(1), "Initial ratio")
-            ("Velocity.UseGraph", po::value<int>()->default_value(0), "Set 1 if a graph file is present")
+            ("Velocity.GraphPrefix", po::value<std::string>(), "The prefix of the graph file")
             ("General.Threshold", po::value<double>()->default_value(0.001), "Threshold of distance of IDW")
             ;
 
@@ -135,15 +135,18 @@ namespace ICHNOS{
             fileXYZ = prefix + "XYZ_" + num2Padstr(/*dbg_rank*/proc_id, leadZeros) + suffix;
         }
 
-        int tmp = vm_vfo["Velocity.UseGraph"].as<int>();
-        if (tmp != 0){
-            buseGraph = true;
-            std::string fileGraph;
-            fileGraph = prefix + num2Padstr(/*dbg_rank*/proc_id, leadZeros) + ".grph";
-            bool tf = CGRAPH.readGraphFile(fileGraph);
-            if (!tf)
-                return false;
+        if (vm_vfo.count("Velocity.GraphPrefix")){
+            std::string graphPrefix = vm_vfo["Velocity.GraphPrefix"].as<std::string>();
+            if (!graphPrefix.empty()){
+                buseGraph = true;
+                std::string fileGraph;
+                fileGraph = graphPrefix + num2Padstr(/*dbg_rank*/proc_id, leadZeros) + ".grph";
+                bool tf = CGRAPH.readGraphFile(fileGraph);
+                if (!tf)
+                    return false;
+            }
         }
+
 
         Threshold = vm_vfo["General.Threshold"].as<double>();
         Scale = vm_vfo["Velocity.Scale"].as<double>();

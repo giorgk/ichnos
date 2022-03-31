@@ -109,7 +109,7 @@ namespace ICHNOS{
             ("Velocity.Trans", po::value<int>()->default_value(0), "0->steady state, 1->Transient state")
             ("Velocity.TimeStepFile", po::value<std::string>(), "This filename with the time steps")
             ("Velocity.TimeInterp", po::value<std::string>(), "Interpolation type between time steps")
-            ("Velocity.RepeatTime", po::value<double>()->default_value(0.0), "The number of days to repeat after the and of time steps")
+            ("Velocity.RepeatTime", po::value<double>()->default_value(0.0), "The number of days to repeat after the end of time steps")
             ("Velocity.Multiplier", po::value<double>()->default_value(1.0), "This is a multiplier to scale velocity")
             //("Velocity.SetOnFaces", po::value<int>()->default_value(0), "Is the velocity defined on the element interfaces?")
             //("Velocity.FaceIdFile", po::value<std::string>(), "Face ids for each element")
