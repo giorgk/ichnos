@@ -33,7 +33,7 @@ namespace ICHNOS{
     class CloudVel : public ic::velocityField{
     public:
         CloudVel(boost::mpi::communicator& world_in, XYZ_base &XYZ_in);
-        bool readVelocityField(std::string vf_file, int nPnts);
+        bool readVelocityField(std::string vf_file);
         void calcVelocity(vec3& p, vec3& vel,
                           std::map<int, double>& proc_map,
                           helpVars& pvlu,
@@ -49,10 +49,10 @@ namespace ICHNOS{
     protected:
         //bool readXYZfile(std::string prefix, std::string suffix, int ld_zero);
         bool readVelocityFiles();
-        bool readVfile(std::string filename, int nPoints, int nSteps, ic::coordDim dim);
-        bool readVH5file(std::string filename, int nPoints, int nSteps);
-        bool readSteadyVfile(std::string filename, int nPoints);
-        bool readTimeSteps(std::string filename, std::vector<double>& TS);
+        //bool readVfile(std::string filename, int nPoints, int nSteps, ic::coordDim dim);
+        //bool readVH5file(std::string filename, int nPoints, int nSteps);
+        //bool readSteadyVfile(std::string filename, int nPoints);
+        //bool readTimeSteps(std::string filename, std::vector<double>& TS);
 
 
         ic::VelTR VEL;
@@ -94,7 +94,7 @@ namespace ICHNOS{
         InterpolateOutsideDomain = true;
     }
 
-    bool CloudVel::readVelocityField(std::string vf_file, int nPnts) {
+    bool CloudVel::readVelocityField(std::string vf_file) {
         if (world.rank() == 0)
             std::cout << "--> Velocity configuration file: " << vf_file << std::endl;
 
@@ -111,6 +111,7 @@ namespace ICHNOS{
             ("Velocity.TimeInterp", po::value<std::string>(), "Interpolation type between time steps")
             ("Velocity.RepeatTime", po::value<double>()->default_value(0.0), "The number of days to repeat after the end of time steps")
             ("Velocity.Multiplier", po::value<double>()->default_value(1.0), "This is a multiplier to scale velocity")
+            ("Velocity.nPoints", po::value<int>()->default_value(0), "This is the number of velocity points")
             //("Velocity.SetOnFaces", po::value<int>()->default_value(0), "Is the velocity defined on the element interfaces?")
             //("Velocity.FaceIdFile", po::value<std::string>(), "Face ids for each element")
             //("Velocity.Scale", po::value<double>()->default_value(1.0), "Scale the domain before velocity calculation")
@@ -145,6 +146,7 @@ namespace ICHNOS{
             }
 
             multiplier = vm_vfo["Velocity.Multiplier"].as<double>();
+            nPoints = vm_vfo["Velocity.nPoints"].as<int>();
 
 
             //Scale = vm_vfo["Velocity.Scale"].as<double>();
@@ -184,7 +186,7 @@ namespace ICHNOS{
             leadingZeros = vm_vfo["Velocity.LeadingZeros"].as<int>();
 
 
-            nPoints = nPnts;
+            //nPoints = nPnts;
             nSteps = TimeSteps.size();
             VEL.init(nPoints, nSteps);
             VEL.setTSvalue(TimeSteps);
@@ -217,45 +219,55 @@ namespace ICHNOS{
     }
 
     bool CloudVel::readVelocityFiles(){
+        bool tf = false;
         int proc_id = world.rank();
         if (XYZ.runAsThread){
             proc_id = 0;
         }
-#if _USEHF > 0
-        if (Suffix.compare(".h5") == 0){
-            std::string fileVXYZ = Prefix + ic::num2Padstr(proc_id, leadingZeros) + Suffix;
-            bool tf1 = readVH5file(fileVXYZ, nPoints, nSteps);
-            return tf1;
-        }
-#endif
-        bool tf = false;
+
         auto start = std::chrono::high_resolution_clock::now();
         if (isVeltrans){
-            std::string fileVX = Prefix + "VX_" + ic::num2Padstr(/*dbg_rank*/proc_id, leadingZeros) + Suffix;
-            tf = readVfile(fileVX, nPoints, nSteps, ic::coordDim::vx);
-            if (tf){
-                std::string fileVY = Prefix + "VY_" + ic::num2Padstr(/*dbg_rank*/proc_id, leadingZeros) + Suffix;
-                tf = readVfile(fileVY, nPoints, nSteps, ic::coordDim::vy);
+
+            if (Suffix.compare(".h5") == 0){
+#if _USEHF > 0
+                std::string fileVXYZ = Prefix + ic::num2Padstr(proc_id, leadingZeros) + Suffix;
+                tf = READ::H5Transient3DVelocity(fileVXYZ, nPoints, nSteps, multiplier, VEL);
+#endif
             }
-            if (tf){
-                std::string fileVZ = Prefix + "VZ_" + ic::num2Padstr(/*dbg_rank*/proc_id, leadingZeros) + Suffix;
-                tf = readVfile(fileVZ, nPoints, nSteps, ic::coordDim::vz);
+            else{
+                std::string fileVX = Prefix + "VX_" + ic::num2Padstr(/*dbg_rank*/proc_id, leadingZeros) + Suffix;
+                tf = READ::read1DVelocity(fileVX, nPoints, nSteps, multiplier, ic::coordDim::vx, VEL);
+                if (tf){
+                    std::string fileVY = Prefix + "VY_" + ic::num2Padstr(/*dbg_rank*/proc_id, leadingZeros) + Suffix;
+                    tf = READ::read1DVelocity(fileVY, nPoints, nSteps, multiplier, ic::coordDim::vy, VEL);
+                }
+                if (tf){
+                    std::string fileVZ = Prefix + "VZ_" + ic::num2Padstr(/*dbg_rank*/proc_id, leadingZeros) + Suffix;
+                    tf = READ::read1DVelocity(fileVZ, nPoints, nSteps, multiplier, ic::coordDim::vz, VEL);
+                }
             }
         }
         else {
-            std::string fileVX = Prefix + ic::num2Padstr(proc_id, leadingZeros) + Suffix;
-            tf = readSteadyVfile(fileVX, nPoints);
+            std::string fileVXYZ = Prefix + ic::num2Padstr(proc_id, leadingZeros) + Suffix;
+            if (Suffix.compare(".h5") == 0){
+#if _USEHF > 0
+                tf = READ::H5SteadyState3DVelocity(fileVXYZ, multiplier, VEL);
+#endif
+            }
+            else{
+                tf = READ::ASCIISteadState3DVelocity(fileVXYZ, nPoints, 6, multiplier, VEL);
+            }
         }
 
-        if (!tf)
-            return false;
-
-        auto finish = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double> elapsed = finish - start;
-        std::cout << "\tRead Velocity in : " << elapsed.count() << std::endl;
-        return true;
+        if (tf){
+            auto finish = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double> elapsed = finish - start;
+            std::cout << "\tRead Velocity in : " << elapsed.count() << std::endl;
+        }
+        return tf;
     }
 
+    /*
     bool CloudVel::readVH5file(std::string filename, int nPoints, int nSteps){
         std::cout << "\tReading file " + filename << std::endl;
 #if _USEHF > 0
@@ -311,7 +323,8 @@ namespace ICHNOS{
 #endif
         return false;
     }
-
+*/
+    /*
     bool CloudVel::readVfile(std::string filename, int nPoints, int nSteps, ic::coordDim dim){
         std::cout << "\tReading file " + filename << std::endl;
         std::ifstream datafile(filename.c_str());
@@ -333,7 +346,9 @@ namespace ICHNOS{
         }
         return true;
     }
+     */
 
+    /*
     bool CloudVel::readSteadyVfile(std::string filename, int nPoints){
         std::cout << "\tReading file " + filename << std::endl;
         std::ifstream datafile(filename.c_str());
@@ -365,7 +380,9 @@ namespace ICHNOS{
         }
         return true;
     }
+     */
 
+    /*
     bool CloudVel::readTimeSteps(std::string filename, std::vector<double>& TS){
         std::cout << "\tReading file " + filename << std::endl;
         std::ifstream datafile(filename.c_str());
@@ -389,6 +406,7 @@ namespace ICHNOS{
         }
         return true;
     }
+*/
 
 //    bool CloudVel::readXYZfile(std::string prefix, std::string suffix, int ld_zero){
 //        std::string fileXYZ = prefix + "XYZ_" + ic::num2Padstr(/*dbg_rank*/world.rank(), ld_zero) + suffix;

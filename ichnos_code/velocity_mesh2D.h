@@ -21,7 +21,7 @@ namespace ICHNOS{
     public:
         Mesh2DVel(boost::mpi::communicator& world_in, XYZ_base &XYZ_in);
 
-        bool readVelocityField(std::string vf_file, int nPnts);
+        bool readVelocityField(std::string vf_file);
         void calcVelocity(vec3& p, vec3 &vel,
                           std::map<int, double>& proc_map,
                           helpVars& pvlu,
@@ -83,7 +83,7 @@ namespace ICHNOS{
         InterpolateOutsideDomain = false;
     }
 
-    bool Mesh2DVel::readVelocityField(std::string vf_file, int nPnts) {
+    bool Mesh2DVel::readVelocityField(std::string vf_file) {
 
         if (world.rank() == 0)
             std::cout << "--> Velocity configuration file: " << vf_file << std::endl;
@@ -103,6 +103,7 @@ namespace ICHNOS{
                 ("Velocity.TimeInterp", po::value<std::string>(), "Interpolation type between time steps")
                 ("Velocity.RepeatTime", po::value<double>()->default_value(0.0), "The number of days to repeat after the and of time steps")
                 ("Velocity.Multiplier", po::value<double>()->default_value(1.0), "This is a multiplier to scale velocity")
+                ("Velocity.nPoints", po::value<int>()->default_value(0), "This is the number of velocity points")
                 ("MESH2D.FaceIdFile", po::value<std::string>(), "Face ids for each element, Required for FACE type")
                 ("MESH2D.Nlayers", po::value<int>()->default_value(4), "Number of layers")
                 ("MESH2D.NodeFile", po::value<std::string>(), "An array of the node coordinates")
@@ -159,6 +160,7 @@ namespace ICHNOS{
 
 
             multiplier = vm_vfo["Velocity.Multiplier"].as<double>();
+            nPoints = vm_vfo["Velocity.nPoints"].as<int>();
             nLayers = vm_vfo["MESH2D.Nlayers"].as<int>();
             nNodes = vm_vfo["MESH2D.Nnodes"].as<int>();
             nElements = vm_vfo["MESH2D.Nelements"].as<int>();
@@ -565,6 +567,7 @@ namespace ICHNOS{
     }
 
     bool Mesh2DVel::readXYZVelocity() {
+        bool tf = false;
         int proc_id = world.rank();
         if (XYZ.runAsThread){
             proc_id = 0;
@@ -572,45 +575,25 @@ namespace ICHNOS{
 
         if (!isVeltrans){
             std::string filename = Prefix + ic::num2Padstr(proc_id, leadingZeros) + Suffix;
+
             if (Suffix.compare(".h5") == 0){
-                //TODO
-                std::cout << "MESH2D xyz - Steady State - H5 input is not implemented yet" << std::endl;
-                return false;
-            }
-            std::cout << "\tReading file " + filename << std::endl;
-            std::ifstream datafile(filename.c_str());
-            if (!datafile.good()){
-                std::cout << "Can't open the file " << filename << std::endl;
-                return false;
+                tf = READ::H5SteadyState3DVelocity(filename,multiplier,VEL);
             }
             else{
-                std::string line;
-                double vx, vy, vz;
-                std::vector<ic::vec3> tmp_vel;
-                while (getline(datafile, line)){
-                    if (line.size() > 1){
-                        std::istringstream inp(line.c_str());
-                        inp >> vx;
-                        inp >> vy;
-                        inp >> vz;
-                        tmp_vel.push_back(ic::vec3(vx, vy, vz));
-                    }
-                }
-                datafile.close();
-                nPoints = tmp_vel.size();
-                VEL.init(nPoints, nSteps);
-                for (unsigned int i = 0; i < tmp_vel.size(); ++i){
-                    VEL.setVELvalue(tmp_vel[i].x * multiplier, i, 0, ic::coordDim::vx);
-                    VEL.setVELvalue(tmp_vel[i].y * multiplier, i, 0, ic::coordDim::vy);
-                    VEL.setVELvalue(tmp_vel[i].z * multiplier, i, 0, ic::coordDim::vz);
-                }
-                return true;
+                tf = READ::ASCIISteadState3DVelocity(filename, nPoints,0, multiplier, VEL);
             }
         }
         else{
-            //TODO
+            if (Suffix.compare(".h5") == 0){
+                std::string filename = Prefix + ic::num2Padstr(proc_id, leadingZeros) + Suffix;
+                tf = READ::H5Transient3DVelocity(filename, nPoints, nSteps, multiplier, VEL);
+            }
+            else{
+                //TODO
+                std::cout << "Reading ASCII Transient State Velocity is not implemented yet" << std::endl;
+            }
         }
-        return false;
+        return tf;
     }
 
     bool Mesh2DVel::readFaceVelocity() {
@@ -644,7 +627,7 @@ namespace ICHNOS{
                     }
                 }
                 datafile.close();
-                nPoints = tmp.size();
+                //nPoints = tmp.size();
                 VEL.init(nPoints, nSteps, 1);
                 for (unsigned int i = 0; i < tmp.size(); ++i){
                     VEL.setVELvalue(tmp[i] * multiplier, i, 0, ic::coordDim::vx);

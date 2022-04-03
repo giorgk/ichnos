@@ -270,19 +270,11 @@ namespace ICHNOS {
 
 		// Attempt to calculate the velocity
         {
-            std::vector<int> ids;
-            std::vector<double> weights;
             std::map<int, double> proc_map;
-            std::vector<vec3> tmp_data;
             bool tf;
             S.PVLU.pp = p;
 
-            //VF.XYZ.calcWeights(p,ids,weights,proc_map,S.PVLU,tf);
-            //if (!tf) {
-            //    return ExitReason::FAR_AWAY;
-            //}
             VF.calcVelocity(p, v, proc_map, S.PVLU, tf, tm);
-            //VF.getVec3Data(tmp_data);
         }
 
 		//proc = VF.calcProcID(proc_map);

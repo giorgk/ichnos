@@ -16,7 +16,7 @@ namespace ICHNOS{
     class CloudRWVel : public ic::CloudVel{
     public:
         CloudRWVel(boost::mpi::communicator& world_in, XYZ_base &XYZ_in);
-        bool readVelocityField(std::string vf_file, int nPnts);
+        bool readVelocityField(std::string vf_file);
         void calcVelocity(vec3& p, vec3& vel,
                           std::map<int, double>& proc_map,
                           helpVars& pvlu,
@@ -44,8 +44,8 @@ namespace ICHNOS{
         InterpolateOutsideDomain = true;
     }
 
-    bool CloudRWVel::readVelocityField(std::string vf_file, int nPnts) {
-        CloudVel::readVelocityField(vf_file, nPnts);
+    bool CloudRWVel::readVelocityField(std::string vf_file) {
+        CloudVel::readVelocityField(vf_file);
         if (world.rank() == 0)
             std::cout << "--> Random Walk related parameters file: " << vf_file << std::endl;
 

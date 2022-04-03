@@ -83,7 +83,7 @@ int main(int argc, char* argv[])
                     {
                         world.barrier();
                         ICHNOS::CloudVel VF(world, XYZcloud);
-                        tf = VF.readVelocityField(OPT.getVelFname(), XYZcloud.getNpnts());
+                        tf = VF.readVelocityField(OPT.getVelFname());
                         if (!tf){return 0;}
                         VF.SetStepOptions(OPT.Popt.StepOpt);
 
@@ -102,7 +102,7 @@ int main(int argc, char* argv[])
                     {
                         world.barrier();
                         ICHNOS::CloudRWVel VF(world, XYZcloud);
-                        tf = VF.readVelocityField(OPT.getVelFname(), XYZcloud.getNpnts());
+                        tf = VF.readVelocityField(OPT.getVelFname());
                         if (!tf){return 0;}
                         VF.SetStepOptions(OPT.Popt.StepOpt);
                         OPT.Popt.UpdateStepSize = 0;
@@ -128,7 +128,7 @@ int main(int argc, char* argv[])
                     case ICHNOS::VelType::DETRM:
                     {
                         ICHNOS::Mesh2DVel VF(world, XYZmesh);
-                        tf = VF.readVelocityField(OPT.getVelFname(), XYZmesh.getNpnts());
+                        tf = VF.readVelocityField(OPT.getVelFname());
                         if (!tf){return 0;}
                         XYZmesh.SetInterpType(VF.getInterpType());
 

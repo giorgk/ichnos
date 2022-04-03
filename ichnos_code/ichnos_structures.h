@@ -347,6 +347,7 @@ namespace ICHNOS {
 
         double nDaysRepeat = 0;
         TimeInterpType tip;
+        bool bIsInitialzed = false;
 
     };
 
@@ -357,6 +358,8 @@ namespace ICHNOS {
     {}
 
     void VelTR::init(int np, int nt, int dim_in) {
+        if (bIsInitialzed)
+            return;
         nPoints = np;
         nSteps = nt;
         nDims = dim_in;
@@ -370,6 +373,7 @@ namespace ICHNOS {
             VZ.resize(nPoints, std::vector<double>(nSteps, 0));
         TS.clear();
         TS.resize(nSteps, 0);
+        bIsInitialzed = true;
     }
 
     void VelTR::setVELvalue(double v, int pnt, int step, coordDim dim){

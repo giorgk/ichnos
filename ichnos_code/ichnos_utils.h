@@ -1051,6 +1051,114 @@ namespace ICHNOS {
             }
             return true;
 		}
+
+		bool read1DVelocity(std::string filename, int nPoints, int nSteps, double multiplier, coordDim dim, VelTR& VEL){
+            std::cout << "\tReading file " + filename << std::endl;
+            std::ifstream datafile(filename.c_str());
+            if (!datafile.good()){
+                std::cout << "Can't open the file " << filename << std::endl;
+                return false;
+            }
+            else{
+                std::string line;
+                double v;
+                for (int i = 0; i < nPoints; i++){
+                    getline(datafile, line);
+                    std::istringstream inp(line.c_str());
+                    for (int j = 0; j < nSteps; j++){
+                        inp >> v;
+                        VEL.setVELvalue(v*multiplier, i, j, dim);
+                    }
+                }
+            }
+            return true;
+		}
+
+		bool H5SteadyState3DVelocity(std::string filename, double multiplier, VelTR& VEL){
+            std::cout << "\tReading file " + filename << std::endl;
+#if _USEHF > 0
+            const std::string VXYZNameSet("VXYZ");
+            HighFive::File HDFNfile(filename, HighFive::File::ReadOnly);
+            HighFive::DataSet datasetVXYZ = HDFNfile.getDataSet(VXYZNameSet);
+            std::vector<std::vector<double>> VXYZ;
+            datasetVXYZ.read(VXYZ);
+            for (int i = 0; i < VXYZ[0].size(); i++){
+                VEL.setVELvalue(VXYZ[0][i]*multiplier, i, 0, coordDim::vx);
+                VEL.setVELvalue(VXYZ[1][i]*multiplier, i, 0, coordDim::vy);
+                VEL.setVELvalue(VXYZ[2][i]*multiplier, i, 0, coordDim::vz);
+            }
+            return true;
+#endif
+            return false;
+		}
+
+		bool ASCIISteadState3DVelocity(std::string filename, int nPoints, int nInfoSkip, double multiplier, VelTR& VEL){
+            std::cout << "\tReading file " + filename << std::endl;
+            std::ifstream datafile(filename.c_str());
+            if (!datafile.good()){
+                std::cout << "Can't open the file " << filename << std::endl;
+                return false;
+            }
+            else{
+                std::string line;
+                double tmp, vx, vy, vz;
+                for (int i = 0; i < nPoints; i++){
+                    getline(datafile, line);
+                    std::istringstream inp(line.c_str());
+                    for (int j = 0; j < nInfoSkip; ++j){
+                        inp >> tmp;
+                    }
+                    inp >> vx;
+                    inp >> vy;
+                    inp >> vz;
+                    VEL.setVELvalue(vx*multiplier, i, 0, coordDim::vx);
+                    VEL.setVELvalue(vy*multiplier, i, 0, coordDim::vy);
+                    VEL.setVELvalue(vz*multiplier, i, 0, coordDim::vz);
+                }
+            }
+            datafile.close();
+            return true;
+		}
+
+		bool H5Transient3DVelocity(std::string filename, int nPoints, int nSteps, double multiplier, VelTR& VEL){
+            std::cout << "\tReading file " + filename << std::endl;
+#if _USEHF > 0
+            VEL.init(nPoints,nSteps);
+            const std::string VXNameSet("VX");
+            const std::string VYNameSet("VY");
+            const std::string VZNameSet("VZ");
+            HighFive::File HDFNfile(filename, HighFive::File::ReadOnly);
+            HighFive::DataSet datasetVX = HDFNfile.getDataSet(VXNameSet);
+            HighFive::DataSet datasetVY = HDFNfile.getDataSet(VYNameSet);
+            HighFive::DataSet datasetVZ = HDFNfile.getDataSet(VZNameSet);
+            std::vector<std::vector<double>> VX;
+            std::vector<std::vector<double>> VY;
+            std::vector<std::vector<double>> VZ;
+            datasetVX.read(VX);
+            datasetVY.read(VY);
+            datasetVZ.read(VZ);
+
+            if (VX[0].size() != nPoints){
+                std::cout << "The number of points (" << VX[0].size() << ") in the file " << filename << " is not " << nPoints << std::endl;
+                return false;
+            }
+            if (VX.size() != nSteps){
+                std::cout << "The number of time steps (" << VX.size() << ") in the file " << filename
+                << "\n does not match the number of steps in the Time step file " << nSteps << std::endl;
+                return false;
+            }
+            for (int i = 0; i < VX[0].size(); i++){
+                for (int j = 0; j < VX.size(); ++j) {
+                    VEL.setVELvalue(VX[j][i]*multiplier, i, j, ICHNOS::coordDim::vx);
+                    VEL.setVELvalue(VY[j][i]*multiplier, i, j, ICHNOS::coordDim::vy);
+                    VEL.setVELvalue(VZ[j][i]*multiplier, i, j, ICHNOS::coordDim::vz);
+                }
+            }
+            return true;
+#endif
+            return false;
+		}
+
 	}
 
 	
