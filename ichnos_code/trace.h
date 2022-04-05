@@ -4,7 +4,9 @@
 
 #include <thread>
 
+#if _USEHF > 0
 #include <highfive/H5File.hpp>
+#endif
 
 #include "ichnos_structures.h"
 #include "velocity_base.h"
