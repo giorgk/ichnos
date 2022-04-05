@@ -579,9 +579,10 @@ namespace ICHNOS {
 		bool readXYZfile(std::string fileXYZ, std::vector<cgal_point_3>& pp, std::vector<Pnt_info>& dd) {
             std::cout << "\tReading file " + fileXYZ << std::endl;
 
-#if _USEHF > 0
+
             std::string ext = getExtension(fileXYZ);
             if (ext.compare("h5") == 0){
+#if _USEHF > 0
                 const std::string XYZDRNameSet("XYZDR");
                 const std::string PROCNameSet("PROC");
                 HighFive::File HDFNfile(fileXYZ, HighFive::File::ReadOnly);
@@ -601,8 +602,10 @@ namespace ICHNOS {
                     dd.push_back(td);
                 }
                 return true;
-            }
 #endif
+                return false;
+            }
+
 
             std::ifstream datafile(fileXYZ.c_str());
             if (!datafile.good()) {
@@ -629,6 +632,7 @@ namespace ICHNOS {
                         dd.push_back(td);
                     }
                 }
+                datafile.close();
                 return true;
             }
         }
