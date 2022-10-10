@@ -69,7 +69,6 @@ namespace ICHNOS {
 
 	enum class XYZType{
 	    CLOUD,
-	    IWFM,
 	    MESH2D,
 	    INVALID
 	};
@@ -79,7 +78,6 @@ namespace ICHNOS {
 	    std::map <XYZType, std::string>::iterator it;
 	    //vtMap.insert(std::pair<VelType, std::string>(VelType::Cloud3d, "Cloud3d"));
 	    xyztMap.insert(std::pair<XYZType, std::string>(XYZType::CLOUD, "CLOUD"));
-	    xyztMap.insert(std::pair<XYZType, std::string>(XYZType::IWFM, "IWFM"));
         xyztMap.insert(std::pair<XYZType, std::string>(XYZType::MESH2D, "MESH2D"));
 	    it = xyztMap.find(xyzt);
 	    if (it != xyztMap.end())
@@ -94,7 +92,6 @@ namespace ICHNOS {
 	    std::map < std::string, XYZType>::iterator it;
 	    //vtMap.insert(std::pair<std::string, VelType>("Cloud3d", VelType::Cloud3d));
 	    xyztMap.insert(std::pair<std::string, XYZType>("CLOUD", XYZType::CLOUD));
-	    xyztMap.insert(std::pair<std::string, XYZType>("IWFM", XYZType::IWFM));
         xyztMap.insert(std::pair<std::string, XYZType>("MESH2D", XYZType::MESH2D));
 	    it = xyztMap.find(xyzt);
 	    if (it != xyztMap.end())
@@ -161,7 +158,7 @@ namespace ICHNOS {
 		:
 		world(world_in)
 	{
-        Version = "0.4.05";
+        Version = "0.4.10";
 	}
 
 	bool options::readInput(int argc, char* argv[]) {
@@ -242,16 +239,16 @@ namespace ICHNOS {
 
 			("AdaptStep.MaxStepSize", po::value<double>()->default_value(2), "Maximum Step Size in units of length")
 			("AdaptStep.MinStepSize", po::value<double>()->default_value(0.1), "Minimum Step Size in units of length")
-			("AdaptStep.increaseRateChange", po::value<double>()->default_value(1.5), "Maximum Step Size in units of length")
-			("AdaptStep.limitUpperDecreaseStep", po::value<double>()->default_value(0.75), "Upper limit of decrease step size")
+			("AdaptStep.IncreaseRateChange", po::value<double>()->default_value(1.5), "Maximum Step Size in units of length")
+			("AdaptStep.LimitUpperDecreaseStep", po::value<double>()->default_value(0.75), "Upper limit of decrease step size")
 			("AdaptStep.Tolerance", po::value<double>()->default_value(0.1), "Tolerance when the RK45 is used")
 
 			// InputOutput
 			("InputOutput.ParticleFile", po::value<std::string >(), "A filename with the initial positions of particles")
 			("InputOutput.WellFile", po::value<std::string >(), "A filename with the well locations")
 			("InputOutput.OutputFile", po::value<std::string >(), "Prefix for the output file")
-            ("InputOutput.printH5", po::value<int>()->default_value(0), "Print output as hdf5")
-            ("InputOutput.printASCII", po::value<int>()->default_value(1), "Print output as ASCII")
+            ("InputOutput.PrintH5", po::value<int>()->default_value(0), "Print output as hdf5")
+            ("InputOutput.PrintASCII", po::value<int>()->default_value(1), "Print output as ASCII")
 			("InputOutput.ParticlesInParallel", po::value<int>()->default_value(1000), "Maximum number run in parallel")
 			("InputOutput.GatherOneFile", po::value<int>()->default_value(1), "Put all streamlines into one file")
 
@@ -260,6 +257,7 @@ namespace ICHNOS {
             ("Other.nThreads", po::value<int>()->default_value(1), "Number of threads")
             ("Other.RunAsThread", po::value<int>()->default_value(0), "Run multi Core as multi-Thread")
 			("Other.Version", po::value<std::string >(), "The version of the Ichnos. (Check ichnos.exe -v)")
+            ("Other.OutFreq", po::value<double>()->default_value(0.0), "Show progress every x % of particles. Set 0 to deactivate")
 
 		;
 
@@ -300,6 +298,7 @@ namespace ICHNOS {
                     Popt.Nthreads = vm_cfg["Other.nThreads"].as<int>();
                     Popt.RunAsThread = vm_cfg["Other.RunAsThread"].as<int>() != 0;
                     Dopt.RunAsThread = Popt.RunAsThread;
+                    Popt.OutputFrequency = vm_cfg["Other.OutFreq"].as<double>();
                 }
 
 				{// Velocity Options
@@ -376,12 +375,12 @@ namespace ICHNOS {
 				{// Adaptive Step configurations
 					Popt.AdaptOpt.MaxStepSize = vm_cfg["AdaptStep.MaxStepSize"].as<double>();
 					Popt.AdaptOpt.MinStepSize = vm_cfg["AdaptStep.MinStepSize"].as<double>();
-					Popt.AdaptOpt.increaseRateChange = vm_cfg["AdaptStep.increaseRateChange"].as<double>();
+					Popt.AdaptOpt.increaseRateChange = vm_cfg["AdaptStep.IncreaseRateChange"].as<double>();
 					if (Popt.AdaptOpt.increaseRateChange < 1) {
 						std::cout << "increaseRateChange should be higher than 1. It gets the default value of 1.5" << std::endl;
 						Popt.AdaptOpt.increaseRateChange = 1.5;
 					}
-					Popt.AdaptOpt.limitUpperDecreaseStep = vm_cfg["AdaptStep.limitUpperDecreaseStep"].as<double>();
+					Popt.AdaptOpt.limitUpperDecreaseStep = vm_cfg["AdaptStep.LimitUpperDecreaseStep"].as<double>();
 					if (Popt.AdaptOpt.limitUpperDecreaseStep < 0 || Popt.AdaptOpt.limitUpperDecreaseStep > 1) {
 						std::cout << "limitUpperDecreaseStep should be between 0 and 1. It gets the default value of 0.75" << std::endl;
 						Popt.AdaptOpt.limitUpperDecreaseStep = 0.75;
@@ -394,8 +393,8 @@ namespace ICHNOS {
 					Popt.WellFile = vm_cfg["InputOutput.WellFile"].as<std::string>();
 					Popt.OutputFile = vm_cfg["InputOutput.OutputFile"].as<std::string>();
 					Popt.ParticlesInParallel = vm_cfg["InputOutput.ParticlesInParallel"].as<int>();
-                    Popt.printH5 = vm_cfg["InputOutput.printH5"].as<int>() != 0;
-                    Popt.printASCII = vm_cfg["InputOutput.printASCII"].as<int>() !=0;
+                    Popt.printH5 = vm_cfg["InputOutput.PrintH5"].as<int>() != 0;
+                    Popt.printASCII = vm_cfg["InputOutput.PrintASCII"].as<int>() !=0;
                 }
 			}
 			catch (std::exception& E)

@@ -49,6 +49,7 @@ namespace ICHNOS{
     protected:
         //bool readXYZfile(std::string prefix, std::string suffix, int ld_zero);
         bool readVelocityFiles();
+        void setVelData(std::vector<std::vector<double>>& data, double multiplier, coordDim dim);
         //bool readVfile(std::string filename, int nPoints, int nSteps, ic::coordDim dim);
         //bool readVH5file(std::string filename, int nPoints, int nSteps);
         //bool readSteadyVfile(std::string filename, int nPoints);
@@ -111,7 +112,7 @@ namespace ICHNOS{
             ("Velocity.TimeInterp", po::value<std::string>(), "Interpolation type between time steps")
             ("Velocity.RepeatTime", po::value<double>()->default_value(0.0), "The number of days to repeat after the end of time steps")
             ("Velocity.Multiplier", po::value<double>()->default_value(1.0), "This is a multiplier to scale velocity")
-            ("Velocity.nPoints", po::value<int>()->default_value(0), "This is the number of velocity points")
+            //("Velocity.nPoints", po::value<int>()->default_value(0), "This is the number of velocity points")
             //("Velocity.SetOnFaces", po::value<int>()->default_value(0), "Is the velocity defined on the element interfaces?")
             //("Velocity.FaceIdFile", po::value<std::string>(), "Face ids for each element")
             //("Velocity.Scale", po::value<double>()->default_value(1.0), "Scale the domain before velocity calculation")
@@ -125,15 +126,15 @@ namespace ICHNOS{
             ("Porosity.Value", po::value<std::string>(), "Porosity. Either a file or a single number")
 
             //General
-            ("General.OwnerThreshold", po::value<double>()->default_value(0.75), "Threshold for the processor ownership")
+            ("Other.OwnerThreshold", po::value<double>()->default_value(0.75), "Threshold for the processor ownership")
             //("General.Threshold", po::value<double>()->default_value(0.001), "Threshold of distance of IDW")
-            ("General.FrequencyStat", po::value<int>()->default_value(20), "Frequency of printing stats")
+            ("Other.FrequencyStat", po::value<int>()->default_value(20), "Frequency of printing stats")
         ;
 
         po::store(po::parse_config_file<char>(vf_file.c_str(), velocityFieldOptions, true), vm_vfo);
 
         { // General
-            OwnerThreshold = vm_vfo["General.OwnerThreshold"].as<double>();
+            OwnerThreshold = vm_vfo["Other.OwnerThreshold"].as<double>();
             //Threshold = vm_vfo["General.Threshold"].as<double>();
             //FrequencyStat = vm_vfo["General.FrequencyStat"].as<int>();
         }
@@ -146,7 +147,7 @@ namespace ICHNOS{
             }
 
             multiplier = vm_vfo["Velocity.Multiplier"].as<double>();
-            nPoints = vm_vfo["Velocity.nPoints"].as<int>();
+            //nPoints = vm_vfo["Velocity.nPoints"].as<int>();
 
 
             //Scale = vm_vfo["Velocity.Scale"].as<double>();
@@ -186,9 +187,13 @@ namespace ICHNOS{
             leadingZeros = vm_vfo["Velocity.LeadingZeros"].as<int>();
 
 
-            //nPoints = nPnts;
             nSteps = TimeSteps.size();
-            VEL.init(nPoints, nSteps);
+            VEL.setnSteps(nSteps);
+            //if (nPoints > 0){
+            //    // We can initialize at this point only if the nPoints is given.
+            //    // Otherwise, we will initialize it inside the readers
+            //    VEL.init(nPoints);
+            //}
             VEL.setTSvalue(TimeSteps);
 
             // Read the Velocity files
@@ -231,19 +236,56 @@ namespace ICHNOS{
             if (Suffix.compare(".h5") == 0){
 #if _USEHF > 0
                 std::string fileVXYZ = Prefix + ic::num2Padstr(proc_id, leadingZeros) + Suffix;
-                tf = READ::H5Transient3DVelocity(fileVXYZ, nPoints, nSteps, multiplier, VEL);
+                tf = READ::H5Transient3DVelocity(fileVXYZ, nSteps, multiplier, VEL);
+                nPoints = VEL.getNpoints();
 #endif
             }
             else{
-                std::string fileVX = Prefix + "VX_" + ic::num2Padstr(/*dbg_rank*/proc_id, leadingZeros) + Suffix;
-                tf = READ::read1DVelocity(fileVX, nPoints, nSteps, multiplier, ic::coordDim::vx, VEL);
-                if (tf){
-                    std::string fileVY = Prefix + "VY_" + ic::num2Padstr(/*dbg_rank*/proc_id, leadingZeros) + Suffix;
-                    tf = READ::read1DVelocity(fileVY, nPoints, nSteps, multiplier, ic::coordDim::vy, VEL);
+                { //VX
+                    std::string fileVX = Prefix + "VX_" + ic::num2Padstr(/*dbg_rank*/proc_id, leadingZeros) + Suffix;
+                    std::vector<std::vector<double>> data;
+                    bool tf = READ::read2Darray<double>(fileVX, nSteps, data);
+                    if (tf) {
+                        nPoints = static_cast<int>(data.size());
+                        VEL.init(nPoints, nSteps, 3);
+                        setVelData(data, multiplier, ic::coordDim::vx);
+                    }
+                    else{
+                        return false;
+                    }
                 }
-                if (tf){
+
+
+                {//VY
+                    std::string fileVY = Prefix + "VY_" + ic::num2Padstr(/*dbg_rank*/proc_id, leadingZeros) + Suffix;
+                    std::vector<std::vector<double>> data;
+                    bool tf = READ::read2Darray<double>(fileVY, nSteps, data);
+                    if (tf){
+                        if (nPoints != data.size()){
+                            std::cout << "The number of data (" << nPoints << ") in VX file is different than the VY file (" << data.size() << ")" << std::endl;
+                            return false;
+                        }
+                        setVelData(data, multiplier, ic::coordDim::vy);
+                    }
+                    else{
+                        return false;
+                    }
+                }
+
+                {// VZ
                     std::string fileVZ = Prefix + "VZ_" + ic::num2Padstr(/*dbg_rank*/proc_id, leadingZeros) + Suffix;
-                    tf = READ::read1DVelocity(fileVZ, nPoints, nSteps, multiplier, ic::coordDim::vz, VEL);
+                    std::vector<std::vector<double>> data;
+                    bool tf = READ::read2Darray<double>(fileVZ, nSteps, data);
+                    if (tf){
+                        if (nPoints != data.size()){
+                            std::cout << "The number of data (" << nPoints << ") in VX and VY file is different than the VZ file (" << data.size() << ")" << std::endl;
+                            return false;
+                        }
+                        setVelData(data, multiplier, ic::coordDim::vz);
+                    }
+                    else{
+                        return false;
+                    }
                 }
             }
         }
@@ -251,11 +293,33 @@ namespace ICHNOS{
             std::string fileVXYZ = Prefix + ic::num2Padstr(proc_id, leadingZeros) + Suffix;
             if (Suffix.compare(".h5") == 0){
 #if _USEHF > 0
-                tf = READ::H5SteadyState3DVelocity(fileVXYZ, multiplier, VEL);
+                std::vector<std::vector<double>> VXYZ;
+                tf = READ::H5SteadyState3DVelocity(fileVXYZ, VXYZ);
+                if (tf){
+                    nPoints = VXYZ[0].size();
+                    VEL.init(nPoints,nSteps, 3);
+                    for (int i = 0; i < VXYZ[0].size(); i++){
+                        VEL.setVELvalue(VXYZ[0][i]*multiplier, i, 0, coordDim::vx);
+                        VEL.setVELvalue(VXYZ[1][i]*multiplier, i, 0, coordDim::vy);
+                        VEL.setVELvalue(VXYZ[2][i]*multiplier, i, 0, coordDim::vz);
+                    }
+                    return true;
+                }
 #endif
             }
             else{
-                tf = READ::ASCIISteadState3DVelocity(fileVXYZ, nPoints, 6, multiplier, VEL);
+                std::vector<std::vector<double>> data;
+                bool tf = READ::read2Darray<double>(fileVXYZ, 9, data);
+                if (tf){
+                    nPoints = static_cast<int>(data.size());
+                    VEL.init(nPoints, nSteps, 3);
+                    for (int i = 0; i < nPoints; i++){
+                        VEL.setVELvalue(data[i][6]*multiplier, i, 0, coordDim::vx);
+                        VEL.setVELvalue(data[i][7]*multiplier, i, 0, coordDim::vy);
+                        VEL.setVELvalue(data[i][8]*multiplier, i, 0, coordDim::vz);
+                    }
+                    return true;
+                }
             }
         }
 
@@ -265,6 +329,14 @@ namespace ICHNOS{
             std::cout << "\tRead Velocity in : " << elapsed.count() << std::endl;
         }
         return tf;
+    }
+
+    void CloudVel::setVelData(std::vector<std::vector<double>>& data, double multiplier, coordDim dim){
+        for (int i = 0; i < nPoints; i++){
+            for (int j = 0; j < nSteps; j++){
+                VEL.setVELvalue(data[i][j]*multiplier, i, j, dim);
+            }
+        }
     }
 
     /*

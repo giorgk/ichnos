@@ -324,6 +324,7 @@ namespace ICHNOS {
     public:
         VelTR();
         void init(int np, int nt, int dim_in = 3);
+        void init(int np, int dim_in = 3);
         void setVELvalue(double v, int pnt, int step, coordDim dim);
         void setTSvalue(double v, int step);
         void setTSvalue(std::vector<double>& TS_in);
@@ -333,6 +334,8 @@ namespace ICHNOS {
         double getTSvalue(int idx);
         void setNrepeatDays(double n){nDaysRepeat = n;}
         void setTimeInterpolationType(TimeInterpType tip_in){tip = tip_in;}
+        void setnSteps(int n){nSteps = n;}
+        int getNpoints(){return nPoints;}
     private:
         std::vector<std::vector<double>> VX;
         std::vector<std::vector<double>> VY;
@@ -374,6 +377,10 @@ namespace ICHNOS {
         TS.clear();
         TS.resize(nSteps, 0);
         bIsInitialzed = true;
+    }
+
+    void VelTR::init(int np, int dim_in){
+        init(np, nSteps, dim_in);
     }
 
     void VelTR::setVELvalue(double v, int pnt, int step, coordDim dim){
@@ -671,6 +678,7 @@ namespace ICHNOS {
 		int Nrealizations;
 		int Nthreads;
 		bool RunAsThread;
+        double OutputFrequency;
 
 		bool bIsTransient = false;
 	};
@@ -804,12 +812,14 @@ namespace ICHNOS {
 		double getAge() { return age; }
         helpVars PVLU;
         ExitReason getExitReason(){return exitreason;}
+        bool printIt(){return PrintThis;}
 
 	private:
 		int Eid;
 		int Sid;
 		std::vector<Particle > SL;
 		ExitReason exitreason = ExitReason::NO_REASON;
+        bool PrintThis = false;
 		vec3 BL;
 		vec3 BU;
 		int IterationsWithoutExpansion = 0;
@@ -866,6 +876,7 @@ namespace ICHNOS {
 
 	void Streamline::Close(ExitReason ER) {
 		exitreason = ER;
+        PrintThis = true;
 	}
 
 	std::vector<std::vector<double> > getRK45coef() {

@@ -20,24 +20,24 @@
 !/docs
 
 # Houdini folder
-!/ichnos_hou
-/ichnos_hou/*
-!/ichnos_hou/ichnos
-/ichnos_hou/ichnos/*
-!/ichnos_hou/ichnos/*.dat
-!/ichnos_hou/ichnos/*.hipnc
-!/ichnos_hou/ichnos/hda
-/ichnos_hou/ichnos/hda/*
-!/ichnos_hou/ichnos/hda/*.hdanc
-!/ichnos_hou/ichnos/examples
-/ichnos_hou/ichnos/examples/*
-!/ichnos_hou/ichnos/examples/*.dat
+#!/ichnos_hou
+#/ichnos_hou/*
+#!/ichnos_hou/ichnos
+#/ichnos_hou/ichnos/*
+#!/ichnos_hou/ichnos/*.dat
+#!/ichnos_hou/ichnos/*.hipnc
+#!/ichnos_hou/ichnos/hda
+#/ichnos_hou/ichnos/hda/*
+#!/ichnos_hou/ichnos/hda/*.hdanc
+#!/ichnos_hou/ichnos/examples
+#/ichnos_hou/ichnos/examples/*
+#!/ichnos_hou/ichnos/examples/*.dat
 
 # R workspace
-!/IchnosRwrkspc
-/IchnosRwrkspc/*
-!/IchnosRwrkspc/*.Rproj
-!/IchnosRwrkspc/*.R
+#!/IchnosRwrkspc
+#/IchnosRwrkspc/*
+#!/IchnosRwrkspc/*.Rproj
+#!/IchnosRwrkspc/*.R
 
 # wiki files
 !/WikiExamples

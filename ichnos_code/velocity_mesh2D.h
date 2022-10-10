@@ -577,20 +577,45 @@ namespace ICHNOS{
             std::string filename = Prefix + ic::num2Padstr(proc_id, leadingZeros) + Suffix;
 
             if (Suffix.compare(".h5") == 0){
-                tf = READ::H5SteadyState3DVelocity(filename,multiplier,VEL);
+#if _USEHF > 0
+                std::vector<std::vector<double>> VXYZ;
+                tf = READ::H5SteadyState3DVelocity(filename, VXYZ);
+                if (tf){
+                    nPoints = VXYZ[0].size();
+                    VEL.init(nPoints,nSteps, 3);
+                    for (int i = 0; i < VXYZ[0].size(); i++){
+                        VEL.setVELvalue(VXYZ[0][i]*multiplier, i, 0, coordDim::vx);
+                        VEL.setVELvalue(VXYZ[1][i]*multiplier, i, 0, coordDim::vy);
+                        VEL.setVELvalue(VXYZ[2][i]*multiplier, i, 0, coordDim::vz);
+                    }
+                }
+#endif
             }
             else{
-                tf = READ::ASCIISteadState3DVelocity(filename, nPoints,0, multiplier, VEL);
+                std::vector<std::vector<double>> data;
+                bool tf = READ::read2Darray<double>(filename, 9, data);
+                if (tf){
+                    nPoints = static_cast<int>(data.size());
+                    VEL.init(nPoints, nSteps, 3);
+                    for (int i = 0; i < nPoints; i++){
+                        VEL.setVELvalue(data[i][0]*multiplier, i, 0, coordDim::vx);
+                        VEL.setVELvalue(data[i][1]*multiplier, i, 0, coordDim::vy);
+                        VEL.setVELvalue(data[i][2]*multiplier, i, 0, coordDim::vz);
+                    }
+                    return true;
+                }
             }
         }
         else{
             if (Suffix.compare(".h5") == 0){
+#if _USEHF > 0
                 std::string filename = Prefix + ic::num2Padstr(proc_id, leadingZeros) + Suffix;
-                tf = READ::H5Transient3DVelocity(filename, nPoints, nSteps, multiplier, VEL);
+                tf = READ::H5Transient3DVelocity(filename, nSteps, multiplier, VEL);
+#endif
             }
             else{
                 //TODO
-                std::cout << "Reading ASCII Transient State Velocity is not implemented yet" << std::endl;
+                std::cout << "Mesh2DVel class: Reading ASCII Transient State Velocity is not implemented yet" << std::endl;
             }
         }
         return tf;

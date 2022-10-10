@@ -1056,7 +1056,20 @@ namespace ICHNOS {
             return true;
 		}
 
-		bool read1DVelocity(std::string filename, int nPoints, int nSteps, double multiplier, coordDim dim, VelTR& VEL){
+		bool read1DVelocity(std::string filename, /*int nPoints,*/ int nSteps, double multiplier, coordDim dim, VelTR& VEL){
+            std::vector<std::vector<double>> data;
+            bool tf = read2Darray<double>(filename, nSteps, data);
+            if (tf){
+                int nPoints = static_cast<int>(data.size());
+                for (int i = 0; i < nPoints; i++){
+                    for (int j = 0; j < nSteps; j++){
+                        VEL.setVELvalue(data[i][j]*multiplier, i, j, dim);
+                    }
+                }
+                return true;
+            }
+            return false;
+            /*
             std::cout << "\tReading file " + filename << std::endl;
             std::ifstream datafile(filename.c_str());
             if (!datafile.good()){
@@ -1076,21 +1089,22 @@ namespace ICHNOS {
                 }
             }
             return true;
+            */
 		}
 
-		bool H5SteadyState3DVelocity(std::string filename, double multiplier, VelTR& VEL){
+		bool H5SteadyState3DVelocity(std::string filename, std::vector<std::vector<double>>& VXYZ){
             std::cout << "\tReading file " + filename << std::endl;
 #if _USEHF > 0
             const std::string VXYZNameSet("VXYZ");
             HighFive::File HDFNfile(filename, HighFive::File::ReadOnly);
             HighFive::DataSet datasetVXYZ = HDFNfile.getDataSet(VXYZNameSet);
-            std::vector<std::vector<double>> VXYZ;
+            //std::vector<std::vector<double>> VXYZ;
             datasetVXYZ.read(VXYZ);
-            for (int i = 0; i < VXYZ[0].size(); i++){
-                VEL.setVELvalue(VXYZ[0][i]*multiplier, i, 0, coordDim::vx);
-                VEL.setVELvalue(VXYZ[1][i]*multiplier, i, 0, coordDim::vy);
-                VEL.setVELvalue(VXYZ[2][i]*multiplier, i, 0, coordDim::vz);
-            }
+            //for (int i = 0; i < VXYZ[0].size(); i++){
+            //    VEL.setVELvalue(VXYZ[0][i]*multiplier, i, 0, coordDim::vx);
+            //    VEL.setVELvalue(VXYZ[1][i]*multiplier, i, 0, coordDim::vy);
+            //    VEL.setVELvalue(VXYZ[2][i]*multiplier, i, 0, coordDim::vz);
+            //}
             return true;
 #endif
             return false;
@@ -1124,10 +1138,10 @@ namespace ICHNOS {
             return true;
 		}
 
-		bool H5Transient3DVelocity(std::string filename, int nPoints, int nSteps, double multiplier, VelTR& VEL){
+		bool H5Transient3DVelocity(std::string filename, /*int nPoints,*/ int nSteps, double multiplier, VelTR& VEL){
             std::cout << "\tReading file " + filename << std::endl;
 #if _USEHF > 0
-            VEL.init(nPoints,nSteps);
+            //VEL.init(nPoints,nSteps);
             const std::string VXNameSet("VX");
             const std::string VYNameSet("VY");
             const std::string VZNameSet("VZ");
@@ -1142,10 +1156,9 @@ namespace ICHNOS {
             datasetVY.read(VY);
             datasetVZ.read(VZ);
 
-            if (VX[0].size() != nPoints){
-                std::cout << "The number of points (" << VX[0].size() << ") in the file " << filename << " is not " << nPoints << std::endl;
-                return false;
-            }
+
+            VEL.init(VX[0].size(), nSteps, 3);
+
             if (VX.size() != nSteps){
                 std::cout << "The number of time steps (" << VX.size() << ") in the file " << filename
                 << "\n does not match the number of steps in the Time step file " << nSteps << std::endl;
@@ -1251,7 +1264,11 @@ namespace ICHNOS {
 		 * @param S
 		 * @param filename The name of the file without the extension
 		 */
-		void writeStreamlines(std::vector<Streamline>& S, std::string filename, bool printH5, bool printASCI){
+		void writeStreamlines(std::vector<Streamline>& S,
+                              std::string filename,
+                              bool printH5,
+                              bool printASCI,
+                              bool append = false){
 #if _USEHF > 0
             if (printH5){ //print with Highfive
                 const std::string FILE_NAME(filename + ".h5");
@@ -1297,8 +1314,16 @@ namespace ICHNOS {
                 const std::string log_file_name = (filename + ".traj");
                 std::cout << "Printing Output to " << log_file_name << std::endl;
                 std::ofstream log_file;
-                log_file.open(log_file_name.c_str());
+                if (append){
+                    log_file.open(log_file_name.c_str(),std::ios_base::app);
+                }
+                else{
+                    log_file.open(log_file_name.c_str());
+                }
+
                 for (unsigned int i = 0; i < S.size(); ++i){
+                    if (!S[i].printIt())
+                        continue;
                     for (unsigned int j = 0; j < S[i].size()-1; ++j) {
                         WRITE::PrintParticle2Log(log_file, S[i], j);
                     }

@@ -215,7 +215,7 @@ namespace ICHNOS {
 
 			}
             const std::string out_file_name = (popt.OutputFile + "_ireal_" + num2Padstr(ireal, 4) + "_iter_" + num2Padstr(iter, 4) + "_proc_" + num2Padstr(my_rank, 4));
-            WRITE::writeStreamlines(S, out_file_name, popt.printH5, popt.printASCII);
+            WRITE::writeStreamlines(S, out_file_name, popt.printH5, popt.printASCII, true);
 
             world.barrier();
 			//std::cout << "Proc " << my_rank << " will send " << Snew.size() << " particles" << std::endl;
@@ -791,16 +791,16 @@ namespace ICHNOS {
 	    //    bool stop= true;
 	    //    std::cout << "Stop Here" << std::endl;
 	    //}
-	    double show_every = 10.0;
+	    double show_every = popt.OutputFrequency;
 	    double cnt = 0.0;
 	    double Nsize = static_cast<double>(Streamlines4thread.size());
         for (int i = ithread; i < Streamlines4thread.size(); i = i + popt.Nthreads){
-            //if (popt.Nthreads == 1){
-            //    if (100*cnt/Nsize > show_every){
-            //        std::cout << "-" << show_every << " %" << std::endl;
-            //        show_every = show_every + 10.0;
-            //    }
-            //}
+            if (popt.OutputFrequency > 0.1){
+                if (100*cnt/Nsize > show_every){
+                    std::cout << "-" << show_every << " % |" << i << " of " << Nsize << std::endl;
+                    show_every = show_every + popt.OutputFrequency;
+                }
+            }
             //std::cout << ithread << ": " << i << std::endl;
             //Streamline S(Streamlines4thread[i].getEid(), Streamlines4thread[i].getSid(),Streamlines4thread[i].getLastParticle());
             bool tf;
