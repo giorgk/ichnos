@@ -1,5 +1,5 @@
 # Ichnos
-Ichnos is a kind of general purpose particle tracking code. As such, Ichnos can trace virtual particles in velocity fields. The development of the code is heavily influenced by the projects that Ichnos was developed for, which is primarily particle tracking in groundwater flow fields. In particular, in groundwater flow fields calculated from finite element groundwater models. Yet, groundwater velocity fields from finite difference and finite volume codes can also be used. A key consideration during the development of the code is to handle simulations with multi-million velocity nodes. Therefore the code can be used with velocitiy fields that can be split across many processors.
+Ichnos is a general purpose particle tracking code. As such, Ichnos can trace virtual particles in velocity fields. The development of the code is heavily influenced by the projects that Ichnos was developed for, which is primarily particle tracking in groundwater flow fields. In particular, in groundwater flow fields calculated from finite element groundwater models. Yet, groundwater velocity fields from finite difference and finite volume codes can also be used. A key consideration during the development of the code is to handle simulations with multi-million velocity nodes. Therefore the code can be used with velocitiy fields that can be split across many processors.
 
 A brief demonstration of the capabilities of this code can be found at our [AGU 2020 poster](https://agu2020fallmeeting-agu.ipostersessions.com/?s=0C-96-C6-05-F8-AB-22-9D-63-C2-37-9D-96-2E-CD-B8).
 
@@ -18,6 +18,10 @@ At the moment we provide two types of positional classes `XYZ`
 For the velocity there are two options:
   1. Transient/Steady state flow fields
   2. Stochastic flow fields (This is in an experimental stage)
+  3. Random Walk (This is in an experimental stage)
+
+------------
+------------
 
 # Getting the code
 ## Windons
@@ -32,8 +36,13 @@ ichnos.exe -v
 ## Linux
 For linux you have to compile the code. See the section below.    
 
+------------
+------------
 # Get started
 The [wiki](https://github.com/giorgk/ichnos/wiki) is the best source to get you started.
+
+------------
+------------
 
 # Building Ichnos
 To build ichnos we use [cmake](https://cmake.org/). The code contains the required [CMakeList.txt](https://github.com/giorgk/ichnos/blob/master/ichnos_code/CMakeLists.txt). However it is possible that it may need adjustments for each system.
@@ -112,7 +121,7 @@ packages:
  spack install cgal@4.13 ^boost@1.69.0+mpi ^openmpi@3.1.4 ^mpfr@4.0.0
  ```
  
- ### Highfive (Skip this, nanoflann is no longer needed)
+ ### Highfive
  The last library Highfive is optional. 
  ```
  spack install highfive target=x86_64
@@ -135,9 +144,10 @@ cmake -DUSEHF=True \
  ```
  see [more](https://stackoverflow.com/questions/3016448/how-can-i-get-cmake-to-find-my-alternative-boost-installation).
 
-
+------------
+------------
 # Running Ichnos
-Ichnos reads the inputs from ascii files and writes the outputs to ascii files as well. 
+Ichnos reads the inputs from ascii or HDF5 files and writes the outputs to ascii or HDF5 files as well. 
 
 To run Ichnos one need to prepare two configuration files as well as a number of other input files that descibe the velocity fields and the domain.
 You can run the code with the following options:
@@ -155,8 +165,14 @@ ichnos.exe -h
 ```
 ichnos.exe -c config.ini
 ```
-
+------------
+------------
 # Who do I talk to
+It depends on what you want to say</br>
+The [Discussion](https://github.com/giorgk/ichnos/discussions) section is the best place to ask questions/clarifications regarding the use of Ichnos. </br>
+Any issues with the code should be reported at [Issues](https://github.com/giorgk/ichnos/issues) section.
+
+For other information you can reach us via email 
 - gkourakos@ucdavis.edu
 - hdahlke@ucdavis.edu 
 - thharter@ucdavis.edu
