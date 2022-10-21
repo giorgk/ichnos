@@ -189,7 +189,6 @@ namespace ICHNOS{
                 VEL.setNrepeatDays(0);
             }
 
-
             nSteps = TimeSteps.size();
 
             Prefix = vm_vfo["Velocity.Prefix"].as<std::string>();
@@ -201,8 +200,6 @@ namespace ICHNOS{
                 Suffix = ".ich";
             }
             leadingZeros = vm_vfo["Velocity.LeadingZeros"].as<int>();
-
-            nSteps = TimeSteps.size();
 
             bool tf = readVelocityFiles();
             if (!tf){return false;}
@@ -592,7 +589,7 @@ namespace ICHNOS{
             }
             else{
                 std::vector<std::vector<double>> data;
-                bool tf = READ::read2Darray<double>(filename, 9, data);
+                bool tf = READ::read2Darray<double>(filename, 3, data);
                 if (tf){
                     nPoints = static_cast<int>(data.size());
                     VEL.init(nPoints, nSteps, 3);

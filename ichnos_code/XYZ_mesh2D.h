@@ -33,7 +33,7 @@ namespace ICHNOS{
     private:
         int nLay;
         //double diameter;
-        double initial_diameter = 640;
+        double initial_diameter = 0.0;
 
         //Mesh2D MSH;
         std::vector<std::vector<double>> elev;
@@ -69,7 +69,7 @@ namespace ICHNOS{
             ("MESH2D.Meshfile", po::value<std::string>(), "An array of the Mesh2D ids")
             ("MESH2D.ElevationFile", po::value<std::string>(), "An array of the Elevations")
             ("MESH2D.Nlayers", po::value<int>()->default_value(4), "Number of layers")
-            ("MESH2D.SearchDiameter", po::value<double>()->default_value(5000), "The search diameter")
+            //("MESH2D.SearchDiameter", po::value<double>()->default_value(5000), "The search diameter")
         //("MESH2D.FaceIdFile", po::value<std::string>(), "Face ids for each element")
             ;
         po::store(po::parse_config_file<char>(vf_file.c_str(), velocityFieldOptions,true), vm_vfo);
@@ -79,7 +79,7 @@ namespace ICHNOS{
         std::string Elevfile = vm_vfo["MESH2D.ElevationFile"].as<std::string>();
 
         nLay = vm_vfo["MESH2D.Nlayers"].as<int>();
-        initial_diameter = vm_vfo["MESH2D.SearchDiameter"].as<double>();
+        //initial_diameter = vm_vfo["MESH2D.SearchDiameter"].as<double>();
         //initial_diameter = initial_diameter*initial_diameter;
 
         bool tf = readNodes(nodefile);
@@ -137,6 +137,7 @@ namespace ICHNOS{
         std::vector<cgal_point_3> pp;
         std::vector<Pnt_IWFM_info> dd;
 
+        initial_diameter = 0.0;
         for (unsigned int i = 0; i < data.size(); ++i){
             int nvert = 4;
             if (data[i][3] == 0)
@@ -155,11 +156,17 @@ namespace ICHNOS{
                 elem_bc.z = elem_bc.z / n;
 
                 // Calculate average distance between element barycenter and element nodes
+                // Set the Initial search diameter equal to 2 times the largest diameter
                 double dst = 0;
+
                 for (int ii = 0; ii < nvert; ++ii){
                     dst += elem_bc.distance(nodes[data[i][ii]-1].x, nodes[data[i][ii]-1].y, nodes[data[i][ii]-1].z);
                 }
                 diam = 2.0*(dst/n);
+                if (diam > initial_diameter){
+                    initial_diameter = diam;
+                }
+
             }
 
             std::vector<int> ids;
@@ -174,6 +181,7 @@ namespace ICHNOS{
             mesh.push_back(ids);
             dd.push_back(td);
         }
+        initial_diameter = initial_diameter*2.0;
         //MSH.setMesh(mesh,true);
 
         {//Build tree

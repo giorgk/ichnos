@@ -386,8 +386,14 @@ namespace ICHNOS {
                         std::vector<int> tmp;
                         for (int j = 0; j < 4; ++j){
                             inp1 >> idx;
-                            if (idx != 0)
+                            if (idx != 0){
+                                idx = idx--;
+                                if (idx < 0){
+                                    std::cout << "I found a mesh index for top/Bottom function equal to " << idx++ << std::endl;
+                                    return false;
+                                }
                                 tmp.push_back(idx);
+                            }
                         }
                         if (splitQuads == 1 && tmp.size() == 4){
                             std::vector<int> tmp1{tmp[0], tmp[1], tmp[2]};
@@ -401,7 +407,7 @@ namespace ICHNOS {
                     }
                     std::vector<vec3> cc;
                     if ((!useSamePoints && top) || useSamePoints){
-                        TopMesh.setMesh(m, false);
+                        TopMesh.setMesh(m, true);
                         TopMesh.CalculateCentroid(cc);
                         for (unsigned int i = 0;i < cc.size(); ++i){
                             cgal_point_2 p(cc[i].x, cc[i].y);
@@ -411,7 +417,7 @@ namespace ICHNOS {
                         TopSet.insert(xy_data.begin(), xy_data.end());
                     }
                     else if (!useSamePoints && bot){
-                        BotMesh.setMesh(m, false);
+                        BotMesh.setMesh(m, true);
                         BotMesh.CalculateCentroid(cc);
                         for (unsigned int i = 0;i < cc.size(); ++i){
                             cgal_point_2 p(cc[i].x, cc[i].y);
