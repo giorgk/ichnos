@@ -94,23 +94,22 @@ namespace ICHNOS{
                 // Velocity parameters
                 ("Velocity.Prefix", po::value<std::string>(), "Prefix for the filename")
                 ("Velocity.LeadingZeros", po::value<int>()->default_value(4), "e.g 0002->4, 000->3")
-                ("Velocity.Suffix", po::value<std::string>(), "ending of file after procid")
+                ("Velocity.Suffix", po::value<std::string>(), "ending of file after proc id")
                 ("Velocity.Type", po::value<std::string>(), "Type of velocity.")
                 ("Velocity.Trans", po::value<int>()->default_value(0), "0->steady state, 1->Transient state")
-                ("Velocity.INTERP", po::value<std::string>(), "Type of interpolation. (ELEMENT, NODE or FACE)")
-                ("Velocity.Nlayers", po::value<int>()->default_value(4), "e.g 0002->4, 000->3")
                 ("Velocity.TimeStepFile", po::value<std::string>(), "This filename with the time steps")
                 ("Velocity.TimeInterp", po::value<std::string>(), "Interpolation type between time steps")
                 ("Velocity.RepeatTime", po::value<double>()->default_value(0.0), "The number of days to repeat after the and of time steps")
                 ("Velocity.Multiplier", po::value<double>()->default_value(1.0), "This is a multiplier to scale velocity")
-                ("Velocity.nPoints", po::value<int>()->default_value(0), "This is the number of velocity points")
+                //("Velocity.nPoints", po::value<int>()->default_value(0), "This is the number of velocity points")
                 ("MESH2D.FaceIdFile", po::value<std::string>(), "Face ids for each element, Required for FACE type")
+                ("MESH2D.INTERP", po::value<std::string>(), "Type of interpolation. (ELEMENT, NODE or FACE)")
                 ("MESH2D.Nlayers", po::value<int>()->default_value(4), "Number of layers")
                 ("MESH2D.NodeFile", po::value<std::string>(), "An array of the node coordinates")
                 ("MESH2D.Meshfile", po::value<std::string>(), "An array of the Mesh2D ids")
-                ("MESH2D.Nfaces", po::value<int>()->default_value(0), "Number of faces per layer")
-                ("MESH2D.Nelements", po::value<int>()->default_value(0), "Number of elements per layer")
-                ("MESH2D.Nnodes", po::value<int>()->default_value(0), "Number of nodes per layer")
+                //("MESH2D.Nfaces", po::value<int>()->default_value(0), "Number of faces per layer")
+                //("MESH2D.Nelements", po::value<int>()->default_value(0), "Number of elements per layer")
+                //("MESH2D.Nnodes", po::value<int>()->default_value(0), "Number of nodes per layer")
                 //("Velocity.Scale", po::value<double>()->default_value(1.0), "Scale the domain before velocity calculation")
                 //("Velocity.Power", po::value<double>()->default_value(3.0), "Power of the IDW interpolation")
                 //("Velocity.InitDiameter", po::value<double>()->default_value(5000), "Initial diameter")
@@ -142,7 +141,7 @@ namespace ICHNOS{
                 return false;
             }
             {// Identify the velocity interpolation type
-                std::string tp = vm_vfo["Velocity.INTERP"].as<std::string>();
+                std::string tp = vm_vfo["MESH2D.INTERP"].as<std::string>();
                 if (tp.compare("ELEMENT") == 0){
                     interp_type = ic::MeshVelInterpType::ELEMENT;
                 }
@@ -160,12 +159,12 @@ namespace ICHNOS{
 
 
             multiplier = vm_vfo["Velocity.Multiplier"].as<double>();
-            nPoints = vm_vfo["Velocity.nPoints"].as<int>();
-            nLayers = vm_vfo["MESH2D.Nlayers"].as<int>();
-            nNodes = vm_vfo["MESH2D.Nnodes"].as<int>();
-            nElements = vm_vfo["MESH2D.Nelements"].as<int>();
-            nFaces = vm_vfo["MESH2D.Nfaces"].as<int>();
-            nTotalFaces = nFaces*nLayers;
+            //nPoints = vm_vfo["Velocity.nPoints"].as<int>();
+            //nLayers = vm_vfo["MESH2D.Nlayers"].as<int>();
+            //nNodes = vm_vfo["MESH2D.Nnodes"].as<int>();
+            //nElements = vm_vfo["MESH2D.Nelements"].as<int>();
+            //nFaces = vm_vfo["MESH2D.Nfaces"].as<int>();
+            //nTotalFaces = nFaces*nLayers;
 
             isVeltrans  = vm_vfo["Velocity.Trans"].as<int>() != 0;
 
