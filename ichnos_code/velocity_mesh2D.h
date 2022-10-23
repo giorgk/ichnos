@@ -30,6 +30,7 @@ namespace ICHNOS{
                           //std::vector<double> &weights,
                           double time = 0);
         void reset(Streamline& S);
+        double stepTimeupdate(helpVars& pvlu);
         void updateStep(double &step);
         void getVec3Data(std::vector<ic::vec3> &data);
         ic::MeshVelInterpType getInterpType(){return interp_type;};
@@ -96,10 +97,10 @@ namespace ICHNOS{
                 ("Velocity.LeadingZeros", po::value<int>()->default_value(4), "e.g 0002->4, 000->3")
                 ("Velocity.Suffix", po::value<std::string>(), "ending of file after proc id")
                 ("Velocity.Type", po::value<std::string>(), "Type of velocity.")
-                ("Velocity.Trans", po::value<int>()->default_value(0), "0->steady state, 1->Transient state")
+                ("Velocity.IsTransient", po::value<int>()->default_value(0), "0->steady state, 1->Transient state")
                 ("Velocity.TimeStepFile", po::value<std::string>(), "This filename with the time steps")
                 ("Velocity.TimeInterp", po::value<std::string>(), "Interpolation type between time steps")
-                ("Velocity.RepeatTime", po::value<double>()->default_value(0.0), "The number of days to repeat after the and of time steps")
+                ("Velocity.RepeatTime", po::value<double>()->default_value(0.0), "The number of TimeUnits (e.g. days) to repeat after the and of time steps")
                 ("Velocity.Multiplier", po::value<double>()->default_value(1.0), "This is a multiplier to scale velocity")
                 //("Velocity.nPoints", po::value<int>()->default_value(0), "This is the number of velocity points")
                 ("MESH2D.FaceIdFile", po::value<std::string>(), "Face ids for each element, Required for FACE type")
@@ -166,7 +167,7 @@ namespace ICHNOS{
             //nFaces = vm_vfo["MESH2D.Nfaces"].as<int>();
             //nTotalFaces = nFaces*nLayers;
 
-            isVeltrans  = vm_vfo["Velocity.Trans"].as<int>() != 0;
+            isVeltrans  = vm_vfo["Velocity.IsTransient"].as<int>() != 0;
 
             // Read the time step
             std::vector<double> TimeSteps;
@@ -270,6 +271,7 @@ namespace ICHNOS{
             {
                 bool tf = readXYZVelocity();
                 if (!tf){return false;}
+                nElements = XYZ.getINTInfo(infoType::Nelem);
                 break;
             }
             case ic::MeshVelInterpType::NODE:
@@ -372,8 +374,14 @@ namespace ICHNOS{
             return;
         }
         int i1, i2;
-        double t;
-        VEL.findIIT(tm, i1, i2, t);
+        double t, tm_tmp;
+        VEL.findIIT(tm, i1, i2, t, tm_tmp);
+        pvlu.td.idx1 = i1;
+        pvlu.td.idx2 = i2;
+        pvlu.td.t = t;
+        pvlu.td.tm = tm;
+        pvlu.td.tm_tmp = tm_tmp;
+
         switch (interp_type){
             case ic::MeshVelInterpType::ELEMENT:
             {
@@ -404,6 +412,39 @@ namespace ICHNOS{
         //tm_data.idx1 = i1;
         //tm_data.idx2 = i2;
         //tm_data.t = t;
+    }
+
+    double Mesh2DVel::stepTimeupdate(ICHNOS::helpVars &pvlu) {
+        double stepTime = 99999999999;
+        if (pvlu.td.idx1 != pvlu.td.idx2){
+            double dt = 1.0/stepOpt.nStepsTime;
+            double tm_1 = VEL.getTSvalue(pvlu.td.idx1);
+            double tm_2 = VEL.getTSvalue(pvlu.td.idx2);
+            double tmp_step = dt*(tm_2 - tm_1);
+            double end_time = pvlu.td.tm_tmp + stepOpt.dir*tmp_step;
+            if (stepOpt.dir > 0){
+                if (std::abs(pvlu.td.tm_tmp - tm_2) < 0.25*tmp_step){
+                    if (pvlu.td.idx2 + 1 < nSteps){
+                        tm_2 = VEL.getTSvalue(pvlu.td.idx2+1);
+                    }
+                }
+                if (end_time > tm_2 && pvlu.td.idx2 < nSteps - 1){
+                    stepTime = pvlu.vv.len() * (tm_2 - pvlu.td.tm);
+                }
+                else{
+                    stepTime = pvlu.vv.len() * tmp_step;
+                }
+            }
+            else{
+                if (end_time < tm_1 && pvlu.td.idx1 > 0){
+                    stepTime = pvlu.vv.len() * (pvlu.td.tm_tmp - tm_1);
+                }
+                else{
+                    stepTime = pvlu.vv.len() * tmp_step;
+                }
+            }
+        }
+        return stepTime;
     }
 
     void Mesh2DVel::updateStep(double& step) {
@@ -563,7 +604,7 @@ namespace ICHNOS{
     }
 
     bool Mesh2DVel::readXYZVelocity() {
-        bool tf = false;
+
         int proc_id = world.rank();
         if (XYZ.runAsThread){
             proc_id = 0;
@@ -575,7 +616,7 @@ namespace ICHNOS{
             if (Suffix.compare(".h5") == 0){
 #if _USEHF > 0
                 std::vector<std::vector<double>> VXYZ;
-                tf = READ::H5SteadyState3DVelocity(filename, VXYZ);
+                bool tf = READ::H5SteadyState3DVelocity(filename, VXYZ);
                 if (tf){
                     nPoints = VXYZ[0].size();
                     VEL.init(nPoints,nSteps, 3);
@@ -584,6 +625,7 @@ namespace ICHNOS{
                         VEL.setVELvalue(VXYZ[1][i]*multiplier, i, 0, coordDim::vy);
                         VEL.setVELvalue(VXYZ[2][i]*multiplier, i, 0, coordDim::vz);
                     }
+                    return true;
                 }
 #endif
             }
@@ -606,15 +648,42 @@ namespace ICHNOS{
             if (Suffix.compare(".h5") == 0){
 #if _USEHF > 0
                 std::string filename = Prefix + ic::num2Padstr(proc_id, leadingZeros) + Suffix;
-                tf = READ::H5Transient3DVelocity(filename, nSteps, multiplier, VEL);
+                bool tf = READ::H5Transient3DVelocity(filename, nSteps, multiplier, VEL);
+                return tf;
 #endif
             }
             else{
-                //TODO
-                std::cout << "Mesh2DVel class: Reading ASCII Transient State Velocity is not implemented yet" << std::endl;
+                std::string filenameVX = Prefix + "VX_" + ic::num2Padstr(proc_id, leadingZeros) + Suffix;
+                std::string filenameVY = Prefix + "VX_" + ic::num2Padstr(proc_id, leadingZeros) + Suffix;
+                std::string filenameVZ = Prefix + "VX_" + ic::num2Padstr(proc_id, leadingZeros) + Suffix;
+                std::vector<std::vector<double>> VX, VY, VZ;
+                bool tf = READ::read2Darray<double>(filenameVX, nSteps, VX);
+                if (!tf)
+                    return false;
+                tf = READ::read2Darray<double>(filenameVY, nSteps, VY);
+                if (!tf)
+                    return false;
+                tf = READ::read2Darray<double>(filenameVZ, nSteps, VZ);
+                if (!tf)
+                    return false;
+
+                if (VX[0].size() != nSteps){
+                    std::cout << "The number of time steps (" << VX[0].size() << ") in the file " << filenameVX
+                              << "\n does not match the number of steps in the Time step file " << nSteps << std::endl;
+                    return false;
+                }
+                VEL.init(VX.size(), nSteps, 3);
+                for (int i = 0; i < VX.size(); i++){
+                    for (int j = 0; j < VX[i].size(); ++j) {
+                        VEL.setVELvalue(VX[i][j]*multiplier, i, j, ICHNOS::coordDim::vx);
+                        VEL.setVELvalue(VY[i][j]*multiplier, i, j, ICHNOS::coordDim::vy);
+                        VEL.setVELvalue(VZ[i][j]*multiplier, i, j, ICHNOS::coordDim::vz);
+                    }
+                }
+                return true;
             }
         }
-        return tf;
+        return false;
     }
 
     bool Mesh2DVel::readFaceVelocity() {

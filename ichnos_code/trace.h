@@ -716,6 +716,9 @@ namespace ICHNOS {
 	void ParticleTrace::multi_threading_trace() {
         std::vector<Streamline> AllStreamlines;
         bool tf = readInputFiles(AllStreamlines);
+        if (!tf){
+            return;
+        }
 
         int particle_index_start = 0;
         int particle_index_end = 0;

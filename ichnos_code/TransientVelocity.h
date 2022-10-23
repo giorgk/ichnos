@@ -546,12 +546,13 @@ namespace ICHNOS{
 
         // Find the time step
         int i1, i2;
-        double t;
-        VEL.findIIT(tm, i1, i2, t);
+        double t, tm_tmp;
+        VEL.findIIT(tm, i1, i2, t, tm_tmp);
         pvlu.td.idx1 = i1;
         pvlu.td.idx2 = i2;
         pvlu.td.t = t;
         pvlu.td.tm = tm;
+        pvlu.td.tm_tmp = tm_tmp;
 
         double sumW = 0;
         ic::vec3 sumWVal;

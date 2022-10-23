@@ -280,13 +280,14 @@ namespace ICHNOS {
 	typedef CGAL::Fuzzy_iso_box<search_traits_stoch> Fuzzy_iso_box_stoch;
 	typedef CGAL::Kd_tree<search_traits_stoch> search_tree_stoch;
 
-
+    enum class infoType {Nelem, Nface};
     enum class coordDim {vx, vy, vz};
     enum class TimeInterpType {NEAREST, LINEAR};
     enum class MeshVelInterpType{ELEMENT, NODE, FACE, UNKNOWN};
 
     struct TimeData{
         double tm;
+        double tm_tmp;
         int idx1;
         int idx2;
         double t;
@@ -328,7 +329,7 @@ namespace ICHNOS {
         void setVELvalue(double v, int pnt, int step, coordDim dim);
         void setTSvalue(double v, int step);
         void setTSvalue(std::vector<double>& TS_in);
-        void findIIT(double x, int &i1, int &i2, double &t);
+        void findIIT(double x, int &i1, int &i2, double &t, double &x_tmp);
         vec3 getVelocity(int pnt, int i1, int i2, double t);
         void getVelocity(std::vector<int> &pnts, int i1, int i2, double t, std::vector<vec3> &vel_out);
         double getTSvalue(int idx);
@@ -420,8 +421,8 @@ namespace ICHNOS {
             findTimeStepIndex(i, ii, x);
     }
 
-    void VelTR::findIIT(double x, int &i1, int &i2, double &t){
-        double x_tmp = x;
+    void VelTR::findIIT(double x, int &i1, int &i2, double &t, double &x_tmp){
+        x_tmp = x;
         if (x <= TS[0]){
             if (nDaysRepeat == 0){
                 i1 = 0;

@@ -1013,7 +1013,7 @@ namespace ICHNOS {
 		bool read2Darray(std::string filename, int ncols, std::vector<std::vector<T>> &data){
             std::ifstream datafile(filename.c_str());
             if (!datafile.good()) {
-                std::cout << "Can't open the file" << filename << std::endl;
+                std::cout << "Can't open the file " << filename << std::endl;
                 return false;
             }
             else{

@@ -26,12 +26,14 @@ namespace ICHNOS{
                          std::map<int, double>& proc_map,
                          helpVars& pvlu, bool& out);
         void reset(Streamline& S);
+        int getINTInfo(infoType I);
         void sendVec3Data(std::vector<vec3>& data){};
         int getNpnts(){return static_cast<int>(mesh.size());}
         void SetInterpType(MeshVelInterpType tp){velInterpType = tp;};
 
     private:
         int nLay;
+        int nElements;
         //double diameter;
         double initial_diameter = 0.0;
 
@@ -179,10 +181,11 @@ namespace ICHNOS{
             td.tri_id = mesh.size();
             td.diameter = diam;
             mesh.push_back(ids);
+
             dd.push_back(td);
         }
         initial_diameter = initial_diameter*2.0;
-        //MSH.setMesh(mesh,true);
+        nElements = mesh.size();
 
         {//Build tree
             auto start = std::chrono::high_resolution_clock::now();
@@ -361,6 +364,12 @@ namespace ICHNOS{
 
     void XYZ_MESH2D::reset(Streamline& S) {
         S.PVLU.diameter = initial_diameter;
+    }
+    int XYZ_MESH2D::getINTInfo(ICHNOS::infoType I) {
+        if (I == infoType::Nelem){
+            return nElements;
+        }
+        return 0;
     }
 
 }

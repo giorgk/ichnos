@@ -25,6 +25,7 @@ namespace ICHNOS{
         virtual void reset(Streamline& S){}
         //virtual void sendVec3Data(std::vector<vec3>& data){};
         bool runAsThread;
+        virtual int getINTInfo(infoType I){return 0;};
     protected:
         boost::mpi::communicator world;
 

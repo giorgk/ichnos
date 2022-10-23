@@ -130,6 +130,7 @@ int main(int argc, char* argv[])
                         ICHNOS::Mesh2DVel VF(world, XYZmesh);
                         tf = VF.readVelocityField(OPT.getVelFname());
                         if (!tf){return 0;}
+                        VF.SetStepOptions(OPT.Popt.StepOpt);
                         XYZmesh.SetInterpType(VF.getInterpType());
 
                         ICHNOS::ParticleTrace pt(world, VF, domain, OPT.Popt);
