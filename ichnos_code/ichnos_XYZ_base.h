@@ -95,12 +95,12 @@ namespace ICHNOS{
             ("Velocity.Suffix", po::value<std::string>(), "ending of file after procid")
             ("Velocity.Type", po::value<std::string>(), "Type of velocity.")
             ("Velocity.Trans", po::value<int>()->default_value(0), "0->steady state, 1->Transient state")
-            ("Cloud.Power", po::value<double>()->default_value(3.0), "Power of the IDW interpolation")
-            ("Cloud.Scale", po::value<double>()->default_value(1.0), "Scale the domain before velocity calculation")
-            ("Cloud.InitDiameter", po::value<double>()->default_value(5000), "Initial diameter")
-            ("Cloud.InitRatio", po::value<double>()->default_value(1), "Initial ratio")
-            ("Cloud.GraphPrefix", po::value<std::string>(), "The prefix of the graph file")
-            ("Cloud.Threshold", po::value<double>()->default_value(0.001), "Threshold of distance of IDW")
+            ("CLOUD.Power", po::value<double>()->default_value(3.0), "Power of the IDW interpolation")
+            ("CLOUD.Scale", po::value<double>()->default_value(1.0), "Scale the domain before velocity calculation")
+            ("CLOUD.InitDiameter", po::value<double>()->default_value(5000), "Initial diameter")
+            ("CLOUD.InitRatio", po::value<double>()->default_value(1), "Initial ratio")
+            ("CLOUD.GraphPrefix", po::value<std::string>(), "The prefix of the graph file")
+            ("CLOUD.Threshold", po::value<double>()->default_value(0.001), "Threshold of distance of IDW")
             ;
 
         po::store(po::parse_config_file<char>(vf_file.c_str(), velocityFieldOptions,true), vm_vfo);
@@ -136,8 +136,8 @@ namespace ICHNOS{
             fileXYZ = prefix + "XYZ_" + num2Padstr(/*dbg_rank*/proc_id, leadZeros) + suffix;
         }
 
-        if (vm_vfo.count("Cloud.GraphPrefix")){
-            std::string graphPrefix = vm_vfo["Cloud.GraphPrefix"].as<std::string>();
+        if (vm_vfo.count("CLOUD.GraphPrefix")){
+            std::string graphPrefix = vm_vfo["CLOUD.GraphPrefix"].as<std::string>();
             if (!graphPrefix.empty()){
                 buseGraph = true;
                 std::string fileGraph;
@@ -149,11 +149,11 @@ namespace ICHNOS{
         }
 
 
-        Threshold = vm_vfo["Cloud.Threshold"].as<double>();
-        Scale = vm_vfo["Cloud.Scale"].as<double>();
-        Power = vm_vfo["Cloud.Power"].as<double>();
-        initial_diameter = vm_vfo["Cloud.InitDiameter"].as<double>();
-        initial_ratio = vm_vfo["Cloud.InitRatio"].as<double>();
+        Threshold = vm_vfo["CLOUD.Threshold"].as<double>();
+        Scale = vm_vfo["CLOUD.Scale"].as<double>();
+        Power = vm_vfo["CLOUD.Power"].as<double>();
+        initial_diameter = vm_vfo["CLOUD.InitDiameter"].as<double>();
+        initial_ratio = vm_vfo["CLOUD.InitRatio"].as<double>();
 
         std::vector<cgal_point_3> pp;
         bool tf = READ::readXYZfile(fileXYZ, pp, pntDATA);
