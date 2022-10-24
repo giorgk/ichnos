@@ -680,6 +680,7 @@ namespace ICHNOS {
 		int Nthreads;
 		bool RunAsThread;
         double OutputFrequency;
+        int nLeadingZeros;
 
 		bool bIsTransient = false;
 	};

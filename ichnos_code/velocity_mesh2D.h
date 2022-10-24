@@ -654,8 +654,8 @@ namespace ICHNOS{
             }
             else{
                 std::string filenameVX = Prefix + "VX_" + ic::num2Padstr(proc_id, leadingZeros) + Suffix;
-                std::string filenameVY = Prefix + "VX_" + ic::num2Padstr(proc_id, leadingZeros) + Suffix;
-                std::string filenameVZ = Prefix + "VX_" + ic::num2Padstr(proc_id, leadingZeros) + Suffix;
+                std::string filenameVY = Prefix + "VY_" + ic::num2Padstr(proc_id, leadingZeros) + Suffix;
+                std::string filenameVZ = Prefix + "VZ_" + ic::num2Padstr(proc_id, leadingZeros) + Suffix;
                 std::vector<std::vector<double>> VX, VY, VZ;
                 bool tf = READ::read2Darray<double>(filenameVX, nSteps, VX);
                 if (!tf)

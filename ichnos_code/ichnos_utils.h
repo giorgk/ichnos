@@ -876,7 +876,7 @@ namespace ICHNOS {
 		bool readWellFile(std::string filename, std::vector <Streamline>& S, bool isTransient) {
 			std::ifstream datafile(filename.c_str());
 			if (!datafile.good()) {
-				std::cout << "Can't open the file" << filename << std::endl;
+				std::cout << "Can't open the file " << filename << std::endl;
 				return false;
 			}
 			else {
@@ -1269,6 +1269,7 @@ namespace ICHNOS {
                               bool printH5,
                               bool printASCI,
                               bool append = false){
+            std::cout << "S size = " << S.size() << std::endl;
 #if _USEHF > 0
             if (printH5){ //print with Highfive
                 const std::string FILE_NAME(filename + ".h5");
@@ -1322,8 +1323,8 @@ namespace ICHNOS {
                 }
 
                 for (unsigned int i = 0; i < S.size(); ++i){
-                    if (!S[i].printIt())
-                        continue;
+                    //if (!S[i].printIt())
+                    //    continue;
                     for (unsigned int j = 0; j < S[i].size()-1; ++j) {
                         WRITE::PrintParticle2Log(log_file, S[i], j);
                     }

@@ -267,6 +267,7 @@ namespace ICHNOS {
 		int proc = world.rank();
 		// Check if the particle is in the domain and exit immediately if not
 		ExitReason er = CheckNewPoint(p);
+
 		if (er == ExitReason::EXIT_SIDE || er == ExitReason::EXIT_BOTTOM || er == ExitReason::EXIT_TOP)
 			return ExitReason::INIT_OUT;
 
@@ -288,7 +289,6 @@ namespace ICHNOS {
 		// that was tracking this streamline before end up in the current processor
 		if (S.getLastParticle().getPid() == 0)
 			S.InitialVelocity(v);
-
 
 		//S.getLastParticle().displayAsVEX(true);
 
@@ -733,8 +733,8 @@ namespace ICHNOS {
 
             for (int ireal = 0; ireal < popt.Nrealizations; ++ireal){
                 auto start = std::chrono::high_resolution_clock::now();
-                if (world.size() > 1){
-                    for (int i = particle_index_start; i < particle_index_end; i = i + world.size()){
+                if (world.size() > 1 || (world.size() == 1 && popt.Nthreads == 1)){
+                    for (int i = world.rank(); i < particle_index_end; i = i + world.size()){
                         Streamlines4thread.push_back(AllStreamlines[i]);
                     }
                     run_thread(world.rank());
@@ -746,8 +746,15 @@ namespace ICHNOS {
                     std::string filename;
                     if (popt.Nrealizations > 1)
                         filename = popt.OutputFile + "_iter_" + num2Padstr(iter, 4) + "_ireal_" + num2Padstr(ireal, 4) + "_iproc_" + num2Padstr(world.rank(), 4);
-                    else
-                        filename = popt.OutputFile+ "_iter_" + num2Padstr(iter, 4) + "_iproc_" + num2Padstr(world.rank(), 4);
+                    else{
+                        if (world.size() > 1){
+                            filename = popt.OutputFile+ "_iter_" + num2Padstr(iter, 4) + "_iproc_" + num2Padstr(world.rank(), 4);
+                        }
+                        else if(world.size() == 1){
+                            filename = popt.OutputFile+ "_iter_" + num2Padstr(iter, 4);
+                        }
+                    }
+
                     WRITE::writeStreamlines(Streamlines4thread, filename, popt.printH5, popt.printASCII);
                     world.barrier();
                 }
@@ -794,26 +801,33 @@ namespace ICHNOS {
 	    //    bool stop= true;
 	    //    std::cout << "Stop Here" << std::endl;
 	    //}
-	    double show_every = popt.OutputFrequency;
-	    double cnt = 0.0;
-	    double Nsize = static_cast<double>(Streamlines4thread.size());
-        for (int i = ithread; i < Streamlines4thread.size(); i = i + popt.Nthreads){
-            if (popt.OutputFrequency > 0.1){
-                if (100*cnt/Nsize > show_every){
-                    std::cout << "-" << show_every << " % |" << i << " of " << Nsize << std::endl;
-                    show_every = show_every + popt.OutputFrequency;
+        if (world.size() > 1 || (world.size() == 1 && popt.Nthreads == 1)){
+            double show_every = popt.OutputFrequency;
+            double cnt = 0.0;
+            double Nsize = static_cast<double>(Streamlines4thread.size());
+            for (int i = 0; i < Streamlines4thread.size(); ++i){
+                if (popt.OutputFrequency > 0.1){
+                    if (100*cnt/Nsize > show_every){
+                        std::cout << "-" << show_every << " % |" << i << " of " << Nsize << std::endl;
+                        show_every = show_every + popt.OutputFrequency;
+                    }
                 }
-            }
-            //std::cout << ithread << ": " << i << std::endl;
-            //Streamline S(Streamlines4thread[i].getEid(), Streamlines4thread[i].getSid(),Streamlines4thread[i].getLastParticle());
-            bool tf;
-            Domain.bisInProcessorPolygon(Streamlines4thread[i].getLastParticle().getP(),tf);
-            if (!tf)
-                continue;
+                //std::cout << ithread << ": " << i << std::endl;
+                //Streamline S(Streamlines4thread[i].getEid(), Streamlines4thread[i].getSid(),Streamlines4thread[i].getLastParticle());
+                bool tf;
+                Domain.bisInProcessorPolygon(Streamlines4thread[i].getLastParticle().getP(),tf);
+                if (!tf)
+                    continue;
 
-            ExitReason er = traceInner(Streamlines4thread[i]);
-            Streamlines4thread[i].Close(er);
-            cnt++;
+                ExitReason er = traceInner(Streamlines4thread[i]);
+                Streamlines4thread[i].Close(er);
+                cnt++;
+            }
         }
+        else{
+            //TODO
+            std::cout << "True multi threaded function is currently disabled" << std::endl;
+        }
+
 	}
 }

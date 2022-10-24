@@ -27,7 +27,7 @@ For the velocity there are two options:
 ## Windons
 Windows executables are available under the [Bin](Bin/) folder. However, those executables may not contain the latest updates, fixes and new bugs.
 
-Under the Bin folder there is a [Dev](Bin/Dev) folder which contains the latest build.
+Under the Bin folder there is a [Dev](Bin/Dev) folder which contains the latest build. You can check [here](https://gist.github.com/giorgk/f727351f5efd8c58f8bb885a87f41978#file-ichnos_test_list-md) which examples have been tested so far with the current development version.
 
 Put under the same folder the exe and all the dlls. Make sure the antivirus is not blocking the execution. To verify that the code can run try the following under a powershell or command prompt.
 ```
