@@ -415,36 +415,7 @@ namespace ICHNOS{
     }
 
     double Mesh2DVel::stepTimeupdate(ICHNOS::helpVars &pvlu) {
-        double stepTime = 99999999999;
-        if (pvlu.td.idx1 != pvlu.td.idx2){
-            double dt = 1.0/stepOpt.nStepsTime;
-            double tm_1 = VEL.getTSvalue(pvlu.td.idx1);
-            double tm_2 = VEL.getTSvalue(pvlu.td.idx2);
-            double tmp_step = dt*(tm_2 - tm_1);
-            double end_time = pvlu.td.tm_tmp + stepOpt.dir*tmp_step;
-            if (stepOpt.dir > 0){
-                if (std::abs(pvlu.td.tm_tmp - tm_2) < 0.25*tmp_step){
-                    if (pvlu.td.idx2 + 1 < nSteps){
-                        tm_2 = VEL.getTSvalue(pvlu.td.idx2+1);
-                    }
-                }
-                if (end_time > tm_2 && pvlu.td.idx2 < nSteps - 1){
-                    stepTime = pvlu.vv.len() * (tm_2 - pvlu.td.tm);
-                }
-                else{
-                    stepTime = pvlu.vv.len() * tmp_step;
-                }
-            }
-            else{
-                if (end_time < tm_1 && pvlu.td.idx1 > 0){
-                    stepTime = pvlu.vv.len() * (pvlu.td.tm_tmp - tm_1);
-                }
-                else{
-                    stepTime = pvlu.vv.len() * tmp_step;
-                }
-            }
-        }
-        return stepTime;
+        return VEL.stepTimeUpdate(pvlu, stepOpt);
     }
 
     void Mesh2DVel::updateStep(double& step) {
