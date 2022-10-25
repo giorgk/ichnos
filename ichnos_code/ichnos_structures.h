@@ -150,6 +150,28 @@ namespace ICHNOS {
 		}
 	};
 
+    struct TimeData{
+        double tm;
+        double tm_tmp;
+        int idx1;
+        int idx2;
+        double t;
+    };
+
+    struct helpVars{
+        vec3 pp;
+        vec3 vv;
+        vec3 ll;
+        vec3 uu;
+        double adaptStepSize;
+        double actualStep;
+        double actualStepTime;
+        double diameter;
+        double ratio;
+        bool bIsInitialized;
+        TimeData td;
+    };
+
 
 	struct NPSAT_data {
 		int proc = -9;
@@ -158,6 +180,21 @@ namespace ICHNOS {
 		double ratio = 0;
 		vec3 v;
 	};
+
+    struct StepOptions {
+        /// This is the step size with units of length. For RK45 this is the initial step size
+        double StepSize;
+        /// This is the step size with units of Time. For RK45 this is the initial step size
+        double StepSizeTime;
+        /// This is the number of steps to divide the size of an element
+        double nSteps;
+        /// This is the number of steps to take within a time step
+        double nStepsTime;
+        /// This is the minimum step size at the exit side of the particles
+        double minExitStepSize;
+        /// The direction of particle tracking
+        double dir;
+    };
 
 	struct elev_data{
 		double top = 0;
@@ -285,13 +322,7 @@ namespace ICHNOS {
     enum class TimeInterpType {NEAREST, LINEAR};
     enum class MeshVelInterpType{ELEMENT, NODE, FACE, UNKNOWN};
 
-    struct TimeData{
-        double tm;
-        double tm_tmp;
-        int idx1;
-        int idx2;
-        double t;
-    };
+
 
     struct Pnt_info{
         int proc = -9;
@@ -337,6 +368,7 @@ namespace ICHNOS {
         void setTimeInterpolationType(TimeInterpType tip_in){tip = tip_in;}
         void setnSteps(int n){nSteps = n;}
         int getNpoints(){return nPoints;}
+        double stepTimeUpdate(helpVars &pvlu, StepOptions &stepOpt);
     private:
         std::vector<std::vector<double>> VX;
         std::vector<std::vector<double>> VY;
@@ -348,6 +380,7 @@ namespace ICHNOS {
         int nSteps;
         int nDims;
         void findTimeStepIndex(int &i, int &ii, double x);
+        void checkIndices(int &i1, int &i2);
 
         double nDaysRepeat = 0;
         TimeInterpType tip;
@@ -375,8 +408,8 @@ namespace ICHNOS {
             VY.resize(nPoints, std::vector<double>(nSteps, 0));
         if (nDims >= 3)
             VZ.resize(nPoints, std::vector<double>(nSteps, 0));
-        TS.clear();
-        TS.resize(nSteps, 0);
+        //TS.clear();
+        //TS.resize(nSteps, 0);
         bIsInitialzed = true;
     }
 
@@ -421,6 +454,15 @@ namespace ICHNOS {
             findTimeStepIndex(i, ii, x);
     }
 
+    void VelTR::checkIndices(int &i1, int &i2) {
+        if (i1 >= TS.size()-1){
+            i1 = TS.size()-2;
+        }
+        if (i2 >= TS.size()-1){
+            i2 = TS.size()-2;
+        }
+    }
+
     void VelTR::findIIT(double x, int &i1, int &i2, double &t, double &x_tmp){
         x_tmp = x;
         if (x <= TS[0]){
@@ -428,6 +470,7 @@ namespace ICHNOS {
                 i1 = 0;
                 i2 = 0;
                 t = 0.0;
+                checkIndices(i1, i2);
                 return;
             }
             else{
@@ -438,8 +481,8 @@ namespace ICHNOS {
         }
         if (x >= TS[TS.size()-1]){
             if (nDaysRepeat == 0){
-                i1 = TS.size()-1;
-                i2 = TS.size()-1;
+                i1 = TS.size()-2;
+                i2 = TS.size()-2;
                 t = 1.0;
                 return;
             }
@@ -454,6 +497,7 @@ namespace ICHNOS {
         i2 = TS.size()-1;
         findTimeStepIndex(i1, i2, x_tmp);
         t = (x_tmp - TS[i1]) / (TS[i2] - TS[i1]);
+        checkIndices(i1, i2);
     }
 
     vec3 VelTR::getVelocity(int pnt, int i1, int i2, double t){
@@ -502,6 +546,63 @@ namespace ICHNOS {
             return TS[idx];
         else
             return -9.0;
+    }
+
+    double VelTR::stepTimeUpdate(helpVars &pvlu, StepOptions &stepOpt){
+        if (nSteps == 0){
+            return 999999999;
+        }
+        double stepTime, tm_1, tm_2;
+        double dt = 1/stepOpt.nStepsTime;
+        if (pvlu.td.idx1 == pvlu.td.idx2){
+            if (stepOpt.dir > 0){
+                tm_1 = getTSvalue(pvlu.td.idx1);
+                tm_2 = getTSvalue(pvlu.td.idx1+1);
+                if (tm_2 < 0){
+                    tm_2 = tm_1;
+                    tm_1 = getTSvalue(pvlu.td.idx1-1);
+                }
+            }
+            else{
+                tm_1 = getTSvalue(pvlu.td.idx1-1);
+                tm_2 = getTSvalue(pvlu.td.idx1);
+                if (tm_1 < 0){
+                    tm_1 = tm_2;
+                    tm_2 = getTSvalue(pvlu.td.idx1+1);
+                }
+            }
+        }
+        else{
+            tm_1 = getTSvalue(pvlu.td.idx1);
+            tm_2 = getTSvalue(pvlu.td.idx2);
+        }
+
+        double tmp_step = dt*(tm_2 - tm_1);
+        stepTime = pvlu.vv.len() * tmp_step;
+        /*double end_time = pvlu.td.tm + stepOpt.dir*tmp_step;
+        if (stepOpt.dir > 0){
+            if (std::abs(pvlu.td.tm - tm_2) < 0.25*tmp_step){
+                if (pvlu.td.idx2 + 1 < nSteps){
+                    tm_2 = getTSvalue(pvlu.td.idx2+1);
+                }
+            }
+            if (end_time > tm_2 && pvlu.td.idx2 < nSteps - 1){
+                stepTime = pvlu.vv.len() * (tm_2 - pvlu.td.tm);
+            }
+            else{
+                stepTime = pvlu.vv.len() * tmp_step;
+            }
+        }
+        else{
+            if (end_time < tm_1 && pvlu.td.idx1 > 0){
+                stepTime = pvlu.vv.len() * (pvlu.td.tm - tm_1);
+            }
+            else{
+                stepTime = pvlu.vv.len() * tmp_step;
+            }
+        }*/
+
+        return stepTime;
     }
 
 
@@ -612,20 +713,7 @@ namespace ICHNOS {
 		}
 	}
 
-	struct StepOptions {
-        /// This is the step size with units of length. For RK45 this is the initial step size
-        double StepSize;
-        /// This is the step size with units of Time. For RK45 this is the initial step size
-        double StepSizeTime;
-        /// This is the number of steps to divide the size of an element
-        double nSteps;
-        /// This is the number of steps to take within a time step
-        double nStepsTime;
-        /// This is the minimum step size at the exit side of the particles
-        double minExitStepSize;
-        /// The direction of particle tracking
-        double dir;
-	};
+
 
 	struct AdaptStepOptions{
         /// When the method is adaptive this is the maximum step size
@@ -769,21 +857,6 @@ namespace ICHNOS {
                     << std::setprecision(6) << std::fixed << " setpointattrib(0,'N',p,{" << vn.x << "," << vn.z << "," << vn.y << "},'set');";
 		std::cout << std::endl;
 	}
-
-	struct helpVars{
-        vec3 pp;
-        vec3 vv;
-        vec3 ll;
-        vec3 uu;
-        double adaptStepSize;
-        double actualStep;
-        double actualStepTime;
-        double diameter;
-        double ratio;
-        bool bIsInitialized;
-        TimeData td;
-
-	};
 
 
 	class Streamline {

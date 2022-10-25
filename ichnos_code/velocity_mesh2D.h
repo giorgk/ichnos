@@ -190,7 +190,7 @@ namespace ICHNOS{
                 VEL.setNrepeatDays(0);
             }
 
-            nSteps = TimeSteps.size();
+            nSteps = TimeSteps.size()-1;
 
             Prefix = vm_vfo["Velocity.Prefix"].as<std::string>();
             std::string suffix;

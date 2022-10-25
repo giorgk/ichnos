@@ -94,7 +94,7 @@ namespace ICHNOS{
             ("Velocity.LeadingZeros", po::value<int>()->default_value(4), "e.g 0002->4, 000->3")
             ("Velocity.Suffix", po::value<std::string>(), "ending of file after procid")
             ("Velocity.Type", po::value<std::string>(), "Type of velocity.")
-            ("Velocity.Trans", po::value<int>()->default_value(0), "0->steady state, 1->Transient state")
+            ("Velocity.TimeStepFile", po::value<std::string>(), "Time step file")
             ("CLOUD.Power", po::value<double>()->default_value(3.0), "Power of the IDW interpolation")
             ("CLOUD.Scale", po::value<double>()->default_value(1.0), "Scale the domain before velocity calculation")
             ("CLOUD.InitDiameter", po::value<double>()->default_value(5000), "Initial diameter")
@@ -121,7 +121,14 @@ namespace ICHNOS{
         }
         std::string fileXYZ;
 
-        bool istrans  = vm_vfo["Velocity.Trans"].as<int>() != 0;
+        bool istrans = false;//  = vm_vfo["Velocity.Trans"].as<int>() != 0;
+        if (vm_vfo.count("Velocity.TimeStepFile")){
+            std::string TSfile = vm_vfo["Velocity.TimeStepFile"].as<std::string>();
+            if (!TSfile.empty()){
+                istrans = true;
+            }
+        }
+
 
         int proc_id = world.rank();
         if (runAsThread){

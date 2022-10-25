@@ -107,7 +107,7 @@ namespace ICHNOS{
             ("Velocity.LeadingZeros", po::value<int>()->default_value(4), "e.g 0002->4, 000->3")
             ("Velocity.Suffix", po::value<std::string>(), "ending of file after procid")
             ("Velocity.Type", po::value<std::string>(), "Type of velocity.")
-            ("Velocity.Trans", po::value<int>()->default_value(0), "0->steady state, 1->Transient state")
+            //("Velocity.Trans", po::value<int>()->default_value(0), "0->steady state, 1->Transient state")
             ("Velocity.TimeStepFile", po::value<std::string>(), "This filename with the time steps")
             ("Velocity.TimeInterp", po::value<std::string>(), "Interpolation type between time steps")
             ("Velocity.RepeatTime", po::value<double>()->default_value(0.0), "The number of days to repeat after the end of time steps")
@@ -146,12 +146,21 @@ namespace ICHNOS{
             //initial_diameter = vm_vfo["Velocity.InitDiameter"].as<double>();
             //initial_ratio = vm_vfo["Velocity.InitRatio"].as<double>();
 
-            isVeltrans  = vm_vfo["Velocity.Trans"].as<int>() != 0;
+            //isVeltrans  = vm_vfo["Velocity.Trans"].as<int>() != 0;
             // Read the time step
             std::vector<double> TimeSteps;
+
+            isVeltrans = false;//  = vm_vfo["Velocity.Trans"].as<int>() != 0;
+            if (vm_vfo.count("Velocity.TimeStepFile")){
+                std::string TSfile = vm_vfo["Velocity.TimeStepFile"].as<std::string>();
+                if (!TSfile.empty()){
+                    isVeltrans = true;
+                }
+            }
+
+
             if (isVeltrans){
                 std::string TSfile = vm_vfo["Velocity.TimeStepFile"].as<std::string>();
-
                 bool tf = ic::READ::readTimeStepFile(TSfile, TimeSteps);
                 if (!tf) {return false;}
                 std::string TimeInterpType = vm_vfo["Velocity.TimeInterp"].as<std::string>();
@@ -178,7 +187,7 @@ namespace ICHNOS{
             leadingZeros = vm_vfo["Velocity.LeadingZeros"].as<int>();
 
 
-            nSteps = TimeSteps.size();
+            nSteps = TimeSteps.size()-1;
             VEL.setnSteps(nSteps);
             //if (nPoints > 0){
             //    // We can initialize at this point only if the nPoints is given.
@@ -209,7 +218,6 @@ namespace ICHNOS{
                     }
                 }
             }
-
         }
         return true;
     }
@@ -222,6 +230,7 @@ namespace ICHNOS{
         }
 
         auto start = std::chrono::high_resolution_clock::now();
+
         if (isVeltrans){
 
             if (Suffix.compare(".h5") == 0){
@@ -235,47 +244,48 @@ namespace ICHNOS{
                 { //VX
                     std::string fileVX = Prefix + "VX_" + ic::num2Padstr(/*dbg_rank*/proc_id, leadingZeros) + Suffix;
                     std::vector<std::vector<double>> data;
-                    bool tf = READ::read2Darray<double>(fileVX, nSteps, data);
+                    tf = READ::read2Darray<double>(fileVX, nSteps, data);
                     if (tf) {
                         nPoints = static_cast<int>(data.size());
                         VEL.init(nPoints, nSteps, 3);
                         setVelData(data, multiplier, ic::coordDim::vx);
                     }
                     else{
-                        return false;
+                        tf = false;
                     }
                 }
 
 
-                {//VY
+                if (tf){//VY
                     std::string fileVY = Prefix + "VY_" + ic::num2Padstr(/*dbg_rank*/proc_id, leadingZeros) + Suffix;
                     std::vector<std::vector<double>> data;
-                    bool tf = READ::read2Darray<double>(fileVY, nSteps, data);
+                    tf = READ::read2Darray<double>(fileVY, nSteps, data);
                     if (tf){
                         if (nPoints != data.size()){
                             std::cout << "The number of data (" << nPoints << ") in VX file is different than the VY file (" << data.size() << ")" << std::endl;
-                            return false;
+                            tf = false;
                         }
                         setVelData(data, multiplier, ic::coordDim::vy);
                     }
                     else{
-                        return false;
+                        tf = false;
                     }
                 }
 
-                {// VZ
+                if (tf){// VZ
                     std::string fileVZ = Prefix + "VZ_" + ic::num2Padstr(/*dbg_rank*/proc_id, leadingZeros) + Suffix;
                     std::vector<std::vector<double>> data;
-                    bool tf = READ::read2Darray<double>(fileVZ, nSteps, data);
+                    tf = READ::read2Darray<double>(fileVZ, nSteps, data);
                     if (tf){
                         if (nPoints != data.size()){
                             std::cout << "The number of data (" << nPoints << ") in VX and VY file is different than the VZ file (" << data.size() << ")" << std::endl;
-                            return false;
+                            tf = false;
                         }
                         setVelData(data, multiplier, ic::coordDim::vz);
+                        tf = true;
                     }
                     else{
-                        return false;
+                        tf = false;
                     }
                 }
             }
@@ -294,13 +304,13 @@ namespace ICHNOS{
                         VEL.setVELvalue(VXYZ[1][i]*multiplier, i, 0, coordDim::vy);
                         VEL.setVELvalue(VXYZ[2][i]*multiplier, i, 0, coordDim::vz);
                     }
-                    return true;
+                    tf = true;
                 }
 #endif
             }
             else{
                 std::vector<std::vector<double>> data;
-                bool tf = READ::read2Darray<double>(fileVXYZ, 9, data);
+                tf = READ::read2Darray<double>(fileVXYZ, 9, data);
                 if (tf){
                     nPoints = static_cast<int>(data.size());
                     VEL.init(nPoints, nSteps, 3);
@@ -309,7 +319,6 @@ namespace ICHNOS{
                         VEL.setVELvalue(data[i][7]*multiplier, i, 0, coordDim::vy);
                         VEL.setVELvalue(data[i][8]*multiplier, i, 0, coordDim::vz);
                     }
-                    return true;
                 }
             }
         }
@@ -595,36 +604,7 @@ namespace ICHNOS{
     }
 
     double CloudVel::stepTimeupdate(helpVars &pvlu) {
-        double stepTime;
-        if (pvlu.td.idx1 != pvlu.td.idx2){
-            double dt = 1/stepOpt.nStepsTime;
-            double tm_1 = VEL.getTSvalue(pvlu.td.idx1);
-            double tm_2 = VEL.getTSvalue(pvlu.td.idx2);
-            double tmp_step = dt*(tm_2 - tm_1);
-            double end_time = pvlu.td.tm + stepOpt.dir*tmp_step;
-            if (stepOpt.dir > 0){
-                if (std::abs(pvlu.td.tm - tm_2) < 0.25*tmp_step){
-                    if (pvlu.td.idx2 + 1 < nSteps){
-                        tm_2 = VEL.getTSvalue(pvlu.td.idx2+1);
-                    }
-                }
-                if (end_time > tm_2 && pvlu.td.idx2 < nSteps - 1){
-                    stepTime = pvlu.vv.len() * (tm_2 - pvlu.td.tm);
-                }
-                else{
-                    stepTime = pvlu.vv.len() * tmp_step;
-                }
-            }
-            else{
-                if (end_time < tm_1 && pvlu.td.idx1 > 0){
-                    stepTime = pvlu.vv.len() * (pvlu.td.tm - tm_1);
-                }
-                else{
-                    stepTime = pvlu.vv.len() * tmp_step;
-                }
-            }
-        }
-        return stepTime;
+        return VEL.stepTimeUpdate(pvlu, stepOpt);
     }
 
     void CloudVel::updateStep(double &step) {
