@@ -704,7 +704,7 @@ namespace ICHNOS {
             stepTime = std::min<double>(stepTime, rem_age);
         }
 
-        if (popt.StepOpt.nStepsTime > 0){
+        if (popt.StepOpt.nStepsTime > 0 && VF.isVelTransient()){
             double stepTimetrans = VF.stepTimeupdate(pvlu);
             if (stepTimetrans < stepTime){
                 stepTime = stepTimetrans;

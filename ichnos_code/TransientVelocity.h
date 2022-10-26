@@ -158,7 +158,6 @@ namespace ICHNOS{
                 }
             }
 
-
             if (isVeltrans){
                 std::string TSfile = vm_vfo["Velocity.TimeStepFile"].as<std::string>();
                 bool tf = ic::READ::readTimeStepFile(TSfile, TimeSteps);
@@ -313,7 +312,7 @@ namespace ICHNOS{
                 tf = READ::read2Darray<double>(fileVXYZ, 9, data);
                 if (tf){
                     nPoints = static_cast<int>(data.size());
-                    VEL.init(nPoints, nSteps, 3);
+                    VEL.init(nPoints, 1, 3);
                     for (int i = 0; i < nPoints; i++){
                         VEL.setVELvalue(data[i][6]*multiplier, i, 0, coordDim::vx);
                         VEL.setVELvalue(data[i][7]*multiplier, i, 0, coordDim::vy);
@@ -547,7 +546,15 @@ namespace ICHNOS{
         // Find the time step
         int i1, i2;
         double t, tm_tmp;
-        VEL.findIIT(tm, i1, i2, t, tm_tmp);
+        if (isVeltrans){
+            VEL.findIIT(tm, i1, i2, t, tm_tmp);
+        }
+        else{
+            i1 = 0;
+            i2 = 0;
+            t = 0.0;
+            tm_tmp = 0.0;
+        }
         pvlu.td.idx1 = i1;
         pvlu.td.idx2 = i2;
         pvlu.td.t = t;

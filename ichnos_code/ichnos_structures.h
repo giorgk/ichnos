@@ -470,7 +470,6 @@ namespace ICHNOS {
                 i1 = 0;
                 i2 = 0;
                 t = 0.0;
-                checkIndices(i1, i2);
                 return;
             }
             else{

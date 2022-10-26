@@ -97,7 +97,7 @@ namespace ICHNOS{
                 ("Velocity.LeadingZeros", po::value<int>()->default_value(4), "e.g 0002->4, 000->3")
                 ("Velocity.Suffix", po::value<std::string>(), "ending of file after proc id")
                 ("Velocity.Type", po::value<std::string>(), "Type of velocity.")
-                ("Velocity.IsTransient", po::value<int>()->default_value(0), "0->steady state, 1->Transient state")
+                //("Velocity.IsTransient", po::value<int>()->default_value(0), "0->steady state, 1->Transient state")
                 ("Velocity.TimeStepFile", po::value<std::string>(), "This filename with the time steps")
                 ("Velocity.TimeInterp", po::value<std::string>(), "Interpolation type between time steps")
                 ("Velocity.RepeatTime", po::value<double>()->default_value(0.0), "The number of TimeUnits (e.g. days) to repeat after the and of time steps")
@@ -167,10 +167,18 @@ namespace ICHNOS{
             //nFaces = vm_vfo["MESH2D.Nfaces"].as<int>();
             //nTotalFaces = nFaces*nLayers;
 
-            isVeltrans  = vm_vfo["Velocity.IsTransient"].as<int>() != 0;
+            //isVeltrans  = vm_vfo["Velocity.IsTransient"].as<int>() != 0;
 
             // Read the time step
             std::vector<double> TimeSteps;
+            isVeltrans = false;
+            if (vm_vfo.count("Velocity.TimeStepFile")){
+                std::string TSfile = vm_vfo["Velocity.TimeStepFile"].as<std::string>();
+                if (!TSfile.empty()){
+                    isVeltrans = true;
+                }
+            }
+
             if (isVeltrans){
                 std::string TSfile = vm_vfo["Velocity.TimeStepFile"].as<std::string>();
                 bool tf = ic::READ::readTimeStepFile(TSfile, TimeSteps);
@@ -375,7 +383,16 @@ namespace ICHNOS{
         }
         int i1, i2;
         double t, tm_tmp;
-        VEL.findIIT(tm, i1, i2, t, tm_tmp);
+        if (isVeltrans){
+            VEL.findIIT(tm, i1, i2, t, tm_tmp);
+        }
+        else{
+            i1 = 0;
+            i2 = 0;
+            t = 0.0;
+            tm_tmp = 0.0;
+        }
+
         pvlu.td.idx1 = i1;
         pvlu.td.idx2 = i2;
         pvlu.td.t = t;
@@ -590,7 +607,7 @@ namespace ICHNOS{
                 bool tf = READ::H5SteadyState3DVelocity(filename, VXYZ);
                 if (tf){
                     nPoints = VXYZ[0].size();
-                    VEL.init(nPoints,nSteps, 3);
+                    VEL.init(nPoints,1, 3);
                     for (int i = 0; i < VXYZ[0].size(); i++){
                         VEL.setVELvalue(VXYZ[0][i]*multiplier, i, 0, coordDim::vx);
                         VEL.setVELvalue(VXYZ[1][i]*multiplier, i, 0, coordDim::vy);
@@ -605,7 +622,7 @@ namespace ICHNOS{
                 bool tf = READ::read2Darray<double>(filename, 3, data);
                 if (tf){
                     nPoints = static_cast<int>(data.size());
-                    VEL.init(nPoints, nSteps, 3);
+                    VEL.init(nPoints, 1, 3);
                     for (int i = 0; i < nPoints; i++){
                         VEL.setVELvalue(data[i][0]*multiplier, i, 0, coordDim::vx);
                         VEL.setVELvalue(data[i][1]*multiplier, i, 0, coordDim::vy);
@@ -667,7 +684,7 @@ namespace ICHNOS{
             std::string filename = Prefix + ic::num2Padstr(proc_id, leadingZeros) + Suffix;
             if (Suffix.compare(".h5") == 0){
                 //TODO
-                std::cout << "MESH2D for Faces - Steady State - H5 input is not implemented yet" << std::endl;
+                std::cout << "MESH2D - Face - Steady State - HDF5 input is not implemented yet" << std::endl;
                 return false;
             }
             std::cout << "\tReading file " + filename << std::endl;
@@ -689,7 +706,7 @@ namespace ICHNOS{
                 }
                 datafile.close();
                 //nPoints = tmp.size();
-                VEL.init(nPoints, nSteps, 1);
+                VEL.init(nPoints, 1, 1);
                 for (unsigned int i = 0; i < tmp.size(); ++i){
                     VEL.setVELvalue(tmp[i] * multiplier, i, 0, ic::coordDim::vx);
                 }
@@ -698,6 +715,7 @@ namespace ICHNOS{
         }
         else{
             // TODO
+            std::cout << "Transient state reader for FACE interpolation has not implemented yet" << std::endl;
         }
 
         return out;
