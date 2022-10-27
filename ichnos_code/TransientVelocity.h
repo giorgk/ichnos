@@ -297,7 +297,7 @@ namespace ICHNOS{
                 tf = READ::H5SteadyState3DVelocity(fileVXYZ, VXYZ);
                 if (tf){
                     nPoints = VXYZ[0].size();
-                    VEL.init(nPoints,nSteps, 3);
+                    VEL.init(nPoints,1, 3);
                     for (int i = 0; i < VXYZ[0].size(); i++){
                         VEL.setVELvalue(VXYZ[0][i]*multiplier, i, 0, coordDim::vx);
                         VEL.setVELvalue(VXYZ[1][i]*multiplier, i, 0, coordDim::vy);

@@ -1313,7 +1313,7 @@ namespace ICHNOS {
 #endif
             if (printASCI){
                 const std::string log_file_name = (filename + ".traj");
-                std::cout << "Printing Output to " << log_file_name << std::endl;
+                //std::cout << "Printing Output to " << log_file_name << std::endl;
                 std::ofstream log_file;
                 if (append){
                     log_file.open(log_file_name.c_str(),std::ios_base::app);
