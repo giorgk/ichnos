@@ -661,6 +661,7 @@ namespace ICHNOS {
 		FAR_AWAY,
 		MAX_AGE,
 		ATTRACT,
+        NOT_IN_SUBDOMAIN,
 		NO_REASON
 	};
 
@@ -679,6 +680,7 @@ namespace ICHNOS {
 		ExitReasonsMap.insert(std::pair<ExitReason, std::string>(ExitReason::FAR_AWAY, "FAR_AWAY"));
 		ExitReasonsMap.insert(std::pair<ExitReason, std::string>(ExitReason::MAX_AGE, "MAX_AGE"));
 		ExitReasonsMap.insert(std::pair<ExitReason, std::string>(ExitReason::ATTRACT, "ATTRACT"));
+        ExitReasonsMap.insert(std::pair<ExitReason, std::string>(ExitReason::NOT_IN_SUBDOMAIN, "NOT_IN_SUBDOMAIN"));
 		ExitReasonsMap.insert(std::pair<ExitReason, std::string>(ExitReason::NO_REASON, "NO_REASON"));
 		it = ExitReasonsMap.find(er);
 		if (it != ExitReasonsMap.end())
@@ -704,6 +706,7 @@ namespace ICHNOS {
 		ExitReasonMap.insert(std::pair<std::string, ExitReason>("NO_EXIT", ExitReason::NO_EXIT));
 		ExitReasonMap.insert(std::pair<std::string, ExitReason>("NO_REASON", ExitReason::NO_REASON));
 		ExitReasonMap.insert(std::pair<std::string, ExitReason>("STUCK", ExitReason::STUCK));
+        ExitReasonMap.insert(std::pair<std::string, ExitReason>("NOT_IN_SUBDOMAIN", ExitReason::NOT_IN_SUBDOMAIN));
 		it = ExitReasonMap.find(exitreason);
 		if (it != ExitReasonMap.end())
 			return it->second;
@@ -950,8 +953,11 @@ namespace ICHNOS {
 
 	void Streamline::Close(ExitReason ER) {
 		exitreason = ER;
-        PrintThis = true;
-	}
+        if (ER == ExitReason::NOT_IN_SUBDOMAIN)
+            PrintThis = false;
+        else
+            PrintThis = true;
+    }
 
 	std::vector<std::vector<double> > getRK45coef() {
 		std::vector<std::vector<double> > RKcoef;

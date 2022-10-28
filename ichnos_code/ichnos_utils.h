@@ -829,7 +829,17 @@ namespace ICHNOS {
 					}
 					if (myPolyFound) {
 						boost::geometry::assign_points(polygon, polygonPoints);
+                        //std::cout << "Area Before" << boost::geometry::area(polygon) << std::endl;
 						boost::geometry::correct(polygon);
+                        //std::cout << "Area After" << boost::geometry::area(polygon) << std::endl;
+                        //bool tf = boost::geometry::within(boostPoint(-30818.557, -183282.562), polygon);
+                        //std::cout << myRank << " " << tf << std::endl;
+                        //if (tf){
+                        //    std::cout << polygonPoints[0].x() << "," << polygonPoints[0].y() << std::endl;
+                        //    std::cout << polygonPoints[1].x() << "," << polygonPoints[1].y() << std::endl;
+                        //    std::cout << polygonPoints[2].x() << "," << polygonPoints[2].y() << std::endl;
+                        //    std::cout << polygonPoints[3].x() << "," << polygonPoints[3].y() << std::endl;
+                        //}
 						break;
 					}
 				}
@@ -1281,6 +1291,8 @@ namespace ICHNOS {
                 std::vector<std::string> ExitReason;
                 //boost::multi_array<double, 2> my_array(boost::extents[size_x][size_y]);
                 for (unsigned int i = 0; i < S.size(); ++i){
+                    if (!S[i].printIt())
+                        continue;
                     std::vector<float> tmp_data(10,0);
                     std::vector<int> tmp_ids(2,0);
                     for (unsigned int j = 0; j < S[i].size(); ++j){
@@ -1323,8 +1335,8 @@ namespace ICHNOS {
                 }
 
                 for (unsigned int i = 0; i < S.size(); ++i){
-                    //if (!S[i].printIt())
-                    //    continue;
+                    if (!S[i].printIt())
+                        continue;
                     for (unsigned int j = 0; j < S[i].size()-1; ++j) {
                         WRITE::PrintParticle2Log(log_file, S[i], j);
                     }

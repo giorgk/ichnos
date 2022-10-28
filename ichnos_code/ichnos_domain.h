@@ -93,6 +93,7 @@ namespace ICHNOS {
 		nProc = Dopt_in.nProc;
 
 		if (nProc > 1 & !Dopt_in.RunAsThread){
+            //std::cout << "Dopt.myRank " << Dopt.myRank << std::endl;
             READ::readProcessorDomain(Dopt.processorDomainFile, ProcessorDomain, /*dbg_rank*/ Dopt.myRank);
             //READ::readProcessorDomain(Dopt.expandedDomainFile, ExpandedDomain, Dopt.myRank);
 		}

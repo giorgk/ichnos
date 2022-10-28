@@ -193,7 +193,7 @@ namespace ICHNOS {
 
 		//std::ofstream log_file;
 		//log_file.open(log_file_name.c_str());
-
+        bool append = false;
 		int trace_iter = 0;
 		std::vector<Streamline> Snew;
 		while (true) {
@@ -201,8 +201,11 @@ namespace ICHNOS {
 			for (unsigned int i = 0; i < S.size(); ++i) {
 				bool tf;
 				Domain.bisInProcessorPolygon(S[i].getLastParticle().getP(),tf);
-				if (!tf)
-					continue;
+				if (!tf){
+                    S[i].Close(ExitReason::NOT_IN_SUBDOMAIN);
+                    continue;
+                }
+
 				//std::cout << "Proc " << world.rank() << " :Particle id: " << S[i].getSid() << std::endl;
 				ExitReason er = traceInner(S[i]);
 				S[i].Close(er);
@@ -215,7 +218,8 @@ namespace ICHNOS {
 
 			}
             const std::string out_file_name = (popt.OutputFile + "_ireal_" + num2Padstr(ireal, 4) + "_iter_" + num2Padstr(iter, 4) + "_proc_" + num2Padstr(my_rank, 4));
-            WRITE::writeStreamlines(S, out_file_name, popt.printH5, popt.printASCII, true);
+            WRITE::writeStreamlines(S, out_file_name, popt.printH5, popt.printASCII, append);
+            append = true;
 
             world.barrier();
 			//std::cout << "Proc " << my_rank << " will send " << Snew.size() << " particles" << std::endl;
@@ -278,6 +282,7 @@ namespace ICHNOS {
             S.PVLU.pp = p;
 
             VF.calcVelocity(p, v, proc_map, S.PVLU, tf, tm);
+            //std::cout << world.rank() << ": " << v.x << "," << v.y << "," << v.z << std::endl;
         }
 
 		//proc = VF.calcProcID(proc_map);
@@ -414,6 +419,7 @@ namespace ICHNOS {
 
 		double top, bottom;
 		Domain.getTopBottomElevation(p, top, bottom, bInDomain);
+        //std::cout << p.z << ":" << top << "-" << bottom << std::endl;
 		if (!bInDomain)
             return ExitReason::FAR_AWAY;
 
