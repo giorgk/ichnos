@@ -740,7 +740,7 @@ namespace ICHNOS {
             for (int ireal = 0; ireal < popt.Nrealizations; ++ireal){
                 auto start = std::chrono::high_resolution_clock::now();
                 if (world.size() > 1 || (world.size() == 1 && popt.Nthreads == 1)){
-                    for (int i = world.rank(); i < particle_index_end; i = i + world.size()){
+                    for (int i = particle_index_start + world.rank(); i < particle_index_end; i = i + world.size()){
                         Streamlines4thread.push_back(AllStreamlines[i]);
                     }
                     run_thread(world.rank());
