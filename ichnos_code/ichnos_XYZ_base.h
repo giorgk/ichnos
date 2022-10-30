@@ -149,7 +149,7 @@ namespace ICHNOS{
                 buseGraph = true;
                 std::string fileGraph;
                 fileGraph = graphPrefix + num2Padstr(/*dbg_rank*/proc_id, leadZeros) + ".grph";
-                bool tf = CGRAPH.readGraphFile(fileGraph);
+                bool tf = CGRAPH.readGraphFile(fileGraph, world.rank());
                 if (!tf)
                     return false;
             }

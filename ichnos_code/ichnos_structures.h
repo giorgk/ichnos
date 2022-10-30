@@ -1218,7 +1218,7 @@ namespace ICHNOS {
     class CellGraph{
     public:
         CellGraph(){};
-        bool readGraphFile(std::string filename);
+        bool readGraphFile(std::string filename, int rank);
         bool getNearVelocities(vec3& p, std::vector<int>& velIds);
 
     private:
@@ -1228,7 +1228,7 @@ namespace ICHNOS {
         std::vector<std::vector<int>> velids;
     };
 
-    bool CellGraph::readGraphFile(std::string filename) {
+    bool CellGraph::readGraphFile(std::string filename, int rank) {
         std::cout << "\tReading file " + filename << std::endl;
 
         std::ifstream datafile(filename.c_str());
@@ -1269,14 +1269,14 @@ namespace ICHNOS {
                 }
             }
 
-            std::cout << neighElem.size() << ", " << velids.size() << std::endl;
+            std::cout << "Rank " << rank << ":" << neighElem.size() << ", " << velids.size() << std::endl;
             auto start = std::chrono::high_resolution_clock::now();
             Tree.insert(boost::make_zip_iterator(boost::make_tuple( pp.begin(), dd.begin() )),
                         boost::make_zip_iterator(boost::make_tuple( pp.end(), dd.end() ) )  );
             Tree.build();
             auto finish = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> elapsed = finish - start;
-            std::cout << "\tPoint Set Building time: " << elapsed.count() << std::endl;
+            std::cout << "\tPoint Set Building time for rank: " << rank << " : " << elapsed.count() << std::endl;
             return true;
         }
     }

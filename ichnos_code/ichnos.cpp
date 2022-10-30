@@ -76,6 +76,7 @@ int main(int argc, char* argv[])
                 ICHNOS::XYZ_cloud XYZcloud(world);
                 XYZcloud.runAsThread = OPT.Popt.RunAsThread;
                 tf = XYZcloud.readXYZdata(OPT.getVelFname());
+                world.barrier();
                 if (!tf){return 0;}
 
                 switch (OPT.velocityFieldType) {
@@ -84,6 +85,7 @@ int main(int argc, char* argv[])
                         world.barrier();
                         ICHNOS::CloudVel VF(world, XYZcloud);
                         tf = VF.readVelocityField(OPT.getVelFname());
+                        world.barrier();
                         if (!tf){return 0;}
                         VF.SetStepOptions(OPT.Popt.StepOpt);
 
@@ -122,6 +124,7 @@ int main(int argc, char* argv[])
                 ICHNOS::XYZ_MESH2D XYZmesh(world);
                 XYZmesh.runAsThread = OPT.Popt.RunAsThread;
                 tf = XYZmesh.readXYZdata(OPT.getVelFname());
+                world.barrier();
                 if (!tf){return 0;}
 
                 switch (OPT.velocityFieldType){
@@ -129,6 +132,7 @@ int main(int argc, char* argv[])
                     {
                         ICHNOS::Mesh2DVel VF(world, XYZmesh);
                         tf = VF.readVelocityField(OPT.getVelFname());
+                        world.barrier();
                         if (!tf){return 0;}
                         VF.SetStepOptions(OPT.Popt.StepOpt);
                         XYZmesh.SetInterpType(VF.getInterpType());
