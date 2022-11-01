@@ -71,6 +71,9 @@ namespace ICHNOS{
             ("MESH2D.Meshfile", po::value<std::string>(), "An array of the Mesh2D ids")
             ("MESH2D.ElevationFile", po::value<std::string>(), "An array of the Elevations")
             ("MESH2D.Nlayers", po::value<int>()->default_value(4), "Number of layers")
+            ("Velocity.LeadingZeros", po::value<int>()->default_value(4), "e.g 0002->4, 000->3")
+            ("Velocity.Suffix", po::value<std::string>(), "ending of file after proc id")
+
             //("MESH2D.SearchDiameter", po::value<double>()->default_value(5000), "The search diameter")
         //("MESH2D.FaceIdFile", po::value<std::string>(), "Face ids for each element")
             ;
@@ -84,11 +87,23 @@ namespace ICHNOS{
         //initial_diameter = vm_vfo["MESH2D.SearchDiameter"].as<double>();
         //initial_diameter = initial_diameter*initial_diameter;
 
+        if (world.size() > 1 && runAsThread == 0){
+            int leadingZeros = vm_vfo["Velocity.LeadingZeros"].as<int>();
+            std::string suffix = vm_vfo["Velocity.Suffix"].as<std::string>();
+            nodefile = nodefile + ic::num2Padstr(world.rank(), leadingZeros) + suffix;
+            Elevfile = Elevfile + ic::num2Padstr(world.rank(), leadingZeros) + suffix;
+            Meshfile = Meshfile + ic::num2Padstr(world.rank(), leadingZeros) + suffix;
+        }
+
         bool tf = readNodes(nodefile);
         if (!tf){return false;}
         tf = readElev(Elevfile);
         if (!tf){return false;}
         tf = readMesh(Meshfile);
+
+        if (world.size() > 1 && runAsThread == 0){
+            std::cout << world.rank() << "ND: " << nodes.size() << ", MSH: " << mesh.size() << ", ELEV: " << elev.size() << std::endl;
+        }
 
         return true;
     }
