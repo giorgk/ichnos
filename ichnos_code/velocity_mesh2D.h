@@ -211,6 +211,11 @@ namespace ICHNOS{
             leadingZeros = vm_vfo["Velocity.LeadingZeros"].as<int>();
 
             bool tf = readVelocityFiles();
+
+            if (world.size() > 1 && XYZ.runAsThread == 0){
+                std::cout << "Proc: " << world.rank() << " has : " << VEL.getNpoints() << "  Velocities "  << std::endl;
+            }
+
             if (!tf){return false;}
             VEL.setTSvalue(TimeSteps);
 
@@ -375,10 +380,14 @@ namespace ICHNOS{
         std::vector<int> ids;
         std::vector<double> weights;
         XYZ.calcWeights(p, ids,weights, proc_map, pvlu, out);
+        if (!out){
+            vel.makeInvalid();
+            return;
+        }
 
 
         if (ids[0] == -9 || ids[1] == -9){
-            vel = 99999;
+            vel.makeInvalid();
             return;
         }
         int i1, i2;

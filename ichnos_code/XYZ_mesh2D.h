@@ -102,7 +102,7 @@ namespace ICHNOS{
         tf = readMesh(Meshfile);
 
         if (world.size() > 1 && runAsThread == 0){
-            std::cout << world.rank() << "ND: " << nodes.size() << ", MSH: " << mesh.size() << ", ELEV: " << elev.size() << std::endl;
+            std::cout << "Proc: " << world.rank() << " has ND: " << nodes.size() << ", MSH: " << mesh.size() << ", ELEV: " << elev.size() << std::endl;
         }
 
         return true;
@@ -236,7 +236,7 @@ namespace ICHNOS{
             else{
                 pvlu.diameter = pvlu.diameter*1.5;
                 if (pvlu.diameter > initial_diameter){
-                    std::cout << "I cant find any point around ("
+                    std::cout << "I can't find any point around ("
                               << p2D.x << "," << p2D.y << "," << p2D.z
                               <<") within the initial diameter of " << initial_diameter
                               << ". Consider increasing the Initial diameter" << std::endl;

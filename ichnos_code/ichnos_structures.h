@@ -138,6 +138,12 @@ namespace ICHNOS {
 			z = 0.0;
 		}
 
+        void makeInvalid(){
+            x = -99999.0;
+            y = -99999.0;
+            z = -99999.0;
+        }
+
 		double distance(double px, double py, double pz) {
 			return std::sqrt((x - px) * (x - px) + (y - py) * (y - py) + (z - pz) * (z - pz));
 		}

@@ -795,7 +795,7 @@ namespace ICHNOS {
 		void readProcessorDomain(std::string filename, boostPolygon& polygon, int myRank) {
 			std::ifstream datafile(filename.c_str());
 			if (!datafile.good()) {
-				std::cout << "Can't open the file" << filename << std::endl;
+				std::cout << "Can't open the ProcessorPolys file:[" << filename << "]" << std::endl;
 			}
 			else {
 				std::vector<boostPoint> polygonPoints;

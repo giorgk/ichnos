@@ -282,6 +282,9 @@ namespace ICHNOS {
             S.PVLU.pp = p;
 
             VF.calcVelocity(p, v, proc_map, S.PVLU, tf, tm);
+            if (!tf){
+                return ExitReason::FIRST_POINT_GHOST;
+            }
             //std::cout << world.rank() << ": " << v.x << "," << v.y << "," << v.z << std::endl;
         }
 
