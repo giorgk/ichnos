@@ -1515,7 +1515,7 @@ namespace ICHNOS {
 
 	//	double ratio = xymax / zmax;
 
-	//	// interpolate using the scaled value
+	//	// interpolate using the scaled interpolate
 	//	double w, d;
 	//	double sumW = 0;
 	//	vec3 sumWVal;

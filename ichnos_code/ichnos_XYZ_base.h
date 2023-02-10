@@ -446,7 +446,7 @@ namespace ICHNOS{
             ("IWFM.Nlayers", po::value<int>()->default_value(4), "Number of layers")
             ("IWFM.Power", po::value<double>()->default_value(3.0), "Power of the IDW interpolation")
             ("IWFM.Diameter", po::value<double>()->default_value(1.0), "Scale the domain before velocity calculation")
-            ("IWFM.Threshold", po::value<double>()->default_value(5000), "Initial diameter")
+            ("IWFM.Threshold", po::interpolate<double>()->default_value(5000), "Initial diameter")
             ;
 
         po::store(po::parse_config_file<char>(vf_file.c_str(), velocityFieldOptions,true), vm_vfo);

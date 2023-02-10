@@ -15,6 +15,7 @@
 
 #include "ichnos_structures.h"
 #include "velocity_base.h"
+#include "ichnos_porosity.h"
 
 #include <chrono>
 #include <ctime>
@@ -60,7 +61,7 @@ namespace ICHNOS{
         //ic::search_tree_info Tree;
 
         ic::interpType porType;
-        double porosityValue = 1.0;
+        Porosity_base porosity;
 
 
         int nPoints;
@@ -107,7 +108,7 @@ namespace ICHNOS{
             ("Velocity.LeadingZeros", po::value<int>()->default_value(4), "e.g 0002->4, 000->3")
             ("Velocity.Suffix", po::value<std::string>(), "ending of file after procid")
             ("Velocity.Type", po::value<std::string>(), "Type of velocity.")
-            //("Velocity.Trans", po::value<int>()->default_value(0), "0->steady state, 1->Transient state")
+            //("Velocity.Trans", po::interpolate<int>()->default_value(0), "0->steady state, 1->Transient state")
             ("Velocity.TimeStepFile", po::value<std::string>(), "This filename with the time steps")
             ("Velocity.TimeInterp", po::value<std::string>(), "Interpolation type between time steps")
             ("Velocity.RepeatTime", po::value<double>()->default_value(0.0), "The number of days to repeat after the end of time steps")
@@ -118,7 +119,7 @@ namespace ICHNOS{
 
             //General
             ("Other.OwnerThreshold", po::value<double>()->default_value(0.75), "Threshold for the processor ownership")
-            //("General.Threshold", po::value<double>()->default_value(0.001), "Threshold of distance of IDW")
+            //("General.Threshold", po::interpolate<double>()->default_value(0.001), "Threshold of distance of IDW")
             ("Other.FrequencyStat", po::value<int>()->default_value(20), "Frequency of printing stats")
         ;
 
@@ -204,18 +205,9 @@ namespace ICHNOS{
         { // Porosity
             if (vm_vfo.count("Porosity.Value")){
                 std::string porfile = vm_vfo["Porosity.Value"].as<std::string>();
-                if (porfile.empty()){
-                    porType = ic::interpType::INGORE;
-                }
-                else{
-                    if (ic::is_input_scalar(porfile)) {
-                        porType = ic::interpType::SCALAR;
-                        porosityValue = std::stod(porfile);
-                    }
-                    else{
-                        // TODO
-                    }
-                }
+                bool tf = porosity.readData(porfile);
+                if (!tf)
+                    return false;
             }
         }
         return true;
@@ -582,13 +574,8 @@ namespace ICHNOS{
 //                max_calc_time = elapsed.count();
         }
 
-        double porosity = 1.0;
-        if (porType == ic::interpType::CLOUD) {
-            // TODO porosity = ic::interpolateScalarTree(PorosityTree, p);
-        }
-        else if (porType == ic::interpType::SCALAR)
-            porosity = porosityValue;
-        vel = vel * (1/porosity);
+        double por = porosity.interpolate(p);
+        vel = vel * (1/por);
 
         //vv = vel;
         //tm_data.tm = VEL.getTSvalue(i1) * (1-t) + VEL.getTSvalue(i2)*t;
@@ -602,6 +589,7 @@ namespace ICHNOS{
 
     void CloudVel::reset(Streamline& S) {
         //bIsInitialized = false;
+        porosity.reset();
     }
 
     void CloudVel::getVec3Data(std::vector<ic::vec3> &data) {

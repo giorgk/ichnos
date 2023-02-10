@@ -7,6 +7,7 @@
 
 #include "ichnos_structures.h"
 #include "velocity_base.h"
+#include "ichnos_porosity.h"
 
 #if _USEHF > 0
 #include <highfive/H5DataSet.hpp>
@@ -39,7 +40,7 @@ namespace ICHNOS{
         ic::VelTR VEL;
         ic::interpType porType;
         std::vector<std::vector<int>> FaceIds;
-        double porosityValue = 1.0;
+        Porosity_base porosity;
         ic::MeshVelInterpType interp_type = ic::MeshVelInterpType::UNKNOWN;
 
         std::vector<vec3> nds;
@@ -97,24 +98,24 @@ namespace ICHNOS{
                 ("Velocity.LeadingZeros", po::value<int>()->default_value(4), "e.g 0002->4, 000->3")
                 ("Velocity.Suffix", po::value<std::string>(), "ending of file after proc id")
                 ("Velocity.Type", po::value<std::string>(), "Type of velocity.")
-                //("Velocity.IsTransient", po::value<int>()->default_value(0), "0->steady state, 1->Transient state")
+                //("Velocity.IsTransient", po::interpolate<int>()->default_value(0), "0->steady state, 1->Transient state")
                 ("Velocity.TimeStepFile", po::value<std::string>(), "This filename with the time steps")
                 ("Velocity.TimeInterp", po::value<std::string>(), "Interpolation type between time steps")
                 ("Velocity.RepeatTime", po::value<double>()->default_value(0.0), "The number of TimeUnits (e.g. days) to repeat after the and of time steps")
                 ("Velocity.Multiplier", po::value<double>()->default_value(1.0), "This is a multiplier to scale velocity")
-                //("Velocity.nPoints", po::value<int>()->default_value(0), "This is the number of velocity points")
+                //("Velocity.nPoints", po::interpolate<int>()->default_value(0), "This is the number of velocity points")
                 ("MESH2D.FaceIdFile", po::value<std::string>(), "Face ids for each element, Required for FACE type")
                 ("MESH2D.INTERP", po::value<std::string>(), "Type of interpolation. (ELEMENT, NODE or FACE)")
                 ("MESH2D.Nlayers", po::value<int>()->default_value(4), "Number of layers")
                 ("MESH2D.NodeFile", po::value<std::string>(), "An array of the node coordinates")
                 ("MESH2D.Meshfile", po::value<std::string>(), "An array of the Mesh2D ids")
-                //("MESH2D.Nfaces", po::value<int>()->default_value(0), "Number of faces per layer")
-                //("MESH2D.Nelements", po::value<int>()->default_value(0), "Number of elements per layer")
-                //("MESH2D.Nnodes", po::value<int>()->default_value(0), "Number of nodes per layer")
-                //("Velocity.Scale", po::value<double>()->default_value(1.0), "Scale the domain before velocity calculation")
-                //("Velocity.Power", po::value<double>()->default_value(3.0), "Power of the IDW interpolation")
-                //("Velocity.InitDiameter", po::value<double>()->default_value(5000), "Initial diameter")
-                //("Velocity.InitRatio", po::value<double>()->default_value(1), "Initial ratio")
+                //("MESH2D.Nfaces", po::interpolate<int>()->default_value(0), "Number of faces per layer")
+                //("MESH2D.Nelements", po::interpolate<int>()->default_value(0), "Number of elements per layer")
+                //("MESH2D.Nnodes", po::interpolate<int>()->default_value(0), "Number of nodes per layer")
+                //("Velocity.Scale", po::interpolate<double>()->default_value(1.0), "Scale the domain before velocity calculation")
+                //("Velocity.Power", po::interpolate<double>()->default_value(3.0), "Power of the IDW interpolation")
+                //("Velocity.InitDiameter", po::interpolate<double>()->default_value(5000), "Initial diameter")
+                //("Velocity.InitRatio", po::interpolate<double>()->default_value(1), "Initial ratio")
 
 
 
@@ -123,7 +124,7 @@ namespace ICHNOS{
 
                 //General
                 ("General.OwnerThreshold", po::value<double>()->default_value(0.75), "Threshold for the processor ownership")
-                //("General.Threshold", po::value<double>()->default_value(0.001), "Threshold of distance of IDW")
+                //("General.Threshold", po::interpolate<double>()->default_value(0.001), "Threshold of distance of IDW")
                 ("General.FrequencyStat", po::value<int>()->default_value(20), "Frequency of printing stats")
                 ;
 
@@ -259,18 +260,9 @@ namespace ICHNOS{
         { // Porosity
             if (vm_vfo.count("Porosity.Value")){
                 std::string porfile = vm_vfo["Porosity.Value"].as<std::string>();
-                if (porfile.empty()){
-                    porType = ic::interpType::INGORE;
-                }
-                else{
-                    if (ic::is_input_scalar(porfile)) {
-                        porType = ic::interpType::SCALAR;
-                        porosityValue = std::stod(porfile);
-                    }
-                    else{
-                        // TODO
-                    }
-                }
+                bool tf = porosity.readData(porfile);
+                if (!tf)
+                    return false;
             }
 
         }
@@ -426,13 +418,8 @@ namespace ICHNOS{
             }
         }
 
-        double porosity = 1.0;
-        if (porType == ic::interpType::CLOUD) {
-            // TODO porosity = ic::interpolateScalarTree(PorosityTree, p);
-        }
-        else if (porType == ic::interpType::SCALAR)
-            porosity = porosityValue;
-        vel = vel * (1/porosity);
+        double por = porosity.interpolate(p);
+        vel = vel * (1/por);
 
         //tm_data.tm = VEL.getTSvalue(i1) * (1-t) + VEL.getTSvalue(i2)*t;
         //tm_data.idx1 = i1;
@@ -453,7 +440,7 @@ namespace ICHNOS{
     }
 
     void Mesh2DVel::reset(Streamline& S) {
-
+        porosity.reset();
     }
 
     void Mesh2DVel::elementInterpolation(vec3 &vel,

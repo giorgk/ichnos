@@ -119,7 +119,7 @@ namespace ICHNOS {
 			return tf;
 		}
 
-		//! Some methods sets the vector to -99999 when the calculations failed. This methods checks is the vector has this value 
+		//! Some methods sets the vector to -99999 when the calculations failed. This methods checks is the vector has this interpolate
 		bool isInvalid() {
 			bool tf = std::sqrt((x + 99999) * (x + 99999) + (y + 99999) * (y + 99999) + (z + 99999) * (z + 99999)) < 0.0000000001;
 			return tf;
@@ -341,6 +341,7 @@ namespace ICHNOS {
     typedef boost::tuple<cgal_point_3, Pnt_info> pnt_with_info;
     typedef CGAL::Search_traits_adapter<pnt_with_info, CGAL::Nth_of_tuple_property_map<0, pnt_with_info>, Traits_base> search_traits_pnt_info;
     typedef CGAL::Fuzzy_iso_box<search_traits_pnt_info> Fuzzy_iso_box_info;
+    typedef CGAL::Fuzzy_sphere<search_traits_pnt_info> Fuzzy_sphere;
     typedef CGAL::Kd_tree<search_traits_pnt_info> search_tree_info;
     typedef CGAL::Orthogonal_k_neighbor_search<search_traits_pnt_info> K_neighbor_search;
 

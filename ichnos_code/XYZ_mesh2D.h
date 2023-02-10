@@ -74,8 +74,8 @@ namespace ICHNOS{
             ("Velocity.LeadingZeros", po::value<int>()->default_value(4), "e.g 0002->4, 000->3")
             ("Velocity.Suffix", po::value<std::string>(), "ending of file after proc id")
 
-            //("MESH2D.SearchDiameter", po::value<double>()->default_value(5000), "The search diameter")
-        //("MESH2D.FaceIdFile", po::value<std::string>(), "Face ids for each element")
+            //("MESH2D.SearchDiameter", po::interpolate<double>()->default_value(5000), "The search diameter")
+        //("MESH2D.FaceIdFile", po::interpolate<std::string>(), "Face ids for each element")
             ;
         po::store(po::parse_config_file<char>(vf_file.c_str(), velocityFieldOptions,true), vm_vfo);
 
@@ -339,7 +339,7 @@ namespace ICHNOS{
                     }
                 }
             }
-            // parametric value of the z coodrinate
+            // parametric interpolate of the z coodrinate
             bc.z = (p.z - zbot)/(ztop - zbot);
 
             if (velInterpType == MeshVelInterpType::ELEMENT){

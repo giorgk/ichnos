@@ -17,7 +17,7 @@ namespace ICHNOS {
      */
 	enum class VelType {
 	    DETRM, /// The velocity is deterministic
-		//STEADY, /// This is a velocity type where a single value for the velocity is defined
+		//STEADY, /// This is a velocity type where a single interpolate for the velocity is defined
 		//TRANS, /// This is a velocity type where for its point the velocity is defined as a time series
 		STOCH, /// (Experimental) This is a velocity type where the velocity is defined in some stochastic manner
 		RWPT, /// (Experimental) This is for random walk particle tracking
@@ -209,13 +209,13 @@ namespace ICHNOS {
 			// Domain options
 			("Domain.Outline", po::value<std::string >(), "A filename that contains the vertices of the outline polygon")
 			("Domain.TopFile", po::value<std::string >(), "A filename with the point cloud of the top elevation")
-			//("Domain.TopRadius", po::value<double>()->default_value(1000), "Search Radius for top elevation")
-			//("Domain.TopPower", po::value<double>()->default_value(3), "Search Power for top elevation")
+			//("Domain.TopRadius", po::interpolate<double>()->default_value(1000), "Search Radius for top elevation")
+			//("Domain.TopPower", po::interpolate<double>()->default_value(3), "Search Power for top elevation")
 			("Domain.BottomFile", po::value<std::string >(), "A filename with the point cloud of the bottom elevation")
-			//("Domain.BottomRadius", po::value<double>()->default_value(1000), "Search Radius for bottom elevation")
-			//("Domain.BottomPower", po::value<double>()->default_value(3), "Search Power for bottom elevation")
+			//("Domain.BottomRadius", po::interpolate<double>()->default_value(1000), "Search Radius for bottom elevation")
+			//("Domain.BottomPower", po::interpolate<double>()->default_value(3), "Search Power for bottom elevation")
 			("Domain.ProcessorPolys", po::value<std::string >(), "A filename that contains the coordinates of each processor polygon")
-			//("Domain.ExpandedPolys", po::value<std::string >(), "A filename that contains the coordinates of each Expanded polygon")
+			//("Domain.ExpandedPolys", po::interpolate<std::string >(), "A filename that contains the coordinates of each Expanded polygon")
 
 			// Stopping criteria
 			("StoppingCriteria.MaxIterationsPerStreamline", po::value<int>()->default_value(1000), "Maximum number of steps per streamline")
@@ -233,7 +233,7 @@ namespace ICHNOS {
             ("StepConfig.nSteps", po::value<double>()->default_value(4.0), "The number of steps to take within the BBox or the element")
             ("StepConfig.nStepsTime", po::value<double>()->default_value(2.0), "The number of steps to take within a time step")
 			("StepConfig.minExitStepSize", po::value<double>()->default_value(0.1), "Minimum Step Size at the exit")
-            //("StepConfig.UpdateStepSize", po::value<int>()->default_value(1), "Update step size wrt bbox")
+            //("StepConfig.UpdateStepSize", po::interpolate<int>()->default_value(1), "Update step size wrt bbox")
 
 			// Adaptive Step configurations
 
@@ -377,12 +377,12 @@ namespace ICHNOS {
 					Popt.AdaptOpt.MinStepSize = vm_cfg["AdaptStep.MinStepSize"].as<double>();
 					Popt.AdaptOpt.increaseRateChange = vm_cfg["AdaptStep.IncreaseRateChange"].as<double>();
 					if (Popt.AdaptOpt.increaseRateChange < 1) {
-						std::cout << "increaseRateChange should be higher than 1. It gets the default value of 1.5" << std::endl;
+						std::cout << "increaseRateChange should be higher than 1. It gets the default interpolate of 1.5" << std::endl;
 						Popt.AdaptOpt.increaseRateChange = 1.5;
 					}
 					Popt.AdaptOpt.limitUpperDecreaseStep = vm_cfg["AdaptStep.LimitUpperDecreaseStep"].as<double>();
 					if (Popt.AdaptOpt.limitUpperDecreaseStep < 0 || Popt.AdaptOpt.limitUpperDecreaseStep > 1) {
-						std::cout << "limitUpperDecreaseStep should be between 0 and 1. It gets the default value of 0.75" << std::endl;
+						std::cout << "limitUpperDecreaseStep should be between 0 and 1. It gets the default interpolate of 0.75" << std::endl;
 						Popt.AdaptOpt.limitUpperDecreaseStep = 0.75;
 					}
 					Popt.AdaptOpt.ToleranceStepSize = vm_cfg["AdaptStep.Tolerance"].as<double>();
