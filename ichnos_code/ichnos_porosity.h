@@ -32,6 +32,7 @@ namespace ICHNOS{
         double Radius;
         double Power;
         double Threshold;
+        bool InitValuesSet = false;
     };
 
     bool Porosity_base::readData(std::string userInput) {
@@ -95,7 +96,7 @@ namespace ICHNOS{
                 inp >> rad;
                 inp >> pw;
                 inp >> thr;
-                Radius = rad*rad;
+                Radius = rad;
                 Power = pw;
                 Threshold = thr;
 
@@ -141,6 +142,23 @@ namespace ICHNOS{
 
     double Porosity_base::cloudInterp(vec3 p) {
         cgal_point_3 center(p.x, p.y, p.z);
+        if (!InitValuesSet){
+            int ClosestPointId = -9;
+            K_neighbor_search search(Tree, center, 1);
+            for (K_neighbor_search::iterator it = search.begin(); it != search.end(); it++){
+                searchDiameter = boost::get<1>(it->first).diameter;
+                ratioCurrent = boost::get<1>(it->first).ratio;
+                ClosestPointId = boost::get<1>(it->first).id;
+                InitValuesSet = true;
+            }
+            if (ClosestPointId == -9){
+                std::cout << "I can't find any point around "
+                          << p.x << "," << p.y << "," << p.z
+                          << " to calculate porosity. Therefore I return 1" << std::endl;
+                return 1.0;
+            }
+
+        }
         std::vector<boost::tuples::tuple<cgal_point_3, Pnt_info>> tmp;
         while(true){
             tmp.clear();
@@ -191,7 +209,7 @@ namespace ICHNOS{
             else{
                 w = 1 / std::pow(scaled_dist, Power);
                 sumW += w;
-                sumWV = w*PorosityArray[tmp[i].get<1>().id];
+                sumWV += w*PorosityArray[tmp[i].get<1>().id];
             }
         }
         ratioCurrent = tmp_ratio;
@@ -202,6 +220,7 @@ namespace ICHNOS{
     void Porosity_base::reset() {
         searchDiameter = Radius;
         ratioCurrent = ratioInit;
+        InitValuesSet = false;
     }
 
 
