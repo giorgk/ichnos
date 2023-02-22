@@ -48,6 +48,8 @@ namespace ICHNOS {
 		bool RK2Step(const Particle& P, vec3& pnew, vec3& vnew, double& tm, helpVars& pvlu, ExitReason& er);
 		bool RK4Step(const Particle& P, vec3& pnew, vec3& vnew, double& tm, helpVars& pvlu, ExitReason& er);
 		bool RK45Step(const Particle& P, vec3& pnew, vec3& vnew, double& tm, helpVars& pvlu, ExitReason& er);
+        bool RalstonStep(const Particle& P, vec3& pnew, vec3& vnew, double& tm, helpVars& pvlu, ExitReason& er);
+        bool PECEStep(const Particle& P, vec3& pnew, vec3& vnew, double& tm, helpVars& pvlu, ExitReason& er);
 
 		void updateStep(double currentAge, helpVars& pvlu);
 
@@ -449,6 +451,12 @@ namespace ICHNOS {
 		case SolutionMethods::RK45:
 			return RK45Step(P, pnew, vnew, tm, pvlu, er);
 			break;
+        case SolutionMethods::RAL:
+            return RalstonStep(P, pnew, vnew, tm, pvlu, er);
+            break;
+        case SolutionMethods::PECE:
+            return PECEStep(P, pnew, vnew, tm, pvlu, er);
+            break;
 		default:
 			return EulerStep(P, pnew, vnew, tm, pvlu, er);
 			break;
@@ -472,6 +480,67 @@ namespace ICHNOS {
         }
 		return true;
 	}
+
+    bool ParticleTrace::PECEStep(const Particle &P, vec3 &pnew, vec3 &vnew, double &tm, helpVars &pvlu,
+                                 ExitReason &er) {
+        bool tf;
+        double init_tm = tm;
+        double tmp_tm = tm;
+        // Take an Euler step
+        vec3 vn_1, vn, pn_1, pn;
+        tf = EulerStep(P,pn, vn, tmp_tm, pvlu, er);
+        if (!tf) return false;
+        for (int i = 0; i < popt.PECEOpt.Order; ++i){
+
+            vn_1 = P.getV()*0.5 + vn*0.5;
+
+            pn_1 =  P.getP() + vn_1.normalize() * pvlu.actualStep * popt.Direction;
+            if (pn_1.distance(pn.x, pn.y, pn.z) < popt.PECEOpt.Tolerance){
+                break;
+            }
+            else{
+                pn = pn_1;
+                vn = vn_1;
+            }
+        }
+    }
+
+    bool ParticleTrace::RalstonStep(const Particle &P, vec3 &pnew, vec3 &vnew, double &tm, helpVars &pvlu, ExitReason &er) {
+        double init_tm = tm;
+
+        // Take a 2/3 step from the current point using the velocity of the current point
+        vec3 p2 = P.getV().normalize() * (2.0*pvlu.actualStep/3.0) * popt.Direction + P.getP();
+        double tm2 = tm + (2.0*pvlu.actualStep/3.0)*popt.Direction / P.getV().len();
+        // Find the velocity on point p2 that point
+        vec3 v2;
+        er = CheckNewPointAndCalcVelocity(p2, v2, pvlu/*, proc*/, tm2);
+        //DEBUG::displayPVasVex(p2, v2);
+        if (v2.isZero()) return false;
+
+        // take another 2/3 step from the current point using the v2 velocity
+        vec3 p3 = v2.normalize() * (2.0*pvlu.actualStep/3.0) * popt.Direction + P.getP();
+        double tm3 = tm + (2.0*pvlu.actualStep/3.0)*popt.Direction / v2.len();
+        // Find the velocity on point p3 that point
+        vec3 v3;
+        er = CheckNewPointAndCalcVelocity(p3, v3, pvlu/*, proc*/, tm3);
+        //DEBUG::displayPVasVex(p3, v3);
+        if (v3.isZero()) return false;
+
+        vec3 v_m = P.getV()*0.25 + v3*0.75 ;
+
+        pnew = v_m.normalize() * pvlu.actualStep * popt.Direction + P.getP();
+        //DEBUG::displayVectorasVex(pnew);
+        tm += pvlu.actualStep*popt.Direction / v_m.len();
+        er = CheckNewPointAndCalcVelocity(pnew, vnew, pvlu/*, proc*/, tm);
+        if (pvlu.actualStep > popt.StepOpt.minExitStepSize){
+            if (er == ExitReason::EXIT_SIDE || er == ExitReason::EXIT_BOTTOM || er == ExitReason::EXIT_TOP ){
+                pvlu.actualStep = pvlu.actualStep * 0.45;
+                tm = init_tm;
+                return RalstonStep(P, pnew, vnew, tm, pvlu, er);
+            }
+        }
+        return true;
+    }
 
 	bool ParticleTrace::RK2Step(const Particle& P, vec3& pnew, vec3& vnew, double& tm, helpVars& pvlu, ExitReason& er) {
         double init_tm = tm;
@@ -508,9 +577,9 @@ namespace ICHNOS {
 		// See RK2Step
 		int proc = world.rank();
 		// Step 1 ----------------------------
-		// take a half step from the current point using the velocity of that point
-		vec3 p2 = P.getV().normalize() * (pvlu.actualStep/2) * popt.Direction + P.getP();
-        double tm2 = tm + (pvlu.actualStep/2)*popt.Direction / P.getV().len();
+		// take a half step from the current point using the velocity of the current point
+		vec3 p2 = P.getV().normalize() * (pvlu.actualStep/2.0) * popt.Direction + P.getP();
+        double tm2 = tm + (pvlu.actualStep/2.0)*popt.Direction / P.getV().len();
 		// Find the velocity on point p2 that point
 		vec3 v2;
 		er = CheckNewPointAndCalcVelocity(p2, v2, pvlu/*, proc*/, tm2);
@@ -519,8 +588,8 @@ namespace ICHNOS {
 
 		// Step 2 ----------------------------
 		// take a half step from the current point using the v2 velocity
-		vec3 p3 = v2.normalize() * (pvlu.actualStep/2) * popt.Direction + P.getP();
-        double tm3 = tm + (pvlu.actualStep/2)*popt.Direction / v2.len();
+		vec3 p3 = v2.normalize() * (pvlu.actualStep/2.0) * popt.Direction + P.getP();
+        double tm3 = tm + (pvlu.actualStep/2.0)*popt.Direction / v2.len();
 		// Find the velocity on point p3 that point
 		vec3 v3;
 		er = CheckNewPointAndCalcVelocity(p3, v3, pvlu/*, proc*/, tm3);

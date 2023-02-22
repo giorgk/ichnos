@@ -158,7 +158,7 @@ namespace ICHNOS {
 		:
 		world(world_in)
 	{
-        Version = "0.4.11";
+        Version = "0.4.12";
 	}
 
 	bool options::readInput(int argc, char* argv[]) {
@@ -242,6 +242,10 @@ namespace ICHNOS {
 			("AdaptStep.IncreaseRateChange", po::value<double>()->default_value(1.5), "Maximum Step Size in units of length")
 			("AdaptStep.LimitUpperDecreaseStep", po::value<double>()->default_value(0.75), "Upper limit of decrease step size")
 			("AdaptStep.Tolerance", po::value<double>()->default_value(0.1), "Tolerance when the RK45 is used")
+
+            ("PECE.Order", po::value<int>()->default_value(2), "Number of PECE iterations")
+            ("PECE.Tolerance", po::value<double>()->default_value(0.1), "Tolerance of the PECE method")
+
 
 			// InputOutput
 			("InputOutput.ParticleFile", po::value<std::string >(), "A filename with the initial positions of particles")
@@ -387,6 +391,15 @@ namespace ICHNOS {
 					}
 					Popt.AdaptOpt.ToleranceStepSize = vm_cfg["AdaptStep.Tolerance"].as<double>();
 				}
+
+                {//PECE options
+                    Popt.PECEOpt.Order = vm_cfg["PECE.Order"].as<int>();
+                    if (Popt.PECEOpt.Order < 2){
+                        std::cout << "The minimum order for PECE is 2. Setting PECE order = 2" << std::endl;
+                        Popt.PECEOpt.Order = 2;
+                    }
+                    Popt.PECEOpt.Tolerance = vm_cfg["PECE.Tolerance"].as<double>();
+                }
 
 				{// InputOutput
 					Popt.ParticleFile = vm_cfg["InputOutput.ParticleFile"].as<std::string>();

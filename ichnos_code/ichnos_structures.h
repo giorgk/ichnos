@@ -620,6 +620,8 @@ namespace ICHNOS {
 		RK2,
 		RK4,
 		RK45,
+        RAL,
+        PECE,
 		INVALID
 	};
 
@@ -739,12 +741,18 @@ namespace ICHNOS {
         double limitUpperDecreaseStep;
 	};
 
+    struct PECEStepOptions{
+        int Order;
+        double Tolerance;
+    };
+
 
 	struct ParticleOptions {
 		
 		SolutionMethods method;
         StepOptions StepOpt;
         AdaptStepOptions AdaptOpt;
+        PECEStepOptions PECEOpt;
 		// The maximum number of iteratiosn that each streamline is alloweded not to expand
 		int StuckIterations;
 
