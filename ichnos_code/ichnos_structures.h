@@ -634,6 +634,8 @@ namespace ICHNOS {
 		SolutionMethodMap.insert(std::pair<std::string, SolutionMethods>("RK2", SolutionMethods::RK2));
 		SolutionMethodMap.insert(std::pair<std::string, SolutionMethods>("RK4", SolutionMethods::RK4));
 		SolutionMethodMap.insert(std::pair<std::string, SolutionMethods>("RK45", SolutionMethods::RK45));
+        SolutionMethodMap.insert(std::pair<std::string, SolutionMethods>("RAL", SolutionMethods::RAL));
+        SolutionMethodMap.insert(std::pair<std::string, SolutionMethods>("PECE", SolutionMethods::PECE));
 		it = SolutionMethodMap.find(method);
 		if (it != SolutionMethodMap.end())
 			return it->second;
@@ -649,6 +651,8 @@ namespace ICHNOS {
 		SolutionMethodMap.insert(std::pair<SolutionMethods, std::string>(SolutionMethods::RK2, "RK2"));
 		SolutionMethodMap.insert(std::pair<SolutionMethods, std::string>(SolutionMethods::RK4, "RK4"));
 		SolutionMethodMap.insert(std::pair<SolutionMethods, std::string>(SolutionMethods::RK45, "RK45"));
+        SolutionMethodMap.insert(std::pair<SolutionMethods, std::string>(SolutionMethods::RAL, "RAL"));
+        SolutionMethodMap.insert(std::pair<SolutionMethods, std::string>(SolutionMethods::PECE, "PECE"));
 		it = SolutionMethodMap.find(m);
 		if (it != SolutionMethodMap.end())
 			return it->second;

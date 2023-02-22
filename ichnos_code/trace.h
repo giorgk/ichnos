@@ -503,6 +503,7 @@ namespace ICHNOS {
                 vn = vn_1;
             }
         }
+        return true;
     }
 
     bool ParticleTrace::RalstonStep(const Particle &P, vec3 &pnew, vec3 &vnew, double &tm, helpVars &pvlu, ExitReason &er) {

@@ -351,8 +351,10 @@ namespace ICHNOS {
 
 				{// Step configuration
 					SolutionMethods method = castMethod2Enum(vm_cfg["StepConfig.Method"].as<std::string>());
-					if (method == SolutionMethods::INVALID)
-						return false;
+					if (method == SolutionMethods::INVALID) {
+                        std::cout << "Invalid StepConfig Method" << std::endl;
+                        return false;
+                    }
 					else {
 						Popt.method = method;
 					}
