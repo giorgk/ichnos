@@ -488,13 +488,16 @@ namespace ICHNOS {
         double tmp_tm = tm;
         // Take an Euler step
         vec3 vn_1, vn, pn_1, pn;
+        //DBG::displayPVasVex(P.getP(), P.getV());
         tf = EulerStep(P,pn, vn, tmp_tm, pvlu, er);
+        //DBG::displayPVasVex(pn, vn);
         if (!tf) return false;
         for (int i = 0; i < popt.PECEOpt.Order; ++i){
 
             vn_1 = P.getV()*0.5 + vn*0.5;
 
             pn_1 =  P.getP() + vn_1.normalize() * pvlu.actualStep * popt.Direction;
+            //DBG::displayPVasVex(pn_1, vn_1);
             if (pn_1.distance(pn.x, pn.y, pn.z) < popt.PECEOpt.Tolerance){
                 break;
             }
@@ -503,6 +506,7 @@ namespace ICHNOS {
                 vn = vn_1;
             }
         }
+        pnew = pn_1;
         return true;
     }
 
@@ -518,16 +522,7 @@ namespace ICHNOS {
         //DEBUG::displayPVasVex(p2, v2);
         if (v2.isZero()) return false;
 
-        // take another 2/3 step from the current point using the v2 velocity
-        vec3 p3 = v2.normalize() * (2.0*pvlu.actualStep/3.0) * popt.Direction + P.getP();
-        double tm3 = tm + (2.0*pvlu.actualStep/3.0)*popt.Direction / v2.len();
-        // Find the velocity on point p3 that point
-        vec3 v3;
-        er = CheckNewPointAndCalcVelocity(p3, v3, pvlu/*, proc*/, tm3);
-        //DEBUG::displayPVasVex(p3, v3);
-        if (v3.isZero()) return false;
-
-        vec3 v_m = P.getV()*0.25 + v3*0.75 ;
+        vec3 v_m = P.getV()*0.25 + v2*0.75 ;
 
         pnew = v_m.normalize() * pvlu.actualStep * popt.Direction + P.getP();
         //DEBUG::displayVectorasVex(pnew);
