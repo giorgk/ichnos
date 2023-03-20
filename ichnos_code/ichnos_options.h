@@ -192,7 +192,7 @@ namespace ICHNOS {
 				std::cout << "|------------------|" << std::endl;
 				std::cout << "|      ICHNOS      |" << std::endl;
 				std::cout << "| Version : " << Version <<" |" << std::endl;
-				std::cout << "|    by  giorgk    |" << std::endl;
+				std::cout << "|  gwt.ucdavis.edu |" << std::endl;
 				std::cout << "|------------------|" << std::endl;
 			}
 			return false;
