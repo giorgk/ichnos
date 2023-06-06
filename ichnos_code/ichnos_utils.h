@@ -941,7 +941,7 @@ namespace ICHNOS {
 					return true;
 				}
 				std::string line, er_str;
-				int eid, sid, pid, eid_prev, sid_prev;
+				int eid, sid, pid, eid_prev, sid_prev, pid_prev;
 				gPart particle;
 				gStream streamline;
 				streamlineMap::iterator eIt;
@@ -957,6 +957,7 @@ namespace ICHNOS {
 						inp >> er_str;
 					}
 					else {
+                        pid_prev = pid;
 						inp >> particle.p.x;
 						inp >> particle.p.y;
 						inp >> particle.p.z;
@@ -978,7 +979,9 @@ namespace ICHNOS {
 							sIt = eIt->second.find(sid);
 						if (sIt != eIt->second.end()) {
 							if (pid < 0) {
-								sIt->second.ex = castExitReasons2Enum(er_str);
+                                int lastPID = sIt->second.particles.rbegin()->first;
+                                if (lastPID == pid_prev)
+								    sIt->second.ex = castExitReasons2Enum(er_str);
 							}
 							else {
 								sIt->second.particles.insert(std::pair<int, gPart>(pid, particle));

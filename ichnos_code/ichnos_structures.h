@@ -991,7 +991,7 @@ namespace ICHNOS {
 		return RKcoef;
 	}
 
-	// A temporary structure that is used durign the gathering phase
+	// A temporary structure that is used during the gathering phase
 	struct gPart {
 		vec3 p;
 		vec3 v;
