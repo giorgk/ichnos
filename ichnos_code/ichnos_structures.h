@@ -248,6 +248,34 @@ namespace ICHNOS {
 
 	// Nstates Nmonths Nvelocities
 	typedef std::vector<std::vector<std::vector<vec3>>> stoch_vel;
+    namespace STOCH{
+        struct pool{
+            std::vector<vec3> velocityPool;
+            void addVelocity(vec3 &v){
+                velocityPool.push_back(v);
+            }
+        };
+
+        struct MCVpools{
+            int nStates;
+            int nPeriods;
+            std::vector<std::vector<pool>> velocityPools;
+            void addVelocity(int iState, int iPeriod, vec3 &v){
+                velocityPools[iState][iPeriod].addVelocity(v);
+            }
+        };
+
+        class MarkovChainVelocity{
+        public:
+            MarkovChainVelocity();
+            void init(int nStates, int nPeriods);
+            void addVelocity(int iState, int iPeriod, vec3 &v);
+            vec3 getVelocity(int iState, int iPeriod, int idx);
+        private:
+            MCVpools mcvp;
+        };
+    }
+
 
 	class Stochastic_Velocity {
 	public:

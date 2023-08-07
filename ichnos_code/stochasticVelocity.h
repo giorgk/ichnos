@@ -15,9 +15,10 @@ namespace STOCH {
 	public:
 		MarkovChainVel(boost::mpi::communicator& world_in, ic::XYZ_base &XYZ_in);
 		bool readVelocityField(std::string vf_file);
-		void calcVelocity(ic::vec3& vel,
-                          std::vector<int>& ids,
-                          std::vector<double>& weights,
+		void calcVelocity(ic::vec3& p, ic::vec3& vel,
+                          std::map<int, double>& proc_map,
+                          ic::helpVars& pvlu,
+                          bool& out,
                           double time = 0);
 		void reset();
 		void updateStep(double& step);
@@ -175,11 +176,12 @@ namespace STOCH {
         return true;
 	}
 
-	void MarkovChainVel::calcVelocity(ic::vec3& vel,
-                                      std::vector<int>& ids,
-                                      std::vector<double>& weights,
+	void MarkovChainVel::calcVelocity(ic::vec3& p, ic::vec3& vel,
+                                      std::map<int, double>& proc_map,
+                                      ic::helpVars& pvlu,
+                                      bool& out,
                                       double time) {
-	    ic::vec3 p;
+
 		// If this is the first point of this streamline we will carry out one additional range search
 		ll.zero();
 		uu.zero();

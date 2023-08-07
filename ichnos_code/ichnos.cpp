@@ -98,6 +98,9 @@ int main(int argc, char* argv[])
                     }
                     case ICHNOS::VelType::STOCH:
                     {
+                        world.barrier();
+                        STOCH::MarkovChainVel MCV(world, XYZcloud);
+                        tf = MCV.readVelocityField(OPT.getVelFname());
                         break;
                     }
                     case ICHNOS::VelType::RWPT:
@@ -129,6 +132,7 @@ int main(int argc, char* argv[])
                 switch (OPT.velocityFieldType){
                     case ICHNOS::VelType::DETRM:
                     {
+                        world.barrier();
                         ICHNOS::Mesh2DVel VF(world, XYZmesh);
                         tf = VF.readVelocityField(OPT.getVelFname());
                         world.barrier();
@@ -141,6 +145,13 @@ int main(int argc, char* argv[])
                         if (world.rank() == 0)
                             std::cout << "Tracing particles..." << std::endl;
                         pt.Trace();
+                    }
+                    case ICHNOS::VelType::STOCH:
+                    {
+                        world.barrier();
+                        STOCH::MarkovChainVel MCV(world, XYZmesh);
+                        tf = MCV.readVelocityField(OPT.getVelFname());
+
                     }
                 }
 
