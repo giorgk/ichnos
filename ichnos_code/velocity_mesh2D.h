@@ -32,7 +32,7 @@ namespace ICHNOS{
                           double time = 0);
         void reset(Streamline& S);
         double stepTimeupdate(helpVars& pvlu);
-        void updateStep(double &step);
+        void updateStep(helpVars& pvlu);
         void getVec3Data(std::vector<ic::vec3> &data);
         ic::MeshVelInterpType getInterpType(){return interp_type;};
 
@@ -431,7 +431,7 @@ namespace ICHNOS{
         return VEL.stepTimeUpdate(pvlu, stepOpt);
     }
 
-    void Mesh2DVel::updateStep(double& step) {
+    void Mesh2DVel::updateStep(helpVars& pvlu) {
 
     }
 

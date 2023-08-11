@@ -93,6 +93,7 @@ namespace ICHNOS{
             ("Velocity.Prefix", po::value<std::string>(), "Prefix for the filename")
             ("Velocity.LeadingZeros", po::value<int>()->default_value(4), "e.g 0002->4, 000->3")
             ("Velocity.Suffix", po::value<std::string>(), "ending of file after procid")
+            //("Velocity.MultipleFiles", po::value<int>(0), "0 all info is contained into one file, otherwise set 1")
             ("Velocity.Type", po::value<std::string>(), "Type of velocity.")
             ("Velocity.TimeStepFile", po::value<std::string>(), "Time step file")
             ("CLOUD.Power", po::value<double>()->default_value(3.0), "Power of the IDW interpolation")
@@ -114,6 +115,7 @@ namespace ICHNOS{
             suffix = ".ich";
         }
         int leadZeros = vm_vfo["Velocity.LeadingZeros"].as<int>();
+        //bool multipleFiles = vm_vfo["Velocity.MultipleFiles"].as<int>() != 0;
         vtype = castVelType2Enum(vm_vfo["Velocity.Type"].as<std::string>());
         if (vtype == VelType::INVALID) {
             std::cout << vm_vfo["Velocity.Type"].as<std::string>() << " is an invalid velocity type" << std::endl;
@@ -121,7 +123,7 @@ namespace ICHNOS{
         }
         std::string fileXYZ;
 
-        bool istrans = false;//  = vm_vfo["Velocity.Trans"].as<int>() != 0;
+        bool istrans = false;
         if (vm_vfo.count("Velocity.TimeStepFile")){
             std::string TSfile = vm_vfo["Velocity.TimeStepFile"].as<std::string>();
             if (!TSfile.empty()){
@@ -129,17 +131,15 @@ namespace ICHNOS{
             }
         }
 
-
         int proc_id = world.rank();
         if (runAsThread){
             proc_id = 0;
         }
 
         if (!istrans || suffix.compare(".h5") == 0){
-
             fileXYZ = prefix + num2Padstr(/*dbg_rank*/proc_id, leadZeros) + suffix;
         }
-        else if (istrans){
+        else {
             fileXYZ = prefix + "XYZ_" + num2Padstr(/*dbg_rank*/proc_id, leadZeros) + suffix;
         }
 

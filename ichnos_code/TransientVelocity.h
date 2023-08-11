@@ -44,7 +44,7 @@ namespace ICHNOS{
                           double time = 0);
         void reset(Streamline& S);
         double stepTimeupdate(helpVars& pvlu);
-        void updateStep(double& step);
+        void updateStep(helpVars& pvlu);
         void getVec3Data(std::vector<ic::vec3>& data);
 
     protected:
@@ -107,6 +107,7 @@ namespace ICHNOS{
             ("Velocity.Prefix", po::value<std::string>(), "Prefix for the filename")
             ("Velocity.LeadingZeros", po::value<int>()->default_value(4), "e.g 0002->4, 000->3")
             ("Velocity.Suffix", po::value<std::string>(), "ending of file after procid")
+            //("Velocity.MultipleFiles", po::value<int>(0), "0 all info is contained into one file, otherwise set 1")
             ("Velocity.Type", po::value<std::string>(), "Type of velocity.")
             //("Velocity.Trans", po::interpolate<int>()->default_value(0), "0->steady state, 1->Transient state")
             ("Velocity.TimeStepFile", po::value<std::string>(), "This filename with the time steps")
@@ -185,6 +186,7 @@ namespace ICHNOS{
                 Suffix = ".ich";
             }
             leadingZeros = vm_vfo["Velocity.LeadingZeros"].as<int>();
+            //multipleFiles = vm_vfo["Velocity.MultipleFiles"].as<int>() != 0;
 
 
             nSteps = TimeSteps.size()-1;
@@ -602,7 +604,7 @@ namespace ICHNOS{
         return VEL.stepTimeUpdate(pvlu, stepOpt);
     }
 
-    void CloudVel::updateStep(double &step) {
+    void CloudVel::updateStep(helpVars& pvlu) {
         std::cout << "The Code should never be here!!!" << std::endl;
         /*
         double stepLen, stepTime;

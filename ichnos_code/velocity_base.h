@@ -25,7 +25,7 @@ namespace ICHNOS {
                                   double tm = 0) {}
 		virtual void reset(Streamline& S){}
 		virtual double stepTimeupdate(helpVars& pvlu){return 0;}
-		virtual void updateStep(double& step){}
+		virtual void updateStep(helpVars& pvlu){}
 		virtual void getVec3Data(std::vector<vec3>& data){}
 		
 		bool bIsInGhostArea(std::map<int, double> proc_map);
@@ -46,6 +46,7 @@ namespace ICHNOS {
 		int leadingZeros;
         double multiplier = 1.0;
         bool isVeltrans;
+        //bool multipleFiles;
 
 	};
 

@@ -248,108 +248,147 @@ namespace ICHNOS {
 
 	// Nstates Nmonths Nvelocities
 	typedef std::vector<std::vector<std::vector<vec3>>> stoch_vel;
-    namespace STOCH{
-        struct pool{
-            std::vector<vec3> velocityPool;
-            void addVelocity(vec3 &v){
-                velocityPool.push_back(v);
-            }
-        };
 
-        struct MCVpools{
-            int nStates;
-            int nPeriods;
-            std::vector<std::vector<pool>> velocityPools;
-            void addVelocity(int iState, int iPeriod, vec3 &v){
-                velocityPools[iState][iPeriod].addVelocity(v);
-            }
-        };
+    struct pool{
+        std::vector<int> velocityIndexPool;
+        void addVelocity(int idx){
+            velocityIndexPool.push_back(idx);
+        }
+        int poolSize(){
+            return velocityIndexPool.size();
+        }
+        int indexAt(int idx){
+            return velocityIndexPool[idx];
+        }
+    };
 
-        class MarkovChainVelocity{
-        public:
-            MarkovChainVelocity();
-            void init(int nStates, int nPeriods);
-            void addVelocity(int iState, int iPeriod, vec3 &v);
-            vec3 getVelocity(int iState, int iPeriod, int idx);
-        private:
-            MCVpools mcvp;
-        };
+    class MCVpools{
+    public:
+        MCVpools(){};
+        bool readPoolData(std::string poolfile);
+        void addVelocity(int iState, int iPeriod, int idx){
+            velocityPools[iState][iPeriod].addVelocity(idx);
+        }
+        int poolSize(int iState, int iPeriod){
+            return velocityPools[iState][iPeriod].poolSize();
+        }
+        int getVelocity(int iState, int iPeriod, int idx){
+            return velocityPools[iState][iPeriod].indexAt(idx);
+        }
+        void init(int nS, int nP);
+
+    private:
+        int nStates;
+        int nPeriods;
+        std::vector<std::vector<pool>> velocityPools;
+    };
+
+    void MCVpools::init(int nS, int nP){
+        nStates = nS;
+        nPeriods = nP;
+        std::vector<pool> tmp(nPeriods);
+        for (int i = 0; i < nStates; ++i){
+            velocityPools.push_back(tmp);
+        }
+    }
+
+    bool MCVpools::readPoolData(std::string poolfile){
+        std::ifstream datafile(poolfile.c_str());
+        if (!datafile.good()) {
+            std::cout << "Can't open the file " << poolfile << std::endl;
+            return false;
+        }
+        else{
+            int istate, iper, idx;
+            std::string line;
+            while (getline(datafile, line)){
+                if (line.size() > 1){
+                    std::istringstream inp(line.c_str());
+                    inp >> iper;
+                    inp >> istate;
+                    inp >> idx;
+                    addVelocity(istate-1, iper-1, idx-1);
+                }
+            }
+        }
+        datafile.close();
+        return true;
     }
 
 
-	class Stochastic_Velocity {
-	public:
-		Stochastic_Velocity();
-		Stochastic_Velocity(int nstates, int nperiods);
-		void initStatesPeriods(int nstates, int nperiods);
-		void initStatesPeriods();
-		void addValue(int istate, int iperiod, vec3 value);
-		int nValues(int istate, int iperiod);
-		void getValue(int istate, int iperiod, int r, vec3& value);
+	//class Stochastic_Velocity {
+	//public:
+	//	Stochastic_Velocity();
+	//	Stochastic_Velocity(int nstates, int nperiods);
+	//	void initStatesPeriods(int nstates, int nperiods);
+	//	void initStatesPeriods();
+	//	void addValue(int istate, int iperiod, vec3 value);
+	//	int nValues(int istate, int iperiod);
+	//	void getValue(int istate, int iperiod, int r, vec3& value);
 
-	private:
-		int Nstates;
-		int Nperiods;
-		stoch_vel VelocityField;
-	};
+	//private:
+	//	int Nstates;
+	//	int Nperiods;
+	//	stoch_vel VelocityField;
+	//};
 
-	Stochastic_Velocity::Stochastic_Velocity()
-		:
-		Nstates(-9),
-		Nperiods(-9)
-	{}
+	//Stochastic_Velocity::Stochastic_Velocity()
+	//	:
+	//	Nstates(-9),
+	//	Nperiods(-9)
+	//{}
 
-	Stochastic_Velocity::Stochastic_Velocity(int nstates, int nperiods)
-		:
-		Nstates(nstates),
-		Nperiods(nperiods)
-	{}
+	//Stochastic_Velocity::Stochastic_Velocity(int nstates, int nperiods)
+	//	:
+	//	Nstates(nstates),
+	//	Nperiods(nperiods)
+	//{}
 
-	void Stochastic_Velocity::initStatesPeriods() {
-		VelocityField.clear();
-		std::vector< std::vector<vec3> > mon_vec;
-		std::vector<vec3> vel_vec;
-		for (int i = 0; i < Nperiods; i++) {
-			mon_vec.push_back(vel_vec);
-		}
-		for (int i = 0; i < Nstates; i++) {
-			VelocityField.push_back(mon_vec);
-		}
-	}
+	//void Stochastic_Velocity::initStatesPeriods() {
+	//	VelocityField.clear();
+	//	std::vector< std::vector<vec3> > mon_vec;
+	//	std::vector<vec3> vel_vec;
+	//	for (int i = 0; i < Nperiods; i++) {
+	//		mon_vec.push_back(vel_vec);
+	//	}
+	//	for (int i = 0; i < Nstates; i++) {
+	//		VelocityField.push_back(mon_vec);
+	//	}
+	//}
 
-	void Stochastic_Velocity::initStatesPeriods(int nstates, int nperiods) {
-		Nstates = nstates;
-		Nperiods = nperiods;
-		initStatesPeriods();
-	}
+	//void Stochastic_Velocity::initStatesPeriods(int nstates, int nperiods) {
+	//	Nstates = nstates;
+	//	Nperiods = nperiods;
+	//	initStatesPeriods();
+	//}
 
-	void Stochastic_Velocity::addValue(int istate, int iperiod, vec3 value) {
-		VelocityField[istate][iperiod].push_back(value);
-	}
-	int Stochastic_Velocity::nValues(int istate, int iperiod) {
-		return static_cast<int>(VelocityField[istate][iperiod].size());
-	}
+	//void Stochastic_Velocity::addValue(int istate, int iperiod, vec3 value) {
+	//	VelocityField[istate][iperiod].push_back(value);
+	//}
+	//int Stochastic_Velocity::nValues(int istate, int iperiod) {
+	//	return static_cast<int>(VelocityField[istate][iperiod].size());
+	//}
 
-	void Stochastic_Velocity::getValue(int istate, int iperiod, int r, vec3& value) {
-		value = VelocityField[istate][iperiod][r];
-	}
+	//void Stochastic_Velocity::getValue(int istate, int iperiod, int r, vec3& value) {
+	//	value = VelocityField[istate][iperiod][r];
+	//}
 
 
 
 	// Data structure for stochastic simulation
-	struct STOCH_data {
-		int proc = -9;
-		int id = -9;
-		double diameter = 0;
-		double ratio = 0;
-		Stochastic_Velocity v;
-	};
+	//struct STOCH_data {
+	//	int proc = -9;
+	//	int id = -9;
+	//	double diameter = 0;
+	//	double ratio = 0;
+	//	Stochastic_Velocity v;
+	//};
 
 	// Stochastic tree
-	typedef boost::tuple<cgal_point_3, STOCH_data> pnt_stoch;
-	typedef CGAL::Search_traits_adapter<pnt_stoch, CGAL::Nth_of_tuple_property_map<0, pnt_stoch>, Traits_base> search_traits_stoch;
-	typedef CGAL::Fuzzy_iso_box<search_traits_stoch> Fuzzy_iso_box_stoch;
-	typedef CGAL::Kd_tree<search_traits_stoch> search_tree_stoch;
+	//typedef boost::tuple<cgal_point_3, STOCH_data> pnt_stoch;
+	//typedef CGAL::Search_traits_adapter<pnt_stoch, CGAL::Nth_of_tuple_property_map<0, pnt_stoch>, Traits_base> search_traits_stoch;
+	//typedef CGAL::Fuzzy_iso_box<search_traits_stoch> Fuzzy_iso_box_stoch;
+	//typedef CGAL::Kd_tree<search_traits_stoch> search_tree_stoch;
 
     enum class infoType {Nelem, Nface};
     enum class coordDim {vx, vy, vz};
@@ -1171,13 +1210,16 @@ namespace ICHNOS {
 	public:
 		TransitionProbabilityMatrix() {};
 		bool readData(std::string filename);
+        bool readTimesPerPeriod(std::string filename);
 		void setNstates(int n);
 		int nextState(int previousState, vec3 p, double r);
+        double periodLength(int iper){ return timesPerPeriod[iper];}
 	private:
 		int Nstates = 0;
 		int Nmatrices = 0;
 		std::vector<boostPolygon> TPMpolygons;
 		std::vector<std::vector<std::vector<double>>> TPMatrices;
+        std::vector<double> timesPerPeriod;
 	};
 
 	void TransitionProbabilityMatrix::setNstates(int n) {
@@ -1204,9 +1246,28 @@ namespace ICHNOS {
 		return newstate;
 	}
 
+    bool TransitionProbabilityMatrix::readTimesPerPeriod(std::string filename) {
+        std::ifstream datafile(filename.c_str());
+        if (!datafile.good()) {
+            std::cout << "Can't open the file " << filename << std::endl;
+            return false;
+        }
+        else{
+            std::string line;
+            double tm;
+            while (getline(datafile, line)){
+                std::istringstream inp(line.c_str());
+                inp >> tm;
+                timesPerPeriod.push_back(tm);
+            }
+        }
+        datafile.close();
+        return true;
+    }
+
 	bool TransitionProbabilityMatrix::readData(std::string filename) {
 		if (Nstates == 0) {
-			std::cout << "The number ofstates is zero" << std::endl;
+			std::cout << "The number of states is zero" << std::endl;
 			return false;
 		}
 

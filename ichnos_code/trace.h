@@ -303,7 +303,7 @@ namespace ICHNOS {
 		//S.getLastParticle().displayAsVEX(true);
 
 		int count_iterations = 0;
-		//DEBUG::displayParticleasVex(S.getLastParticle(), true);
+		ICHNOS::DBG::displayPVasVex(S.getLastParticle().getP(), v);
 		while (er == ExitReason::NO_EXIT) {
 			//if (S.size()>1){// Check if there is rapid change in the d
 			//	vec3 v_prev = S.getParticleBeforeLast().getV();
@@ -318,7 +318,7 @@ namespace ICHNOS {
 			bool foundPoint = findNextPoint(S.getLastParticle(), p, v, tm, S.PVLU, er);
 			if (foundPoint) {
 				//er = CheckNewPointAndCalcVelocity(p, v/*, proc*/, tm);
-				//ICHNOS::DBG::displayPVasVex(p, v);
+				ICHNOS::DBG::displayPVasVex(p, v);
 				S.AddParticle(Particle(p, v, S.getLastParticle(), tm));
 				//S.getLastParticle().displayAsVEX(true);
 				// In the unlike event that the velocity of the point is zero
@@ -330,6 +330,9 @@ namespace ICHNOS {
 				Domain.bisInNearAttractor(p, isNearAttractor);
 				if (isNearAttractor)
 					return ExitReason::ATTRACT;
+				if (VF.getVelType() == VelType::STOCH){
+					VF.updateStep(S.PVLU);
+				}
 			}
 
 			count_iterations++;
