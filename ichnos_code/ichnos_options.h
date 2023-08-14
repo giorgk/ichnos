@@ -262,6 +262,7 @@ namespace ICHNOS {
             ("Other.RunAsThread", po::value<int>()->default_value(0), "Run multi Core as multi-Thread")
 			("Other.Version", po::value<std::string >(), "The version of the Ichnos. (Check ichnos.exe -v)")
             ("Other.OutFreq", po::value<double>()->default_value(0.0), "Show progress every x % of particles. Set 0 to deactivate")
+            ("Other.PrintVex", po::value<double>()->default_value(0.0), "Print points to console output as vex code")
 
 		;
 
@@ -303,6 +304,7 @@ namespace ICHNOS {
                     Popt.RunAsThread = vm_cfg["Other.RunAsThread"].as<int>() != 0;
                     Dopt.RunAsThread = Popt.RunAsThread;
                     Popt.OutputFrequency = vm_cfg["Other.OutFreq"].as<double>();
+                    Popt.printVex = vm_cfg["Other.PrintVex"].as<int>() !=0;
                 }
 
 				{// Velocity Options

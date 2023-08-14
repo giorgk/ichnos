@@ -847,6 +847,7 @@ namespace ICHNOS {
 		std::string OutputFile;
 		bool printH5;
 		bool printASCII;
+        bool printVex;
 		// During gathering puut all streamlines into one file.
 		// If false each file will contain ParticlesInParallel streamlines per file
 		bool gatherOneFile;
