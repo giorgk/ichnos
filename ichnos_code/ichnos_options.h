@@ -158,7 +158,7 @@ namespace ICHNOS {
 		:
 		world(world_in)
 	{
-        Version = "0.5.01";
+        Version = "0.5.02";
 	}
 
 	bool options::readInput(int argc, char* argv[]) {
@@ -203,7 +203,7 @@ namespace ICHNOS {
 		config_options.add_options()
 			// Velocity Options
 			("Velocity.XYZType", po::value<std::string>(), "Type of point coordinates e.g CLOUD/MESH2D")
-			("Velocity.Type", po::value<std::string>(), "Type of velocity. (STEADY or TRANS)")
+			("Velocity.Type", po::value<std::string>(), "Type of velocity. (DETRM, STOCH or RWPT(experimental))")
 			("Velocity.ConfigFile", po::value<std::string >(), "Set configuration file for the velocity field")
 
 			// Domain options
@@ -262,7 +262,7 @@ namespace ICHNOS {
             ("Other.RunAsThread", po::value<int>()->default_value(0), "Run multi Core as multi-Thread")
 			("Other.Version", po::value<std::string >(), "The version of the Ichnos. (Check ichnos.exe -v)")
             ("Other.OutFreq", po::value<double>()->default_value(0.0), "Show progress every x % of particles. Set 0 to deactivate")
-            ("Other.PrintVex", po::value<double>()->default_value(0.0), "Print points to console output as vex code")
+            ("Other.PrintVex", po::value<int>()->default_value(0.0), "Print points to console output as vex code")
 
 		;
 
