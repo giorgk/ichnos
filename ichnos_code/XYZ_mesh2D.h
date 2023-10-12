@@ -34,6 +34,7 @@ namespace ICHNOS{
     private:
         int nLay;
         int nElements;
+        int nNodes;
         //double diameter;
         double initial_diameter = 0.0;
 
@@ -115,6 +116,7 @@ namespace ICHNOS{
         for (unsigned int i = 0; i < data.size(); ++i){
             nodes.push_back(vec3(data[i][0], data[i][1], 0.0));
         }
+        nNodes = nodes.size();
         //MSH.setNodes(nodes);
         return true;
     }
@@ -383,6 +385,9 @@ namespace ICHNOS{
     int XYZ_MESH2D::getINTInfo(ICHNOS::infoType I) {
         if (I == infoType::Nelem){
             return nElements;
+        }
+        else if(I == infoType::NNodes){
+            return nNodes;
         }
         return 0;
     }

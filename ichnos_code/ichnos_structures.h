@@ -390,7 +390,7 @@ namespace ICHNOS {
 	//typedef CGAL::Fuzzy_iso_box<search_traits_stoch> Fuzzy_iso_box_stoch;
 	//typedef CGAL::Kd_tree<search_traits_stoch> search_tree_stoch;
 
-    enum class infoType {Nelem, Nface};
+    enum class infoType {Nelem, Nface, NNodes};
     enum class coordDim {vx, vy, vz};
     enum class TimeInterpType {NEAREST, LINEAR};
     enum class MeshVelInterpType{ELEMENT, NODE, FACE, UNKNOWN};

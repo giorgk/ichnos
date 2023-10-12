@@ -154,16 +154,16 @@ int main(int argc, char* argv[])
                         if (world.rank() == 0)
                             std::cout << "Tracing particles..." << std::endl;
                         pt.Trace();
+                        break;
                     }
                     case ICHNOS::VelType::STOCH:
                     {
                         world.barrier();
                         ICHNOS::MarkovChainVelCloud MCV(world, XYZmesh);
                         tf = MCV.readVelocityField(OPT.getVelFname());
-
+                        break;
                     }
                 }
-
                 break;
             }
        }

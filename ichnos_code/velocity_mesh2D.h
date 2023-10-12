@@ -52,7 +52,7 @@ namespace ICHNOS{
         int FrequencyStat;
         int nPoints;
         int nSteps;
-        int nLayers;
+        //int nLayers;
         int nFaces;
         int nElements;
         int nNodes;
@@ -283,6 +283,8 @@ namespace ICHNOS{
             {
                 bool tf = readXYZVelocity();
                 if (!tf){return false;}
+                nElements = XYZ.getINTInfo(infoType::Nelem);
+                nNodes = XYZ.getINTInfo(infoType::NNodes);
                 break;
             }
             case ic::MeshVelInterpType::FACE:
