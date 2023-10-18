@@ -36,7 +36,7 @@ namespace ICHNOS{
         void getVec3Data(std::vector<ic::vec3> &data);
         ic::MeshVelInterpType getInterpType(){return interp_type;};
 
-    private:
+    protected:
         ic::VelTR VEL;
         ic::interpType porType;
         std::vector<std::vector<int>> FaceIds;

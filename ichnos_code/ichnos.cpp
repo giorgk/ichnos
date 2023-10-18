@@ -159,8 +159,17 @@ int main(int argc, char* argv[])
                     case ICHNOS::VelType::STOCH:
                     {
                         world.barrier();
-                        ICHNOS::MarkovChainVelCloud MCV(world, XYZmesh);
+                        ICHNOS::MarkovChainVelMESH2D MCV(world, XYZmesh);
                         tf = MCV.readVelocityField(OPT.getVelFname());
+                        if (!tf){return 0;}
+                        world.barrier();
+                        OPT.Popt.StepOpt.nStepsTime =-1.0; // For the stochastic velocity the number of steps per time step doesn't make sense
+                        MCV.SetStepOptions(OPT.Popt.StepOpt);
+                        ICHNOS::ParticleTrace pt(world, MCV, domain, OPT.Popt);
+                        world.barrier();
+                        if (world.rank() == 0)
+                            std::cout << "Tracing particles..." << std::endl;
+                        pt.Trace();
                         break;
                     }
                 }

@@ -6,6 +6,7 @@
 #include "velocity_base.h"
 #include "ichnos_XYZ_base.h"
 #include "TransientVelocity.h"
+#include "velocity_mesh2D.h"
 
 namespace po = boost::program_options;
 namespace ic = ICHNOS;
@@ -55,7 +56,7 @@ namespace ICHNOS {
 
 	MarkovChainVelCloud::MarkovChainVelCloud(boost::mpi::communicator& world_in, ic::XYZ_base &XYZ_in)
 		:
-            CloudVel(world_in, XYZ_in)
+        CloudVel(world_in, XYZ_in)
 	{}
 
 	void MarkovChainVelCloud::reset(Streamline& S) {
@@ -132,7 +133,7 @@ namespace ICHNOS {
 			std::cout << "The number of states must be positive" << std::endl;
             return false;
 		}
-        return true;
+        return false;
 	}
 
 	void MarkovChainVelCloud::calcVelocity(ic::vec3& p, ic::vec3& vel,
@@ -491,4 +492,209 @@ namespace ICHNOS {
 			currentPeriod = Nperiods - 1;
 		}
 	}
+
+
+
+    class MarkovChainVelMESH2D : public ICHNOS::Mesh2DVel{
+    public:
+        MarkovChainVelMESH2D(boost::mpi::communicator& world_in, ic::XYZ_base &XYZ_in);
+        bool readVelocityField(std::string vf_file);
+        void calcVelocity(ic::vec3& p, ic::vec3& vel,
+                          std::map<int, double>& proc_map,
+                          ic::helpVars& pvlu,
+                          bool& out,
+                          double time = 0);
+        void reset(Streamline& S);
+        void updateStep(helpVars& pvlu);
+    private:
+        int Nstates = -9;
+        int Nperiods = -9;
+        ic::TransitionProbabilityMatrix TPM;
+        ICHNOS::SingletonGenerator* RG = RG->getInstance();
+        MCVpools MCVP;
+
+        bool bIsInitialized = false;
+        int currentState;
+        int currentPeriod;
+        int initial_state = 0;
+        int initial_period = 0;
+        int UpdatePeriod = 0;
+
+        double TimeSinceLastUpdate = 0;
+        void updatePeriod(bool add);
+    };
+
+    MarkovChainVelMESH2D::MarkovChainVelMESH2D(boost::mpi::communicator &world_in, ic::XYZ_base &XYZ_in)
+        :
+        Mesh2DVel(world_in, XYZ_in)
+    {}
+
+    void MarkovChainVelMESH2D::reset(ICHNOS::Streamline &S) {
+        Mesh2DVel::reset(S);
+        bIsInitialized = false;
+        currentState = initial_state;
+        currentPeriod = initial_period;
+        TimeSinceLastUpdate = 0;
+    }
+
+    bool MarkovChainVelMESH2D::readVelocityField(std::string vf_file) {
+        Mesh2DVel::readVelocityField(vf_file);
+        if (world.rank() == 0)
+            std::cout << "Markov Chain related parameters: " << vf_file << std::endl;
+
+        po::options_description velocityFieldOptions("Velocity field options");
+        po::variables_map vm_vfo;
+        velocityFieldOptions.add_options()
+            // MarkovChain
+            ("MarkovChain.Nstates", po::value<int>(), "Number of states of the Markov chain model")
+            ("MarkovChain.Nperiods", po::value<int>(), "Number of periods of the Markov chain model")
+            ("MarkovChain.UpdatePeriod", po::value<int>()->default_value(1), "An integer that shows after which period the state should be updated")//The input must be based on 1. It is converted to zero based in code
+            ("MarkovChain.InitState", po::value<int>()->default_value(1), "The initial State for each particle")
+            ("MarkovChain.InitPeriod", po::value<int>()->default_value(1), "The initial Period for each particle")
+            ("MarkovChain.TPmatrix", po::value<std::string>(), "Transition probability matrix")
+            ("MarkovChain.StateSequence", po::value<std::string>(), "State Sequence file")
+            ("MarkovChain.VelocityPools", po::value<std::string>(), "Velocity pools")
+            ("MarkovChain.TimesPerPeriod", po::value<std::string>(), "Time per period. it is used with TPmatrix option only")
+            ;
+
+        po::store(po::parse_config_file<char>(vf_file.c_str(), velocityFieldOptions, true), vm_vfo);
+        // Transition probabilities
+        Nstates = vm_vfo["MarkovChain.Nstates"].as<int>();
+        initial_state = vm_vfo["MarkovChain.InitState"].as<int>() - 1;
+        if (initial_state >= Nstates)
+            initial_state = 0;
+        Nperiods = vm_vfo["MarkovChain.Nperiods"].as<int>();
+        initial_period = vm_vfo["MarkovChain.InitPeriod"].as<int>() - 1;
+        if (initial_period >= Nperiods)
+            initial_period = 0;
+        UpdatePeriod = vm_vfo["MarkovChain.UpdatePeriod"].as<int>() - 1;
+
+        if (Nstates > 0){
+            TPM.setNstates(Nstates);
+            std::string tpmatrixfile = vm_vfo["MarkovChain.TPmatrix"].as<std::string>();
+            if (!tpmatrixfile.empty()){
+                TPM.readData(tpmatrixfile);
+                std::string timesperiodfile = vm_vfo["MarkovChain.TimesPerPeriod"].as<std::string>();
+                TPM.readTimesPerPeriod(timesperiodfile);
+            }
+            else{
+                std::string sequenfile = vm_vfo["MarkovChain.StateSequence"].as<std::string>();
+                if (sequenfile.empty()){
+                    std::cout << "Both TPmatrix and StateSequence are empty!!" << std::endl;
+                    return false;
+                }
+                else{
+                    //TODO
+                    //Write reader for reading sequence file
+                }
+            }
+
+            MCVP.init(Nstates, Nperiods);
+            std::string poolfile = vm_vfo["MarkovChain.VelocityPools"].as<std::string>();
+            bool tf = MCVP.readPoolData(poolfile);
+            return tf;
+        }
+        else{
+            std::cout << "The number of states must be positive" << std::endl;
+            return false;
+        }
+        return false;
+    }
+
+    void MarkovChainVelMESH2D::calcVelocity(ic::vec3 &p, ic::vec3 &vel,
+                                            std::map<int, double> &proc_map,
+                                            ic::helpVars &pvlu,
+                                            bool &out,
+                                            double time) {
+
+        std::vector<int> ids;
+        std::vector<double> weights;
+        XYZ.calcWeights(p, ids,weights, proc_map, pvlu, out);
+        if (!out){
+            vel.makeInvalid();
+            return;
+        }
+
+        if (ids[0] == -9 || ids[1] == -9){
+            vel.makeInvalid();
+            return;
+        }
+
+        // Pick a random time index from the pool
+        int poolSize = MCVP.poolSize(currentState, currentPeriod);
+        int idx = RG->randomNumber(0, poolSize);
+        int itime = MCVP.getVelocity(currentState, currentPeriod,idx);
+
+        switch (interp_type){
+            case ic::MeshVelInterpType::ELEMENT:
+            {
+                elementInterpolation(vel, ids, itime, itime, 0.0);
+                break;
+            }
+            case ic::MeshVelInterpType::NODE:
+            {
+                nodeInterpolation(vel, ids, weights, itime, itime, 0.0);
+                break;
+            }
+            case ic::MeshVelInterpType::FACE:
+            {
+                faceInterpolation(vel, ids, weights, itime, itime, 0.0);
+                break;
+            }
+        }
+        double por = porosity.interpolate(p);
+        vel = vel * (1/por);
+    }
+
+    void MarkovChainVelMESH2D::updateStep(ICHNOS::helpVars &pvlu) {
+        double currentPeriodLength = TPM.periodLength(currentPeriod);
+        if (stepOpt.dir > 0){
+            TimeSinceLastUpdate +=pvlu.actualStep;
+            while (true){
+                if (TimeSinceLastUpdate < currentPeriodLength){
+                    break;
+                }
+                TimeSinceLastUpdate = TimeSinceLastUpdate - currentPeriodLength;
+                updatePeriod(true);
+                currentPeriodLength = TPM.periodLength(currentPeriod);
+                if (currentPeriod == UpdatePeriod) {
+                    double r = RG->randomNumber();
+                    currentState = TPM.nextState(currentState, pvlu.pp, r);
+                }
+            }
+        }
+        else{
+            TimeSinceLastUpdate -=pvlu.actualStep;
+            while (true){
+                if (std::abs(TimeSinceLastUpdate) < currentPeriodLength){
+                    break;
+                }
+                TimeSinceLastUpdate = TimeSinceLastUpdate + currentPeriodLength;
+                updatePeriod(false);
+                currentPeriodLength = TPM.periodLength(currentPeriod);
+                if (currentPeriod == UpdatePeriod) {
+                    double r = RG->randomNumber();
+                    currentState = TPM.nextState(currentState, pvlu.pp, r);
+                }
+            }
+        }
+    }
+
+    void MarkovChainVelMESH2D::updatePeriod(bool add) {
+        if (add){
+            currentPeriod += 1;
+        }
+        else{
+            currentPeriod -= 1;
+        }
+        if (currentPeriod >= Nperiods){
+            currentPeriod = 0;
+        }
+        else if (currentPeriod < 0){
+            currentPeriod = Nperiods - 1;
+        }
+    }
+
+
+
 }
