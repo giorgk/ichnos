@@ -804,13 +804,16 @@ namespace ICHNOS {
         int iter = 0;
         double Simulation_time = 0;
         while (true){
-            Streamlines4thread.clear();
             particle_index_end = particle_index_start + popt.ParticlesInParallel;
             if (particle_index_end + static_cast<int>(static_cast<double>(popt.ParticlesInParallel)*0.3) > static_cast<int>(AllStreamlines.size())){
                 particle_index_end = AllStreamlines.size();
             }
 
             for (int ireal = 0; ireal < popt.Nrealizations; ++ireal){
+				if (popt.Nrealizations > 1){
+					std::cout << "------- Realization " << ireal << " --------" << std::endl;
+				}
+				Streamlines4thread.clear();
                 auto start = std::chrono::high_resolution_clock::now();
                 if (world.size() > 1 || (world.size() == 1 && popt.Nthreads == 1)){
                     for (int i = particle_index_start + world.rank(); i < particle_index_end; i = i + world.size()){

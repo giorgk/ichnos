@@ -108,7 +108,7 @@ namespace ICHNOS{
                 ("MESH2D.INTERP", po::value<std::string>(), "Type of interpolation. (ELEMENT, NODE or FACE)")
                 ("MESH2D.Nlayers", po::value<int>()->default_value(4), "Number of layers")
                 ("MESH2D.NodeFile", po::value<std::string>(), "An array of the node coordinates")
-                ("MESH2D.Meshfile", po::value<std::string>(), "An array of the Mesh2D ids")
+                ("MESH2D.MeshFile", po::value<std::string>(), "An array of the Mesh2D ids")
                 //("MESH2D.Nfaces", po::interpolate<int>()->default_value(0), "Number of faces per layer")
                 //("MESH2D.Nelements", po::interpolate<int>()->default_value(0), "Number of elements per layer")
                 //("MESH2D.Nnodes", po::interpolate<int>()->default_value(0), "Number of nodes per layer")
@@ -235,7 +235,7 @@ namespace ICHNOS{
                 }
 
                 {// read mesh
-                    std::string mshfile = vm_vfo["MESH2D.Meshfile"].as<std::string>();
+                    std::string mshfile = vm_vfo["MESH2D.MeshFile"].as<std::string>();
                     std::vector<std::vector<int>> tmp;
                     tf = READ::read2Darray(mshfile,4,tmp);
                     if (!tf) { return false;}
@@ -251,7 +251,7 @@ namespace ICHNOS{
                 }
             }
             else if (interp_type == ic::MeshVelInterpType::NODE){
-                std::string meshfile = vm_vfo["MESH2D.Meshfile"].as<std::string>();
+                std::string meshfile = vm_vfo["MESH2D.MeshFile"].as<std::string>();
                 tf = readFaceIds(meshfile);
                 if (!tf) { return false;}
             }

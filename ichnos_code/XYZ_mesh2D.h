@@ -69,7 +69,7 @@ namespace ICHNOS{
         po::variables_map vm_vfo;
         velocityFieldOptions.add_options()
             ("MESH2D.NodeFile", po::value<std::string>(), "An array of the node coordinates")
-            ("MESH2D.Meshfile", po::value<std::string>(), "An array of the Mesh2D ids")
+            ("MESH2D.MeshFile", po::value<std::string>(), "An array of the Mesh2D ids")
             ("MESH2D.ElevationFile", po::value<std::string>(), "An array of the Elevations")
             ("MESH2D.Nlayers", po::value<int>()->default_value(4), "Number of layers")
             ("Velocity.LeadingZeros", po::value<int>()->default_value(4), "e.g 0002->4, 000->3")
@@ -81,7 +81,7 @@ namespace ICHNOS{
         po::store(po::parse_config_file<char>(vf_file.c_str(), velocityFieldOptions,true), vm_vfo);
 
         std::string nodefile = vm_vfo["MESH2D.NodeFile"].as<std::string>();
-        std::string Meshfile = vm_vfo["MESH2D.Meshfile"].as<std::string>();
+        std::string Meshfile = vm_vfo["MESH2D.MeshFile"].as<std::string>();
         std::string Elevfile = vm_vfo["MESH2D.ElevationFile"].as<std::string>();
 
         nLay = vm_vfo["MESH2D.Nlayers"].as<int>();
