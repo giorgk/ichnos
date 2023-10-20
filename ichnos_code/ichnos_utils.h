@@ -413,7 +413,7 @@ namespace ICHNOS {
         std::cout << " uv coords were set to the center of element" << std::endl;
     }
 
-    void QuadInverseMappingV1(vec3 &p, vec3 &p1, vec3 &p2, vec3 &p3, vec3 &p4, vec3 &uv){
+    void QuadInverseMappingV1(vec3 &p, vec3 &p1, vec3 &p2, vec3 &p3, vec3 &p4, vec3 &uv, bool &tf){
         //DBG::displayVectorMatlab(p);
         //DBG::displayVectorMatlab(p1);
         //DBG::displayVectorMatlab(p2);

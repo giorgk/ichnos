@@ -99,12 +99,16 @@ namespace ICHNOS{
                 return false;
             }
             else{
+                bool tf1;
                 QuadInverseMappingV1(p,
                                      nodes[mesh[elid][0]],
                                      nodes[mesh[elid][1]],
                                      nodes[mesh[elid][2]],
                                      nodes[mesh[elid][3]],
-                                     uv);
+                                     uv, tf1);
+                if (!tf1){
+                    std::cout << "[" << mesh[elid][0] << " " << mesh[elid][1] << " " << mesh[elid][2] << " " << mesh[elid][3] << "]" << std::endl;
+                }
                 //QuadInverseMapping(p,
                 //                  nodes[mesh[elid][0]],
                 //                  nodes[mesh[elid][1]],
