@@ -99,7 +99,7 @@ namespace ICHNOS{
                 return false;
             }
             else{
-                bool tf1;
+                bool tf1 = true;
                 QuadInverseMappingV1(p,
                                      nodes[mesh[elid][0]],
                                      nodes[mesh[elid][1]],

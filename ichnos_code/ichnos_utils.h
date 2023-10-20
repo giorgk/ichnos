@@ -414,6 +414,7 @@ namespace ICHNOS {
     }
 
     void QuadInverseMappingV1(vec3 &p, vec3 &p1, vec3 &p2, vec3 &p3, vec3 &p4, vec3 &uv, bool &tf){
+        tf = true;
         //DBG::displayVectorMatlab(p);
         //DBG::displayVectorMatlab(p1);
         //DBG::displayVectorMatlab(p2);
@@ -442,6 +443,7 @@ namespace ICHNOS {
         if (std::abs(A) < 0.00000001){
             if (std::abs(B) < 0.00000001){
                 printFailedInverseQuadInfo(p,p1,p2,p3,p4);
+                tf = false;
             }
             else{
                 u = -C/(2.0*B);
@@ -451,6 +453,7 @@ namespace ICHNOS {
             double xt = B*B-A*C;
             if (xt < 0.0){
                 printFailedInverseQuadInfo(p,p1,p2,p3,p4);
+                tf = false;
             }
             else{
                 u = (-B+std::sqrt(xt))/A;
@@ -477,6 +480,7 @@ namespace ICHNOS {
         if (std::abs(A) < 0.00000001){
             if (std::abs(B) < 0.00000001){
                 printFailedInverseQuadInfo(p,p1,p2,p3,p4);
+                tf = false;
             }
             else{
                 v = -C/(2.0*B);
@@ -486,6 +490,7 @@ namespace ICHNOS {
             double yt = B*B-A*C;
             if (yt < 0.0){
                 printFailedInverseQuadInfo(p,p1,p2,p3,p4);
+                tf = false;
             }
             else{
                 v = (-B-std::sqrt(yt))/A;
