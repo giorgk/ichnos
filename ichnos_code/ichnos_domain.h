@@ -390,7 +390,8 @@ namespace ICHNOS {
                             if (idx != 0){
                                 idx = idx-1;
                                 if (idx < 0){
-                                    std::cout << "I found a mesh index for top/Bottom function equal to " << idx++ << std::endl;
+                                    idx = idx + 1;
+                                    std::cout << "I found a mesh index for top/Bottom function equal to " << idx << std::endl;
                                     return false;
                                 }
                                 tmp.push_back(idx);

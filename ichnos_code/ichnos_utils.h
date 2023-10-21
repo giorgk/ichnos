@@ -58,7 +58,7 @@ namespace ICHNOS {
 	void linspace(double min, double max, int n, std::vector<double>& v){
 		v.clear();
 		int iterator = 0;
-		for (int i = 0; i <= n-2; i++){
+		for (int i = 0; i <= n-2; ++i){
 			double temp = min + i*(max-min)/(floor(static_cast<double>(n)) - 1);
 			v.insert(v.begin() + iterator, temp);
         	iterator += 1;
@@ -97,7 +97,7 @@ namespace ICHNOS {
 				temp.z = zval[i];
 				S.push_back(Streamline(eid, sid, Particle(temp, releaseTime)));
 				//DEBUG::displayVectorasVex(temp);
-				sid++;
+				sid = sid + 1;
 			}
 		}
 	}
@@ -119,7 +119,7 @@ namespace ICHNOS {
 			pp.z = bot + h*i;
 			//Particle(pp).displayAsVEX(false);
 			S.push_back(Streamline(eid, sid, Particle(pp)));
-			sid++;
+			sid = sid + 1;
 		}
 	}
 
@@ -331,7 +331,7 @@ namespace ICHNOS {
             if (iter > 20 && abs(err_prev - err_best) < 0.01 ){
                 break;
             }
-            iter++;
+            iter = iter + 1;
             if (iter > 50){
                 break;
             }
@@ -375,7 +375,7 @@ namespace ICHNOS {
             local2GlobalCoord(u, v, p1, p2, p3, p4, puv);
             //DBG::displayVectorMatlab(puv);
             dst = p2d.distance(puv.x, puv.y, puv.z);
-            iter++;
+            iter = iter + 1;
             if (iter > 2000 || dst > 99999999) {
                 bool tf1 = QuadUVApprox(p,p1,p2,p3,p4,uv);
                 u = uv.x;
@@ -573,7 +573,7 @@ namespace ICHNOS {
                             tmp[i+1] = id-1;
                         }
                         data.push_back(tmp);
-                        idx++;
+                        idx = idx + 1;
                     }
                 }
                 return true;
@@ -631,7 +631,7 @@ namespace ICHNOS {
                         inp >> td.diameter;
                         inp >> td.ratio;
                         td.id = cnt;
-                        cnt++;
+                        cnt = cnt + 1;
 
                         pp.push_back(cgal_point_3(x, y, z));
                         dd.push_back(td);
@@ -696,7 +696,7 @@ namespace ICHNOS {
 						inp >> npsat_data.proc;
 						npsat_data.v = npsat_data.v * VelocityMultiplier;
 						npsat_data.id = ii;
-						ii++;
+						ii = ii + 1;
 						data.push_back(std::make_pair(cgal_point(x, y, z), npsat_data));
 					}
 				}
@@ -735,7 +735,7 @@ namespace ICHNOS {
 						inp >> npsat_data.ratio;
 						npsat_data.v = npsat_data.v * VelocityMultiplier;
 						npsat_data.id = ii;
-						ii++;
+						ii = ii + 1;
 						//dd.push_back(std::make_pair(cgal_point_3(x, y, z), npsat_data));
 						pp.push_back(cgal_point_3(x, y, z));
 						dd.push_back(npsat_data);
@@ -1079,8 +1079,8 @@ namespace ICHNOS {
             bool tf = read2Darray<double>(filename, nSteps, data);
             if (tf){
                 int nPoints = static_cast<int>(data.size());
-                for (int i = 0; i < nPoints; i++){
-                    for (int j = 0; j < nSteps; j++){
+                for (int i = 0; i < nPoints; ++i){
+                    for (int j = 0; j < nSteps; ++j){
                         VEL.setVELvalue(data[i][j]*multiplier, i, j, dim);
                     }
                 }
@@ -1138,7 +1138,7 @@ namespace ICHNOS {
             else{
                 std::string line;
                 double tmp, vx, vy, vz;
-                for (int i = 0; i < nPoints; i++){
+                for (int i = 0; i < nPoints; ++i){
                     getline(datafile, line);
                     std::istringstream inp(line.c_str());
                     for (int j = 0; j < nInfoSkip; ++j){
@@ -1182,7 +1182,7 @@ namespace ICHNOS {
                 << "\n does not match the number of steps in the Time step file " << nSteps << std::endl;
                 return false;
             }
-            for (int i = 0; i < VX[0].size(); i++){
+            for (int i = 0; i < VX[0].size(); ++i){
                 for (int j = 0; j < VX.size(); ++j) {
                     VEL.setVELvalue(VX[j][i]*multiplier, i, j, ICHNOS::coordDim::vx);
                     VEL.setVELvalue(VY[j][i]*multiplier, i, j, ICHNOS::coordDim::vy);
@@ -1568,7 +1568,7 @@ namespace ICHNOS {
 		bool outcome;
 		try {
 			double value = std::stod(input);
-			value++; // something to surpress the warning
+			value = value + 1; // something to surpress the warning
 			outcome = true;
 		}
 		catch (...) {
@@ -1587,7 +1587,7 @@ namespace ICHNOS {
 
 			template <typename T>
 			void PrintVectorData(std::vector<std::vector<T> >& v, int myrank, std::string vname) {
-				for (int i = 0; i < v.size(); i++){
+				for (int i = 0; i < v.size(); ++i){
 					for (int j = 0; j < v[i].size(); ++j) {
 						std::cout << "Proc: " << myrank << ": " << vname << "[" << i << "][" << j << "] = " << v[i][j] << std::endl;
 					}
@@ -1612,7 +1612,7 @@ namespace ICHNOS {
 			output.resize(n_proc);
 			std::vector<int> temp(n_proc, 1);
 			std::vector<int> displs(n_proc);
-			for (int i = 1; i < n_proc; i++)
+			for (int i = 1; i < n_proc; ++i)
 				displs[i] = displs[i - 1] + 1;
 
 			MPI_Allgatherv(&N, // This is what this processor will send to every other
@@ -1647,7 +1647,7 @@ namespace ICHNOS {
 			unsigned int n_proc = data.size();
 			std::vector<int> displs(n_proc);
 			displs[0] = 0;
-			for (unsigned int i = 1; i < n_proc; i++)
+			for (unsigned int i = 1; i < n_proc; ++i)
 				displs[i] = displs[i - 1] + N_data_per_proc[i - 1];
 			int totdata = displs[n_proc - 1] + N_data_per_proc[n_proc - 1];
 			
@@ -1703,7 +1703,7 @@ namespace ICHNOS {
 			std::vector<T> Allscalar(n_proc);
 			std::vector<int> temp(n_proc, 1);
 			std::vector<int> displs(n_proc);
-			for (int i = 1; i < n_proc; i++)
+			for (int i = 1; i < n_proc; ++i)
 				displs[i] = displs[i - 1] + 1;
 
 			MPI_Allgatherv(&scalar, // This is what this processor will send to every other
@@ -1725,7 +1725,7 @@ namespace ICHNOS {
 			std::vector<T> Allscalar(n_proc);
 			std::vector<int> temp(n_proc, 1);
 			std::vector<int> displs(n_proc);
-			for (unsigned int i = 1; i < n_proc; i++)
+			for (unsigned int i = 1; i < n_proc; ++i)
 				displs[i] = displs[i - 1] + 1;
 
 			MPI_Allgatherv(&scalar, // This is what this processor will send to every other

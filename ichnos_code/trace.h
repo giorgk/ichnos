@@ -174,7 +174,7 @@ namespace ICHNOS {
 			//int nRemainingstreamlines = ALL_Streamlines.size();
 			//std::cout << "Proc " << my_rank << " N_part2send = " << N_part2send << std::endl;
 			MPI::sumScalar<int>(nRemainingstreamlines, nproc, world, MPI_INT);
-			outer_iter++;
+			outer_iter = outer_iter + 1;
 			
 			if (nRemainingstreamlines == 0)
 				break;
@@ -244,7 +244,7 @@ namespace ICHNOS {
 			//	std::cout << "exit after " << trace_iter << " Iteration. DONT FORGET TO REMOVE THIS Condition" << std::endl;
 			//	break;
 			//}
-			trace_iter++;
+			trace_iter = trace_iter + 1;
 			//std::cout << trace_iter << std::endl;
 			if (trace_iter > popt.MaxProcessorExchanges) {
 				if (my_rank == 0) {
@@ -337,7 +337,7 @@ namespace ICHNOS {
 				}
 			}
 
-			count_iterations++;
+			count_iterations = count_iterations + 1;
 			if (count_iterations > popt.MaxIterationsPerStreamline)
 				return ExitReason::MAX_INNER_ITER;
 			if (S.StuckIter() > popt.StuckIterations)
@@ -648,7 +648,7 @@ namespace ICHNOS {
 			}
 
 		// Step 2 ----------------------------
-		istep++;
+		istep = istep + 1;
 		v_m = v1 * CF[istep][1] + v2 * CF[istep][2];
 		p3 = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
 		double tm3 = tm + CF[istep][0] * ssdir * v_m.len();
@@ -663,7 +663,7 @@ namespace ICHNOS {
 			}
 
 		// Step 3 ----------------------------
-		istep++;
+        istep = istep + 1;
 		v_m = v1 * CF[istep][1] + v2 * CF[istep][2] + v3 * CF[istep][3];
 		p4 = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
 		double tm4 = tm + CF[istep][0] * ssdir * v_m.len();
@@ -672,7 +672,7 @@ namespace ICHNOS {
 		if (v4.isZero()) return false;
 
 		// Step 4 ----------------------------
-		istep++;
+        istep = istep + 1;
 		v_m = v1 * CF[istep][1] + v2 * CF[istep][2] + v3 * CF[istep][3] + v4 * CF[istep][4];
 		p5 = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
         double tm5 = tm + CF[istep][0] * ssdir * v_m.len();
@@ -681,7 +681,7 @@ namespace ICHNOS {
 		if (v5.isZero()) return false;
 
 		// Step 5 ----------------------------
-		istep++;
+        istep = istep + 1;
 		v_m = v1 * CF[istep][1] + v2 * CF[istep][2] + v3 * CF[istep][3] + v4 * CF[istep][4] + v5 * CF[istep][5];
 		p6 = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
         double tm6 = tm + CF[istep][0] * ssdir * v_m.len();
@@ -696,11 +696,11 @@ namespace ICHNOS {
 			}
 
 		//// Calculate the point using two different paths
-		istep++;
+        istep = istep + 1;
 		v_m = v1 * CF[istep][1] + v3 * CF[istep][2] + v4 * CF[istep][3] + v5 * CF[istep][4];
 		yn = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
 		//DEBUG::displayVectorasVex(yn);
-		istep++;
+        istep = istep + 1;
 		v_m = v1 * CF[istep][1] + v3 * CF[istep][2] + v4 * CF[istep][3] + v5 * CF[istep][4] + v6 * CF[istep][5];
 		zn = v_m.normalize() * CF[istep][0] * ssdir + P.getP();
 		//DEBUG::displayVectorasVex(zn);
@@ -873,7 +873,7 @@ namespace ICHNOS {
                 break;
             }
             particle_index_start = particle_index_end;
-            iter++;
+            iter = iter + 1;
         }
         std::cout << "Total simulation Time : " << Simulation_time << std::endl;
     }
@@ -903,7 +903,7 @@ namespace ICHNOS {
 
                 ExitReason er = traceInner(Streamlines4thread[i]);
                 Streamlines4thread[i].Close(er);
-                cnt++;
+                cnt = cnt + 1;
             }
         }
         else{

@@ -1035,7 +1035,7 @@ namespace ICHNOS {
 		if (expand)
 			IterationsWithoutExpansion = 0;
 		else
-			IterationsWithoutExpansion++;
+			IterationsWithoutExpansion = IterationsWithoutExpansion + 1;
 	}
 
 	void Streamline::Close(ExitReason ER) {
@@ -1230,7 +1230,7 @@ namespace ICHNOS {
 	int TransitionProbabilityMatrix::nextState(int previousState, vec3 p, double r) {
 		int ipoly = 0;
 		int newstate = 0;
-		for (int i = 0; i < Nmatrices; i++) {
+		for (int i = 0; i < Nmatrices; ++i) {
 			bool tf = boost::geometry::within(boostPoint(p.x, p.y), TPMpolygons[i]);
 			if (tf) {
 				ipoly = i;
@@ -1238,7 +1238,7 @@ namespace ICHNOS {
 			}
 		}
 
-		for (int i = 0; i < Nstates; i++) {
+		for (int i = 0; i < Nstates; ++i) {
 			if (r < TPMatrices[ipoly][previousState][i]){
 				newstate = i;
 				break;
@@ -1287,7 +1287,7 @@ namespace ICHNOS {
 
 				inp >> Nmatrices;
 			}
-			for (int imat = 0; imat < Nmatrices; imat++) {
+			for (int imat = 0; imat < Nmatrices; ++imat) {
 				TPMatrices.push_back(std::vector<std::vector<double>>(Nstates, std::vector<double>(Nstates)));
 				{
 					{
@@ -1297,7 +1297,7 @@ namespace ICHNOS {
 					}
 					boostPolygon polygon;
 					std::vector<boostPoint> polygonPoints;
-					for (int j = 0; j < nverts; j++) {
+					for (int j = 0; j < nverts; ++j) {
 						getline(datafile, line);
 						std::istringstream inp(line.c_str());
 						inp >> x;
@@ -1308,10 +1308,10 @@ namespace ICHNOS {
 					boost::geometry::correct(polygon);
 					TPMpolygons.push_back(polygon);
 
-					for (int i = 0; i < Nstates; i++) {
+					for (int i = 0; i < Nstates; ++i) {
 						getline(datafile, line);
 						std::istringstream inp(line.c_str());
-						for (int j = 0; j < Nstates; j++) {
+						for (int j = 0; j < Nstates; ++j) {
 							inp >> x;
 							TPMatrices[imat][i][j] = x;
 						}
@@ -1360,7 +1360,7 @@ namespace ICHNOS {
                     inp >> z;
                     pp.push_back(cgal_point_3(x, y, z));
                     dd.push_back(idx);
-                    idx++;
+                    idx = idx + 1;
                     inp >> ncells;
                     inp >> nvels;
                     std::vector<int> cells;
@@ -1394,7 +1394,7 @@ namespace ICHNOS {
         cgal_point_3 query(p.x, p.y, p.z);
         K_neighbor_search_int search(Tree, query, 1);
         int idx = -9;
-        for (K_neighbor_search_int::iterator it = search.begin(); it != search.end(); it++){
+        for (K_neighbor_search_int::iterator it = search.begin(); it != search.end(); ++it){
             idx = boost::get<1>(it->first);
         }
         if (idx == -9){
