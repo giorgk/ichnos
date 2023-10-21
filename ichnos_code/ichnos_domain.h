@@ -388,7 +388,7 @@ namespace ICHNOS {
                         for (int j = 0; j < 4; ++j){
                             inp1 >> idx;
                             if (idx != 0){
-                                idx = idx--;
+                                idx = idx-1;
                                 if (idx < 0){
                                     std::cout << "I found a mesh index for top/Bottom function equal to " << idx++ << std::endl;
                                     return false;
