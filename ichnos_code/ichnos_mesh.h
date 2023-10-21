@@ -107,7 +107,7 @@ namespace ICHNOS{
                                      nodes[mesh[elid][3]],
                                      uv, tf1);
                 if (!tf1){
-                    std::cout << "[" << mesh[elid][0] << " " << mesh[elid][1] << " " << mesh[elid][2] << " " << mesh[elid][3] << "]" << std::endl;
+                    std::cout << "IchnosMesh[" << mesh[elid][0] << " " << mesh[elid][1] << " " << mesh[elid][2] << " " << mesh[elid][3] << "]" << std::endl;
                 }
                 //QuadInverseMapping(p,
                 //                  nodes[mesh[elid][0]],
