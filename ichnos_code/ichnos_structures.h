@@ -394,6 +394,7 @@ namespace ICHNOS {
     enum class coordDim {vx, vy, vz};
     enum class TimeInterpType {NEAREST, LINEAR};
     enum class MeshVelInterpType{ELEMENT, NODE, FACE, UNKNOWN};
+    enum class NodeInterpType{BILINEAR, TRILINEAR};
 
 
 

@@ -42,6 +42,8 @@ namespace ICHNOS{
         std::vector<std::vector<int>> FaceIds;
         Porosity_base porosity;
         ic::MeshVelInterpType interp_type = ic::MeshVelInterpType::UNKNOWN;
+        ic::NodeInterpType VXYnodeInterp = ic::NodeInterpType::TRILINEAR;
+        ic::NodeInterpType VZnodeInterp = ic::NodeInterpType::TRILINEAR;
 
         std::vector<vec3> nds;
         std::vector<std::vector<int>> msh;
@@ -109,6 +111,9 @@ namespace ICHNOS{
                 ("MESH2D.Nlayers", po::value<int>()->default_value(4), "Number of layers")
                 ("MESH2D.NodeFile", po::value<std::string>(), "An array of the node coordinates")
                 ("MESH2D.MeshFile", po::value<std::string>(), "An array of the Mesh2D ids")
+                ("NODE.VXY", po::value<std::string>(), "TRILINEAR or BILINEAR")
+                ("NODE.VZ", po::value<std::string>(), "TRILINEAR or BILINEAR")
+
                 //("MESH2D.Nfaces", po::interpolate<int>()->default_value(0), "Number of faces per layer")
                 //("MESH2D.Nelements", po::interpolate<int>()->default_value(0), "Number of elements per layer")
                 //("MESH2D.Nnodes", po::interpolate<int>()->default_value(0), "Number of nodes per layer")
@@ -253,6 +258,21 @@ namespace ICHNOS{
             else if (interp_type == ic::MeshVelInterpType::NODE){
                 std::string meshfile = vm_vfo["MESH2D.MeshFile"].as<std::string>();
                 tf = readFaceIds(meshfile);
+
+                if (vm_vfo.count("NODE.VXY")){
+                    std::string vxyinterp = vm_vfo["NODE.VXY"].as<std::string>();
+                    if (vxyinterp.compare("BILINEAR") == 0){
+                        VXYnodeInterp = ic::NodeInterpType::BILINEAR;
+                    }
+                }
+
+                if (vm_vfo.count("NODE.VZ")){
+                    std::string vzinterp = vm_vfo["NODE.VZ"].as<std::string>();
+                    if (vzinterp.compare("BILINEAR") == 0){
+                        VZnodeInterp = ic::NodeInterpType::BILINEAR;
+                    }
+                }
+
                 if (!tf) { return false;}
             }
         }
@@ -489,6 +509,15 @@ namespace ICHNOS{
 
         vec3 vt, vb;
         for (unsigned int i = 0; i < velTop.size(); ++i){
+            if (VXYnodeInterp == ic::NodeInterpType::BILINEAR){
+                // We will replace the x y velocities of the top layer to the bottom layer
+                velBot[i].x = velTop[i].x;
+                velBot[i].y = velTop[i].y;
+            }
+            if (VZnodeInterp == ic::NodeInterpType::BILINEAR){
+                velBot[i].z = velTop[i].z;
+            }
+
             vt = vt + velTop[i]*N[i];
             vb = vb + velBot[i]*N[i];
         }
