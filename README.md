@@ -22,28 +22,44 @@ The velocity can be defined as there are two options:
 ------------
 # Outline of this repository
 Here we provide a list of the repository's directories and what information these folders provide
-* **Bin** Is the folder which holds the windows executable of ichnos. 
+* **Bin** is the folder which holds the windows executable of ichnos. 
+* **IchnosRwrksp** contains R scripts related to ichnos
+* **WikiExamples** contains the configuration files for the examples presented at the [wiki](https://github.com/giorgk/ichnos/wiki)
+* **docs** Was supposed to hold the documentation of the code. Currently is empty as we use codeblocks 
+* **ichnos_code** contains the c++ code files.
+* **ichnos_hou** contains project files and data for [Houdini visualization](https://www.sidefx.com/)
 
-
+--------------
 # Getting the code
+The code relies on libraries that are available to all major operating OS.
 ## Windons
 Windows executables are available under the [Bin](Bin/) folder. However, those executables may not contain the latest updates, fixes and new bugs.
 
 Under the Bin folder there is a [Dev](Bin/Dev) folder which contains the latest build. You can check [here](https://gist.github.com/giorgk/f727351f5efd8c58f8bb885a87f41978#file-ichnos_test_list-md) which examples have been tested so far with the current development version.
 
-Put under the same folder the exe and all the dlls. Make sure the antivirus is not blocking the execution. To verify that the code can run try the following under a powershell or command prompt.
+Put under the same folder the ```.exe``` and all the ```dlls```. Make sure the antivirus is not blocking the execution. To verify that the code can run try the following under a powershell or command prompt.
 ```
 ichnos.exe -v
 ```
 ## Linux
-For linux you have to compile the code. See the section below.    
+For linux you have to compile the code. See the section Builinding Ichnos below.    
 
-------------
 ------------
 # Get started
 The [wiki](https://github.com/giorgk/ichnos/wiki) is the best source to get you started.
 
-------------
+## Suggested Roadmap
+Because the wiki contains alot of information and examples can be a bit chaotic. Here we provide a roadmap on how to go through the wiki documentation
+
+* The main page of [wiki](https://github.com/giorgk/ichnos/wiki) is very important as it provides a list of the required information of the two  required configuration files. It also list all possible options. Therefore it is strongly suggested to go through this page first.  
+
+* Next it is recommended to go thought the tutorials that run on a single core.
+
+* Multiple core simulations require an extra effort therefore one need to have a good understanding of the file requirements.
+
+* Besides the two configuration files ichnos requires a specific format about how to write any information. The [File format](https://github.com/giorgk/ichnos/wiki/File-formats) should be used as a reference to the format of the files.  
+
+
 ------------
 
 # Building Ichnos
@@ -64,7 +80,8 @@ Getting the dependencies right sometimes can be quite tricky. To build Ichnos we
 * **Build everything** That requires some experience and it is recommended on systems without administration privileges, e.g clusters.
 
 ## Building with vcpkg
-All that is needed is to pass the following argument
+First install all the libraries that Icvhnos depend on.</br> 
+Then pass the following argument to cmake
 ```
 -DCMAKE_TOOLCHAIN_FILE=path\to\vcpkg\scripts\buildsystems\vcpkg.cmake -DUSEHF=True
 ```
