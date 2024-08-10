@@ -1,4 +1,4 @@
-# Ichnos
+# Ichnos overview
 Ichnos is a general purpose particle tracking code. As such, Ichnos can trace virtual particles in velocity fields. The development of the code is heavily influenced by the projects that Ichnos was developed for, which is primarily particle tracking in groundwater flow fields. In particular, in groundwater flow fields calculated from finite element groundwater models. Yet, groundwater velocity fields from finite difference and finite volume codes can also be used. A key consideration during the development of the code is to handle simulations with multi-million velocity nodes. Therefore the code can be used with velocitiy fields that can be split across many processors.
 
 A brief demonstration of the capabilities of this code can be found at our [AGU 2020 poster](https://agu2020fallmeeting-agu.ipostersessions.com/?s=0C-96-C6-05-F8-AB-22-9D-63-C2-37-9D-96-2E-CD-B8).
@@ -10,18 +10,20 @@ In particle tracking codes there are essentially two main functionalities. i) Tr
 At the moment we provide two types of positional classes `XYZ` 
   1. **CLOUD** </br>
   The CLOUD type assumes that the velocity information is defined into a cloud of points without any particular relation other that proximity between the nodes.</br>
-  2. **CLOUD GRAPH** </br>
-  Cloud graph type is very similar to cloud except that the velocity nodes are aware which velocity nodes are influential. 
+  
   2. **MESH2D** </br>
   The MESH2D type assumes that the velocity is organized via a 2D mesh that is extruded in the vertical direction. Within the extruded 2D mesh the velocity can be defined at the element barycenters, which assumes constant velocity within the elements, or at the mesh nodes, or at the Mesh faces. In the latter case the interpolation is carried out using the [Raviart–Thomas basis functions](https://en.wikipedia.org/wiki/Raviart%E2%80%93Thomas_basis_functions).
  
-For the velocity there are two options:
-  1. Transient/Steady state flow fields
-  2. Stochastic flow fields (This is in an experimental stage)
-  3. Random Walk (This is in an experimental stage)
+The velocity can be defined as there are two options:
+  * Transient or Steady state
+  * Stochastic flow fields (This is in an experimental stage)
+  * Random Walk (This is in an experimental stage)
 
 ------------
-------------
+# Outline of this repository
+Here we provide a list of the repository's directories and what information these folders provide
+* **Bin** Is the folder which holds the windows executable of ichnos. 
+
 
 # Getting the code
 ## Windons
