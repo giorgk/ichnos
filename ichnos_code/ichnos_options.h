@@ -17,8 +17,6 @@ namespace ICHNOS {
      */
 	enum class VelType {
 	    DETRM, /// The velocity is deterministic
-		//STEADY, /// This is a velocity type where a single interpolate for the velocity is defined
-		//TRANS, /// This is a velocity type where for its point the velocity is defined as a time series
 		STOCH, /// (Experimental) This is a velocity type where the velocity is defined in some stochastic manner
 		RWPT, /// (Experimental) This is for random walk particle tracking
 		INVALID /// This is used for any velocity type that does not make any sense
@@ -67,12 +65,20 @@ namespace ICHNOS {
 		}
 	}
 
+    /*!
+     * @brief XYZType is a list of support structure types
+     */
 	enum class XYZType{
 	    CLOUD,
 	    MESH2D,
 	    INVALID
 	};
 
+    /*!
+     * Converts the XYZType to string
+     * @param xyzt
+     * @return the XYZType in string format
+     */
 	std::string castXYZType2String(XYZType xyzt) {
 	    std::map <XYZType, std::string> xyztMap;
 	    std::map <XYZType, std::string>::iterator it;
@@ -87,6 +93,11 @@ namespace ICHNOS {
 	    }
 	}
 
+    /*!
+     * Converts the string into XYZType
+     * @param xyzt The string to convert
+     * @return Output type
+     */
 	XYZType castXYZType2Enum(std::string xyzt) {
 	    std::map < std::string, XYZType> xyztMap;
 	    std::map < std::string, XYZType>::iterator it;
@@ -131,16 +142,22 @@ namespace ICHNOS {
 			return velocityFieldFileName;
 		}
 
+        /// A container of the particle tracking related options
+		ParticleOptions Popt;
+        /// A container of the domain related options
+		DomainOptions Dopt;
+        /// Indicates whether the program should rather particles from files or do particle tracking
+		bool gatherMode = false;
+        /// Number of processors. This should set automatically.
+		int nproc = 0;
+        /// The number of iterations during the gather mode. This is set also from the input files
+		int niter = 0;
 
-		ParticleOptions Popt; /// A container of the particle tracking related options
-		DomainOptions Dopt; /// A container of the domain related options
-		bool gatherMode = false; /// Indicates whether the program should rather particles from files or do particle tracking
-		int nproc = 0; /// Number of processors. This should set automatically.
-		int niter = 0; /// The number of iterations during the gather mode. This is set also from the input files
-
-		VelType velocityFieldType; /// The velocity field type
+        /// The velocity field type
+		VelType velocityFieldType;
+        /// The support structure type
 		XYZType xyztype;
-
+        ///The version of the code
 		std::string Version;
 		
 
@@ -160,7 +177,7 @@ namespace ICHNOS {
 	{
         Version = "0.5.05";
 	}
-
+    
 	bool options::readInput(int argc, char* argv[]) {
 		// Command line options
 		po::options_description commandLineOptions("Command line options");

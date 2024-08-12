@@ -17,7 +17,7 @@
 namespace ICHNOS {
 	namespace DBG {
 		/**
-		 * 
+		 * Prints the particle positions and velocities are VEX code
 		 * \param P
 		 * \param prinAttr
 		 */
@@ -28,33 +28,66 @@ namespace ICHNOS {
 				std::cout << std::setprecision(5) << std::fixed << " setpointattrib(0,'N',p,{" << vn.x << "," << vn.z << "," << vn.y << "},'set');";
 			std::cout << std::endl;
 		}
+
+        /**
+         * Prints the particle as VEX code
+         * @param p
+         */
 		void displayVectorasVex(vec3 p) {
 			std::cout << std::setprecision(3) << std::fixed << "p = addpoint(0,{" << p.x << "," << p.z << "," << p.y << "});" << std::endl;
 		}
+
+        /**
+         * Prints the particel and the velocity as VEX code
+         * @param p
+         * @param v
+         */
 		void displayPVasVex(vec3 p, vec3 v) {
 			vec3 vn = v.normalize();
 			std::cout << std::setprecision(3) << std::fixed << "p = addpoint(0,{" << p.x << "," << p.z << "," << p.y << "});";
 			std::cout << std::setprecision(3) << std::fixed << " setpointattrib(0,'N',p,{" << vn.x << "," << vn.z << "," << vn.y << "},'set');";
 			std::cout << std::endl;
 		}
+
+        /**
+         * Prints the particle as Matlab code
+         * @param p
+         */
 		void displayVectorMatlab(vec3 p){
 		    std::cout << std::setprecision(5) << std::fixed << "[" << p.x << "," << p.y << "," << p.z << "]" << std::endl;
 		}
 	}
 
-
+    /**
+     * returns the sing of the input number
+     * @param num
+     * @return
+     */
 	double sgnFace(int num){
         if (num > 0) return 1.0;
         if (num < 0) return -1.0;
         return 0.0;
 	}
 
+    /**
+     * Creates a string filled with zeros before the number. Eg for i = 34 and n = 4 this will return 0034
+     * @param i Is the number
+     * @param n is the total size of the characters.
+     * @return
+     */
 	std::string num2Padstr(int i, int n) {
 		std::stringstream ss;
 		ss << std::setw(n) << std::setfill('0') << i;
 		return ss.str();
 	}
 
+    /**
+     * Distributes n numbers equally spaced between min and max
+     * @param min
+     * @param max
+     * @param n
+     * @param v the distributed numbers
+     */
 	void linspace(double min, double max, int n, std::vector<double>& v){
 		v.clear();
 		int iterator = 0;
@@ -66,11 +99,29 @@ namespace ICHNOS {
 		v.insert(v.begin() + iterator, max);
 	}
 
-	// https://stackoverflow.com/questions/2390912/checking-for-an-empty-file-in-c
+
+    /**
+     * Checks ith the file is empty
+     *
+     * See more https://stackoverflow.com/questions/2390912/checking-for-an-empty-file-in-c
+     * @param pFile
+     * @return true of false
+     */
 	bool is_file_empty(std::ifstream& pFile){
 		return pFile.peek() == std::ifstream::traits_type::eof();
 	}
 
+    /**
+     * Distributes particles around the well screen layer by layer
+     * @param eid The well id
+     * @param x x coordinate of the well
+     * @param y y coordinate of the well
+     * @param top top of the well screen
+     * @param bot bottom of the well screen
+     * @param S Output vector that holds the particle positions as streamline
+     * @param wopt Well options
+     * @param releaseTime The release time for the particles
+     */
 	void distributeParticlesAroundWellLayered(int eid, double x, double y, double top, double bot, std::vector<Streamline>& S, WellOptions wopt, double releaseTime){
 		double pi = boost::math::constants::pi<double>();
 		std::vector<double> zval;
@@ -101,7 +152,17 @@ namespace ICHNOS {
 			}
 		}
 	}
-	
+
+    /**
+     * This is no longer used. Is distributing the particles in a spiral way
+     * @param eid
+     * @param x
+     * @param y
+     * @param top
+     * @param bot
+     * @param S
+     * @param wopt
+     */
 	void distributeParticlesAroundWell(int eid, double x, double y, double top, double bot, std::vector<Streamline>& S, WellOptions wopt) {
 		const double PI = 4 * atan(1);
 		double maxt = 2*PI*static_cast<double>(wopt.Nlayer);
@@ -123,6 +184,15 @@ namespace ICHNOS {
 		}
 	}
 
+    /**
+     * Calculates the upper and lower corner of the box that encapsulates the particle.
+     * @param p is the particle position
+     * @param l is the output lower point
+     * @param u is the output upper point
+     * @param diameter the size of the box in the horizontal direction
+     * @param ratio the ration between horizontal and vertical dimension
+     * @param search_mult a multiplier that modifies the dimensions of the bounding box
+     */
     void calculate_search_box(vec3 &p, vec3 &l, vec3 &u, double diameter, double ratio, double search_mult) {
         double xy_dir = (diameter/2)*search_mult;
         double z_dir = xy_dir/ratio;
@@ -208,6 +278,14 @@ namespace ICHNOS {
         return pmin.distance(pmax.x, pmax.y, pmax.z);
 	}
 
+    /**
+     * Calculates the barycentric coordinates of a point in triangle. The point can be located outside of the triangle.
+     * @param bc The barycentric coordinates
+     * @param p The point in question
+     * @param p1 First corner of triangle
+     * @param p2 Second corner of triangle
+     * @param p3 Third corner of triangle
+     */
 	void calculateBaryCoordTriangle2D(vec3& bc,vec3 &p, vec3 &p1, vec3 &p2, vec3 &p3){
         double det = (p2.y - p3.y)*(p1.x - p3.x) + (p3.x - p2.x)*(p1.y - p3.y);
         if (std::abs(det) < 0.0000001){
@@ -223,6 +301,15 @@ namespace ICHNOS {
         bc.z = 1 - bc.x - bc.y;
     }
 
+    /**
+     * Checks if a point is in or out of a triangle
+     * @param p The point in question
+     * @param p1 First corner of triangle
+     * @param p2 Second corner of triangle
+     * @param p3 Third corner of triangle
+     * @param bc THe function returs the barycentric coordinates
+     * @return true of false
+     */
     bool isPointInTriangle(vec3 &p, vec3 &p1, vec3 &p2, vec3 &p3, vec3 &bc){
         calculateBaryCoordTriangle2D(bc, p, p1, p2, p3);
         if (bc.x >= 0 && bc.x <= 1 && bc.y >= 0 && bc.y <= 1 && bc.z >= 0 && bc.z <= 1)
@@ -231,6 +318,13 @@ namespace ICHNOS {
             return false;
     }
 
+    /**
+     * A helper function which prints information on a console during runtime
+     * @param count_times
+     * @param FrequencyStat
+     * @param calc_time
+     * @param max_calc_time
+     */
     void PrintStat(int &count_times, int &FrequencyStat, double &calc_time, double &max_calc_time) {
         if (count_times > FrequencyStat){
             std::cout << "||			---Velocity Calc time: " << std::fixed << std::setprecision(15) << calc_time/static_cast<double>(count_times) <<  ", (";// std::endl;
@@ -242,6 +336,15 @@ namespace ICHNOS {
         }
     }
 
+    /**
+     * Calculates the shape functions of a quadrilateral
+     * @param u normalized coordinate
+     * @param v normalized coordinate
+     * @param N1 Shape value
+     * @param N2 Shape value
+     * @param N3 Shape value
+     * @param N4 Shape value
+     */
     void QuadShapeFunctions(double u, double v, double &N1, double &N2, double &N3, double &N4){
         N1 = 0.25*(1-u)*(1-v);
         N2 = 0.25*(1+u)*(1-v);
@@ -249,6 +352,16 @@ namespace ICHNOS {
         N4 = 0.25*(1-u)*(1+v);
     }
 
+    /**
+     * Calculates the global coordinate of a point from its local coordinates
+     * @param u local coordinate
+     * @param v local coordinate
+     * @param p1 Corner of quadrilateral
+     * @param p2 Corner of quadrilateral
+     * @param p3 Corner of quadrilateral
+     * @param p4 Corner of quadrilateral
+     * @param p Global coordinate
+     */
     void local2GlobalCoord(double u, double v, vec3 &p1, vec3 &p2, vec3 &p3, vec3 &p4, vec3 &p){
         p.zero();
         double n1, n2, n3, n4;
@@ -258,6 +371,16 @@ namespace ICHNOS {
         p.y = n1*p1.y + n2*p2.y + n3*p3.y + n4*p4.y;
     }
 
+    /**
+     * Calculates the jacobian of a trangle
+     * @param p1
+     * @param p2
+     * @param p3
+     * @param a
+     * @param b
+     * @param c
+     * @param d
+     */
     void calculateTriangleJacobian(vec3 &p1, vec3 &p2, vec3 &p3,
                                    double &a, double &b, double &c, double &d){
         a = p1.x - p3.x;
@@ -266,6 +389,19 @@ namespace ICHNOS {
         d = p2.y - p3.y;
     }
 
+    /**
+     * Calculates the jacobian of a quadrilateral
+     * @param u
+     * @param v
+     * @param p1
+     * @param p2
+     * @param p3
+     * @param p4
+     * @param a
+     * @param b
+     * @param c
+     * @param d
+     */
     void calculateQuadJacobian(double u, double v, vec3 &p1, vec3 &p2, vec3 &p3, vec3 &p4,
                                double &a, double &b, double &c, double &d){
         double dn1 = 0.25*(v - 1);

@@ -29,7 +29,7 @@
 #include <CGAL/Point_set_2.h>
 
 
-
+// Includes for random generators
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_real_distribution.hpp>
 #include <boost/iterator/zip_iterator.hpp>
@@ -40,8 +40,9 @@
 
 
 namespace ICHNOS {
-
+    /// This is the square root of 2
     const double sqrt2 = std::sqrt(2.0);
+
 	/**
 	 * @brief This is a structure to hold parameters for the distribution of 
 	 * particles around the wells
@@ -119,7 +120,7 @@ namespace ICHNOS {
 			return tf;
 		}
 
-		//! Some methods sets the vector to -99999 when the calculations failed. This methods checks is the vector has this interpolate
+		//! Some methods may set the vector to -99999 when the calculations failed. This methods checks is the vector has this value
 		bool isInvalid() {
 			bool tf = std::sqrt((x + 99999) * (x + 99999) + (y + 99999) * (y + 99999) + (z + 99999) * (z + 99999)) < 0.0000000001;
 			return tf;
@@ -138,16 +139,29 @@ namespace ICHNOS {
 			z = 0.0;
 		}
 
+        //! Set invalid values to the vector
         void makeInvalid(){
             x = -99999.0;
             y = -99999.0;
             z = -99999.0;
         }
 
+        /**
+         * Calculates the distance between the input values and the vector
+         * @param px x coordinate
+         * @param py y coordinate
+         * @param pz z coordinate
+         * @return The distance
+         */
 		double distance(double px, double py, double pz) {
 			return std::sqrt((x - px) * (x - px) + (y - py) * (y - py) + (z - pz) * (z - pz));
 		}
 
+        /**
+         * Calculates the angle between the input vector and this
+         * @param b the input vector
+         * @return The angle
+         */
 		double angle(vec3& b){
 			double ab = x*b.x + y*b.y + z*b.z;
 			double abs_a = this->len();
@@ -156,6 +170,9 @@ namespace ICHNOS {
 		}
 	};
 
+    /**
+     * @brief A structure that holds same time related data and is used to pass around multiple data
+     */
     struct TimeData{
         double tm;
         double tm_tmp;
@@ -164,6 +181,9 @@ namespace ICHNOS {
         double t;
     };
 
+    /**
+     * @brief A structure that holds a number of values as a structure
+     */
     struct helpVars{
         vec3 pp;
         vec3 vv;
@@ -178,7 +198,9 @@ namespace ICHNOS {
         TimeData td;
     };
 
-
+    /**
+     * @brief A structure that holds some data but currently is not used
+     */
 	struct NPSAT_data {
 		int proc = -9;
 		int id = -9;
@@ -187,6 +209,9 @@ namespace ICHNOS {
 		vec3 v;
 	};
 
+    /**
+     * @brief A structure that holds time step configuration data
+     */
     struct StepOptions {
         /// This is the step size with units of length. For RK45 this is the initial step size
         double StepSize;
@@ -202,6 +227,9 @@ namespace ICHNOS {
         double dir;
     };
 
+    /**
+     * Another structure that is not used
+     */
 	struct elev_data{
 		double top = 0;
 		double bot = 0;
