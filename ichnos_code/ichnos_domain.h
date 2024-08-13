@@ -1,6 +1,8 @@
 #pragma once
 #include <boost/lexical_cast.hpp>
 
+#include "gridInterp.h"
+
 #include "ichnos_structures.h"
 #include "ichnos_utils.h"
 #include "ichnos_mesh.h"
@@ -40,7 +42,8 @@ namespace ICHNOS {
         enum type{
             CONST,
             CLOUD,
-            MESH2D
+            MESH2D,
+            GRID
         };
 
 		void bisInPolygon(vec3& p, bool& tf);
@@ -77,6 +80,9 @@ namespace ICHNOS {
         type Bot_interpolation_type;
 
         double invTransfTol = 0.001;
+
+        GRID_INTERP::interp<2> gridTop;
+        GRID_INTERP::interp<2> gridBot;
 
 
 		bool interpolateSets(vec3& p, double& top, double& bot);
@@ -282,6 +288,9 @@ namespace ICHNOS {
                 else if (line.compare("MESH2D") == 0){
                     interpolation_type = type::MESH2D;
                 }
+                else if (line.compare("GRID") == 0){
+                    interpolation_type = type::GRID;
+                }
                 else{
                     std::cout << "[" << line << "] is unknown interpolation type for the top/bottom function" << std::endl;
                     return false;
@@ -428,6 +437,13 @@ namespace ICHNOS {
                         }
                         BotSet.insert(xy_data.begin(), xy_data.end());
                     }
+                }
+                else if (interpolation_type == type::GRID){
+                    std::string gridTopfFle, gridBotFile;
+                    inp >> gridTopfFle;
+                    inp >> gridBotFile;
+                    gridTop.getDataFromFile(gridTopfFle);
+                    gridBot.getDataFromFile(gridBotFile);
                 }
             }
             datafile.close();
