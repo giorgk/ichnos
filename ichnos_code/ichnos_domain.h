@@ -1,7 +1,7 @@
 #pragma once
 #include <boost/lexical_cast.hpp>
 
-#include "gridInterp.h"
+//#include "gridInterp.h"
 
 #include "ichnos_structures.h"
 #include "ichnos_utils.h"
@@ -81,8 +81,8 @@ namespace ICHNOS {
 
         double invTransfTol = 0.001;
 
-        GRID_INTERP::interp<2> gridTop;
-        GRID_INTERP::interp<2> gridBot;
+        //GRID_INTERP::interp<2> gridTop;
+        //GRID_INTERP::interp<2> gridBot;
 
 
 		bool interpolateSets(vec3& p, double& top, double& bot);
@@ -442,8 +442,8 @@ namespace ICHNOS {
                     std::string gridTopfFle, gridBotFile;
                     inp >> gridTopfFle;
                     inp >> gridBotFile;
-                    gridTop.getDataFromFile(gridTopfFle);
-                    gridBot.getDataFromFile(gridBotFile);
+                    //gridTop.getDataFromFile(gridTopfFle);
+                    //gridBot.getDataFromFile(gridBotFile);
                 }
             }
             datafile.close();
