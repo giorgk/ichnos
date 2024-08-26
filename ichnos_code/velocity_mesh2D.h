@@ -8,6 +8,7 @@
 #include "ichnos_structures.h"
 #include "velocity_base.h"
 #include "ichnos_porosity.h"
+#include "ichnos_utils.h"
 
 #if _USEHF > 0
 #include <highfive/H5DataSet.hpp>
@@ -54,8 +55,10 @@ namespace ICHNOS{
         int FrequencyStat;
         int nPoints;
         int nSteps;
-        //int nLayers;
-        int nFaces;
+        int nLayers;
+        // Number of face velocities in the horizontal direction.
+        // This is not necessarily the total number of faces.
+        int nFaceVels;
         int nElements;
         int nNodes;
         int nTotalFaces;
@@ -167,11 +170,11 @@ namespace ICHNOS{
 
             multiplier = vm_vfo["Velocity.Multiplier"].as<double>();
             //nPoints = vm_vfo["Velocity.nPoints"].as<int>();
-            //nLayers = vm_vfo["MESH2D.Nlayers"].as<int>();
+            nLayers = vm_vfo["MESH2D.Nlayers"].as<int>();
             //nNodes = vm_vfo["MESH2D.Nnodes"].as<int>();
             //nElements = vm_vfo["MESH2D.Nelements"].as<int>();
-            //nFaces = vm_vfo["MESH2D.Nfaces"].as<int>();
-            //nTotalFaces = nFaces*nLayers;
+            //nFaceVels = vm_vfo["MESH2D.Nfaces"].as<int>();
+            //nTotalFaces = nFaceVels*nLayers;
 
             //isVeltrans  = vm_vfo["Velocity.IsTransient"].as<int>() != 0;
 
@@ -309,6 +312,7 @@ namespace ICHNOS{
             }
             case ic::MeshVelInterpType::FACE:
             {
+                nElements = XYZ.getINTInfo(infoType::Nelem);
                 bool tf = readFaceVelocity();
                 if (!tf){return false;}
                 break;
@@ -538,19 +542,19 @@ namespace ICHNOS{
         if (FaceIds[elid].size() == 4){
             double vf1, vf2, vf3, vf4;// Face velocities
             // face 1
-            idx = std::abs(FaceIds[elid][0]) - 1 + lay*nFaces;
+            idx = std::abs(FaceIds[elid][0]) - 1 + lay * nFaceVels;
             tmp = VEL.getVelocity(idx, i1, i2, t);
             vf1 = -1.0*sgnFace(FaceIds[elid][0]) * tmp.x;
             // face 2
-            idx = std::abs(FaceIds[elid][1]) - 1 + lay*nFaces;
+            idx = std::abs(FaceIds[elid][1]) - 1 + lay * nFaceVels;
             tmp = VEL.getVelocity(idx, i1, i2, t);
             vf2 = sgnFace(FaceIds[elid][1]) * tmp.x;
             // face 3
-            idx = std::abs(FaceIds[elid][2]) - 1 + lay*nFaces;
+            idx = std::abs(FaceIds[elid][2]) - 1 + lay * nFaceVels;
             tmp = VEL.getVelocity(idx, i1, i2, t);
             vf3 = sgnFace(FaceIds[elid][2]) * tmp.x;
             //face 4
-            idx = std::abs(FaceIds[elid][3]) - 1 + lay*nFaces;
+            idx = std::abs(FaceIds[elid][3]) - 1 + lay * nFaceVels;
             tmp = VEL.getVelocity(idx, i1, i2, t);
             vf4 = -1.0*sgnFace(FaceIds[elid][3]) * tmp.x;
 
@@ -575,15 +579,15 @@ namespace ICHNOS{
         else if (FaceIds[elid].size() == 3){
             double vf1, vf2, vf3;// Face velocities
             // face 1
-            idx = std::abs(FaceIds[elid][0]) - 1 + lay*nFaces;
+            idx = std::abs(FaceIds[elid][0]) - 1 + lay * nFaceVels;
             tmp = VEL.getVelocity(idx, i1, i2, t);
             vf1 = sgnFace(FaceIds[elid][0]) * tmp.x;
             // face 2
-            idx = std::abs(FaceIds[elid][1]) - 1 + lay*nFaces;
+            idx = std::abs(FaceIds[elid][1]) - 1 + lay * nFaceVels;
             tmp = VEL.getVelocity(idx, i1, i2, t);
             vf2 = sgnFace(FaceIds[elid][1]) * tmp.x;
             // face 3
-            idx = std::abs(FaceIds[elid][2]) - 1 + lay*nFaces;
+            idx = std::abs(FaceIds[elid][2]) - 1 + lay * nFaceVels;
             tmp = VEL.getVelocity(idx, i1, i2, t);
             vf3 = sgnFace(FaceIds[elid][2]) * tmp.x;
 
@@ -714,31 +718,21 @@ namespace ICHNOS{
                 std::cout << "MESH2D - Face - Steady State - HDF5 input is not implemented yet" << std::endl;
                 return false;
             }
-            std::cout << "\tReading file " + filename << std::endl;
-            std::ifstream datafile(filename.c_str());
-            if (!datafile.good()){
-                std::cout << "Can't open the file " << filename << std::endl;
+            std::vector<std::vector<double>> data;
+            bool tf = READ::read2Darray<double>(filename, 1, data);
+            if (!tf){
                 return false;
             }
-            else{
-                std::string line;
-                double vf;
-                std::vector<double> tmp;
-                while (getline(datafile, line)){
-                    if (line.size() > 1){
-                        std::istringstream inp(line.c_str());
-                        inp >> vf;
-                        tmp.push_back(vf);
-                    }
-                }
-                datafile.close();
-                //nPoints = tmp.size();
-                VEL.init(nPoints, 1, 1);
-                for (unsigned int i = 0; i < tmp.size(); ++i){
-                    VEL.setVELvalue(tmp[i] * multiplier, i, 0, ic::coordDim::vx);
-                }
-                out = true;
+
+            //nPoints = tmp.size();
+            // The file should contain nFaceValues*nLayers + nElements*(nLayers+1)
+            nFaceVels = static_cast<int>(data.size())/nLayers - nElements * (nLayers +1);
+            nTotalFaces = nFaceVels * nLayers;
+            VEL.init(data.size(), 1, 1);
+            for (unsigned int i = 0; i < data.size(); ++i){
+                VEL.setVELvalue(data[i][0] * multiplier, i, 0, ic::coordDim::vx);
             }
+            out = true;
         }
         else{
             // TODO

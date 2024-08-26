@@ -142,7 +142,7 @@ namespace ICHNOS{
             }
             faceIds.push_back(ids);
         }
-        nFaces = faceIds.size();
+        nFaceVels = faceIds.size();
         return true;
     }
     */
