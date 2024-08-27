@@ -58,10 +58,11 @@ namespace ICHNOS{
         int nLayers;
         // Number of face velocities in the horizontal direction.
         // This is not necessarily the total number of faces.
-        int nFaceVels;
+        int nFaceVelperLayer;
         int nElements;
         int nNodes;
         int nTotalFaces;
+        int nTotalHORFaces;
         //ic::TimeData tm_data;
 
         bool readVelocityFiles();
@@ -542,19 +543,19 @@ namespace ICHNOS{
         if (FaceIds[elid].size() == 4){
             double vf1, vf2, vf3, vf4;// Face velocities
             // face 1
-            idx = std::abs(FaceIds[elid][0]) - 1 + lay * nFaceVels;
+            idx = std::abs(FaceIds[elid][0]) - 1 + lay * nFaceVelperLayer;
             tmp = VEL.getVelocity(idx, i1, i2, t);
             vf1 = -1.0*sgnFace(FaceIds[elid][0]) * tmp.x;
             // face 2
-            idx = std::abs(FaceIds[elid][1]) - 1 + lay * nFaceVels;
+            idx = std::abs(FaceIds[elid][1]) - 1 + lay * nFaceVelperLayer;
             tmp = VEL.getVelocity(idx, i1, i2, t);
             vf2 = sgnFace(FaceIds[elid][1]) * tmp.x;
             // face 3
-            idx = std::abs(FaceIds[elid][2]) - 1 + lay * nFaceVels;
+            idx = std::abs(FaceIds[elid][2]) - 1 + lay * nFaceVelperLayer;
             tmp = VEL.getVelocity(idx, i1, i2, t);
             vf3 = sgnFace(FaceIds[elid][2]) * tmp.x;
             //face 4
-            idx = std::abs(FaceIds[elid][3]) - 1 + lay * nFaceVels;
+            idx = std::abs(FaceIds[elid][3]) - 1 + lay * nFaceVelperLayer;
             tmp = VEL.getVelocity(idx, i1, i2, t);
             vf4 = -1.0*sgnFace(FaceIds[elid][3]) * tmp.x;
 
@@ -579,15 +580,15 @@ namespace ICHNOS{
         else if (FaceIds[elid].size() == 3){
             double vf1, vf2, vf3;// Face velocities
             // face 1
-            idx = std::abs(FaceIds[elid][0]) - 1 + lay * nFaceVels;
+            idx = std::abs(FaceIds[elid][0]) - 1 + lay * nFaceVelperLayer;
             tmp = VEL.getVelocity(idx, i1, i2, t);
             vf1 = sgnFace(FaceIds[elid][0]) * tmp.x;
             // face 2
-            idx = std::abs(FaceIds[elid][1]) - 1 + lay * nFaceVels;
+            idx = std::abs(FaceIds[elid][1]) - 1 + lay * nFaceVelperLayer;
             tmp = VEL.getVelocity(idx, i1, i2, t);
             vf2 = sgnFace(FaceIds[elid][1]) * tmp.x;
             // face 3
-            idx = std::abs(FaceIds[elid][2]) - 1 + lay * nFaceVels;
+            idx = std::abs(FaceIds[elid][2]) - 1 + lay * nFaceVelperLayer;
             tmp = VEL.getVelocity(idx, i1, i2, t);
             vf3 = sgnFace(FaceIds[elid][2]) * tmp.x;
 
@@ -610,11 +611,11 @@ namespace ICHNOS{
         }
 
         // Top vertical velocity
-        idx = nTotalFaces + elid + lay*nElements;
+        idx = nTotalHORFaces + elid + lay*nElements;
         tmp = VEL.getVelocity(idx, i1, i2, t);
         double vt = tmp.x;
         // Bottom vertical velocity
-        idx = nTotalFaces + elid + (lay+1)*nElements;
+        idx = nTotalHORFaces + elid + (lay+1)*nElements;
         tmp = VEL.getVelocity(idx, i1, i2, t);
         double vb = tmp.x;
         vel.z = vt * weights[2] + vb * (1.0-weights[2]);
@@ -706,37 +707,94 @@ namespace ICHNOS{
     }
 
     bool Mesh2DVel::readFaceVelocity() {
+        bool out = false;
+        bool bisascii = true;
         int proc_id = world.rank();
         if (XYZ.runAsThread){
             proc_id = 0;
         }
-        bool out = false;
+
+        auto start = std::chrono::high_resolution_clock::now();
+
         if (!isVeltrans){
-            std::string filename = Prefix + ic::num2Padstr(proc_id, leadingZeros) + Suffix;
+            std::vector<std::vector<double>> VHOR;
+            std::vector<std::vector<double>> VVER;
             if (Suffix.compare(".h5") == 0){
+#if _USEHF > 0
                 //TODO
-                std::cout << "MESH2D - Face - Steady State - HDF5 input is not implemented yet" << std::endl;
-                return false;
+                std::string filename = Prefix + ic::num2Padstr(proc_id, leadingZeros) + Suffix;
+                const std::string VHORNameSet("VHOR");
+                const std::string VVERNameSet("VVER");
+                HighFive::File HDFNfile(filename, HighFive::File::ReadOnly);
+                HighFive::DataSet datasetVHOR = HDFNfile.getDataSet(VHORNameSet);
+                HighFive::DataSet datasetVVER = HDFNfile.getDataSet(VVERNameSet);
+
+                datasetVHOR.read(VHOR);
+                datasetVVER.read(VVER);
+                bisascii = false;
+#endif
             }
-            std::vector<std::vector<double>> data;
-            bool tf = READ::read2Darray<double>(filename, 1, data);
-            if (!tf){
-                return false;
+            else{
+                std::string filenameHOR = Prefix + "VHOR_" + ic::num2Padstr(proc_id, leadingZeros) + Suffix;
+                std::string filenameVER = Prefix + "VVER_" + ic::num2Padstr(proc_id, leadingZeros) + Suffix;
+                bool tf = READ::read2Darray<double>(filenameHOR, 1, VHOR);
+                if (!tf){
+                    return false;
+                }
+                tf = READ::read2Darray<double>(filenameVER, 1, VVER);
+                if (!tf){
+                    return false;
+                }
             }
 
-            //nPoints = tmp.size();
-            // The file should contain nFaceValues*nLayers + nElements*(nLayers+1)
-            nFaceVels = static_cast<int>(data.size())/nLayers - nElements * (nLayers +1);
-            nTotalFaces = nFaceVels * nLayers;
-            VEL.init(data.size(), 1, 1);
-            for (unsigned int i = 0; i < data.size(); ++i){
-                VEL.setVELvalue(data[i][0] * multiplier, i, 0, ic::coordDim::vx);
+            int nTotalVERface;
+            if (bisascii){
+                nTotalHORFaces = static_cast<int>(VHOR.size());
+                nTotalVERface = static_cast<int>(VVER.size());
+            }
+            else{
+                nTotalHORFaces = static_cast<int>(VHOR[0].size());
+                nTotalVERface = static_cast<int>(VVER[0].size());
+            }
+
+            nFaceVelperLayer = nTotalHORFaces/nLayers;
+            nTotalFaces = nTotalHORFaces + nTotalVERface;
+            int n = nTotalVERface / (nLayers + 1);
+            if (nElements != n){
+                std::cout << "The number of elements in Element file is not the same as the elements in the VVER file" << std::endl;
+                return false;
+            }
+            VEL.init(nTotalFaces, 1, 1);
+
+            for (int i = 0; i < nTotalHORFaces; ++i){
+                if (bisascii){
+                    VEL.setVELvalue(VHOR[i][0] * multiplier, i, 0, ic::coordDim::vx);
+                }
+                else{
+                    VEL.setVELvalue(VHOR[0][i] * multiplier, i, 0, ic::coordDim::vx);
+                }
+            }
+
+            for (int i = 0; i < nTotalVERface; ++i){
+                if (bisascii){
+                    VEL.setVELvalue(VVER[i][0] * multiplier, i + nTotalHORFaces, 0, ic::coordDim::vx);
+                }
+                else{
+                    VEL.setVELvalue(VVER[0][i] * multiplier, i + nTotalHORFaces, 0, ic::coordDim::vx);
+                }
             }
             out = true;
+
         }
         else{
             // TODO
             std::cout << "Transient state reader for FACE interpolation has not implemented yet" << std::endl;
+        }
+
+        if (out){
+            auto finish = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double> elapsed = finish - start;
+            std::cout << "\tRead Velocity in : " << elapsed.count() << std::endl;
         }
 
         return out;
