@@ -5,7 +5,7 @@ A brief demonstration of the capabilities of this code can be found at our [AGU 
 
 Note that this is a continuation of a previous project [IWFMtrack](https://gwt.ucdavis.edu/research-tools-and-applications/iwfm-track).
 
-In particle tracking codes there are essentially two main functionalities. i) Tracing the particles in a velocity field. ii) Interpolating a velocity field. The code has been designed so that tracing functions are unaware of the details of the velocity field. To do so the code contains a velocity base class that communicates with the tracing class. Then each different type of field has to derive from the base velocity class and overwrite a few functions. The velocity field field can be split into 2 components. The positional information of the points where the velocity is known and the velocity itself. Each of those components are defined in based classes. The positional base class `class XYZ` is responsible to calculate the weight contribution of each velocity point in the field for a given particle position. Then it passes the weights to the `Velocity` class which then calculates the velocity value. Using this separation it is possible to combine different data structures in the code.
+In particle tracking codes there are essentially two main functionalities. i) Tracing the particles in a velocity field. ii) Interpolating a velocity field. The code has been designed so that tracing functions are unaware of the details of the velocity field. To do so the code contains a velocity base class that communicates with the tracing class. Then each different type of field has to derive from the base velocity class and overwrite a few functions. The velocity field can be split into 2 components. The positional information of the points where the velocity is known and the velocity itself. Each of those components are defined in based classes. The positional base class `class XYZ` is responsible to calculate the weight contribution of each velocity point in the field for a given particle position. Then it passes the weights to the `Velocity` class which calculates the velocity value. Using this separation it is possible to combine different data structures in the code.
 
 At the moment we provide two types of positional classes `XYZ` 
   1. **CLOUD** </br>
@@ -14,7 +14,7 @@ At the moment we provide two types of positional classes `XYZ`
   2. **MESH2D** </br>
   The MESH2D type assumes that the velocity is organized via a 2D mesh that is extruded in the vertical direction. Within the extruded 2D mesh the velocity can be defined at the element barycenters, which assumes constant velocity within the elements, or at the mesh nodes, or at the Mesh faces. In the latter case the interpolation is carried out using the [Raviart–Thomas basis functions](https://en.wikipedia.org/wiki/Raviart%E2%80%93Thomas_basis_functions).
  
-The velocity can be defined as there are two options:
+The velocity can be defined as:
   * Transient or Steady state
   * Stochastic flow fields (This is in an experimental stage)
   * Random Walk (This is in an experimental stage)
@@ -23,9 +23,9 @@ The velocity can be defined as there are two options:
 # Outline of this repository
 Here we provide a list of the repository's directories and what information these folders provide
 * **Bin** is the folder which holds the windows executable of ichnos. 
-* **IchnosRwrksp** contains R scripts related to ichnos
+* **IchnosRwrksp** contains R scripts related to ichnos. (Currently we are using Matlab threfore there is no much R scripting there)
 * **WikiExamples** contains the configuration files for the examples presented at the [wiki](https://github.com/giorgk/ichnos/wiki)
-* **docs** Was supposed to hold the documentation of the code. Currently is empty as we use codeblocks 
+* **docs** Was supposed to hold the doxygen documentation for the code. Currently is empty as we use codeblocks 
 * **ichnos_code** contains the c++ code files.
 * **ichnos_hou** contains project files and data for [Houdini visualization](https://www.sidefx.com/)
 
@@ -42,20 +42,20 @@ Put under the same folder the ```.exe``` and all the ```dlls```. Make sure the a
 ichnos.exe -v
 ```
 ## Linux
-For linux you have to compile the code. See the section Builinding Ichnos below.    
+For linux you have to compile the code. See the section [Builinding Ichnos](https://github.com/giorgk/ichnos?tab=readme-ov-file#building-ichnos) below.    
 
 ------------
 # Get started
 The [wiki](https://github.com/giorgk/ichnos/wiki) is the best source to get you started.
 
 ## Suggested Roadmap
-Because the wiki contains alot of information and examples can be a bit chaotic. Here we provide a roadmap on how to go through the wiki documentation
+Because the wiki contains alot of information and examples it can be a bit chaotic. Here we provide a roadmap on how to go through the wiki documentation
 
-* The main page of [wiki](https://github.com/giorgk/ichnos/wiki) is very important as it provides a list of the required information of the two  required configuration files. It also list all possible options. Therefore it is strongly suggested to go through this page first.  
+* The main page of [wiki](https://github.com/giorgk/ichnos/wiki) is very important as it provides a list of the required information of the two  required configuration files. It lists also all possible options. Therefore it is strongly suggested to go through this page first.  
 
-* Next it is recommended to go thought the tutorials that run on a single core.
+* Next it is recommended to go thought the tutorials that run on a single core. The single core examples can also be run as multicore by tracing particles concurrently.
 
-* Multiple core simulations require an extra effort therefore one need to have a good understanding of the file requirements.
+* Multiple core simulations where the domain is split into multiple subdomains require an extra effort and therefore one need to have a good understanding of the file requirements.
 
 * Besides the two configuration files ichnos requires a specific format about how to write any information. The [File format](https://github.com/giorgk/ichnos/wiki/File-formats) should be used as a reference to the format of the files.  
 
@@ -80,7 +80,7 @@ Getting the dependencies right sometimes can be quite tricky. To build Ichnos we
 * **Build everything** That requires some experience and it is recommended on systems without administration privileges, e.g clusters.
 
 ## Building with vcpkg
-First install all the libraries that Icvhnos depend on.</br> 
+First install all the libraries that Ichnos depend on. Make sure you install the boost with mpi</br> 
 Then pass the following argument to cmake
 ```
 -DCMAKE_TOOLCHAIN_FILE=path\to\vcpkg\scripts\buildsystems\vcpkg.cmake -DUSEHF=True
@@ -164,27 +164,11 @@ cmake -DUSEHF=True \
  see [more](https://stackoverflow.com/questions/3016448/how-can-i-get-cmake-to-find-my-alternative-boost-installation).
 
 ------------
-------------
+
+
 # Running Ichnos
-Ichnos reads the inputs from ascii or HDF5 files and writes the outputs to ascii or HDF5 files as well. 
+More information about running Ichnos can he found in the [wiki section](https://github.com/giorgk/ichnos/wiki#run-ichnos). 
 
-To run Ichnos one need to prepare two configuration files as well as a number of other input files that descibe the velocity fields and the domain.
-You can run the code with the following options:
-
-* Read the version of the executable
-```
-ichnos.exe -v
-```
-* Get help options
-```
-ichnos.exe -h
-```
-
-* Run the code
-```
-ichnos.exe -c config.ini
-```
-------------
 ------------
 # Who do I talk to
 It depends on what you want to say</br>
