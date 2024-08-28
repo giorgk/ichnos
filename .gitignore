@@ -42,6 +42,7 @@
 # wiki files
 !/WikiExamples
 /WikiExamples/*
+!/WikiExamples/*.md
 !/WikiExamples/*.m
 !/WikiExamples/*.ini
 !/WikiExamples/CLOUD
