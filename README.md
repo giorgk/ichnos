@@ -21,23 +21,23 @@ The velocity can be defined as:
 
 ------------
 # Outline of this repository
-Here we provide a list of the repository's directories and what information these folders provide
+Here we breifly outline the Ichnos repository structure and what information each of these folders contain.
 * **Bin** is the folder which holds the windows executable of ichnos. 
-* **IchnosRwrksp** contains R scripts related to ichnos. (Currently we are using Matlab threfore there is no much R scripting there)
+* **IchnosRwrksp** contains R scripts related to ichnos. (Currently we are using primarily Matlab threfore there is no much R scripting there)
 * **WikiExamples** contains the configuration files for the examples presented at the [wiki](https://github.com/giorgk/ichnos/wiki)
 * **docs** Was supposed to hold the doxygen documentation for the code. Currently is empty as we use codeblocks 
 * **ichnos_code** contains the c++ code files.
-* **ichnos_hou** contains project files and data for [Houdini visualization](https://www.sidefx.com/)
+* **ichnos_hou** contains project files and data for various [Houdini visualizations](https://www.sidefx.com/)
 
 --------------
 # Getting the code
 The code relies on libraries that are available to all major operating OS.
 ## Windons
 Windows executables are available under the [Bin](Bin/) folder. However, those executables may not contain the latest updates, fixes and new bugs.
+Under the Bin folder there is a [Dev](Bin/Dev) folder which contains the latest build. 
+<!-- You can check [here](https://gist.github.com/giorgk/f727351f5efd8c58f8bb885a87f41978#file-ichnos_test_list-md) which examples have been tested so far with the current development version. -->
 
-Under the Bin folder there is a [Dev](Bin/Dev) folder which contains the latest build. You can check [here](https://gist.github.com/giorgk/f727351f5efd8c58f8bb885a87f41978#file-ichnos_test_list-md) which examples have been tested so far with the current development version.
-
-Put under the same folder the ```.exe``` and all the ```dlls```. Make sure the antivirus is not blocking the execution. To verify that the code can run try the following under a powershell or command prompt.
+Put under the same folder the `ichnos.exe` and all the `*.dlls`. Make sure the antivirus is not blocking the execution. To verify that the code can run try the following under a powershell or command prompt.
 ```
 ichnos.exe -v
 ```
@@ -51,9 +51,11 @@ The [wiki](https://github.com/giorgk/ichnos/wiki) is the best source to get you 
 ## Suggested Roadmap
 Because the wiki contains alot of information and examples it can be a bit chaotic. Here we provide a roadmap on how to go through the wiki documentation
 
-* The main page of [wiki](https://github.com/giorgk/ichnos/wiki) is very important as it provides a list of the required information of the two  required configuration files. It lists also all possible options. Therefore it is strongly suggested to go through this page first.  
+* The main page of [wiki](https://github.com/giorgk/ichnos/wiki) is very important as it provides a list of the required information of the two  required configuration files. It lists also all possible options. Therefore it is strongly suggested to go through this page to get an idea of the available options and requirements for a simulation run. This is also the page you would need to consult when setting up the two configuration files  
 
-* Next it is recommended to go thought the tutorials that run on a single core. The single core examples can also be run as multicore by tracing particles concurrently.
+* Next it is recommended to go through, first the [simple example](https://github.com/giorgk/ichnos/wiki/Simple-Example) and seconldy the [sample face example](https://github.com/giorgk/ichnos/wiki/Simple-Face-Example) excersizes as they go through all required file preparation that one would need to do for an Ichnos simulation. 
+
+* Then it is recommended to go thought the tutorials that run on a single core. The single core examples can also be run as multicore by tracing particles concurrently.
 
 * Multiple core simulations where the domain is split into multiple subdomains require an extra effort and therefore one need to have a good understanding of the file requirements.
 
@@ -68,7 +70,7 @@ To build ichnos we use [cmake](https://cmake.org/). The code contains the requir
 Ichnos depends on a few libraries
 
 * MPI. All mpi frameworks should work. 
-* [Boost](https://www.boost.org/) witn mpi support. Any relatively new version of boost is good. In the CMakeList.txt we require 1.58 but the code works with lower versions.
+* [Boost](https://www.boost.org/) with mpi support. Any relatively new version of boost is good. In the CMakeList.txt we require 1.58 but the code works with lower versions.
 * [CGAL](https://www.cgal.org/) Similarly any relatively recent version should work.
 * [HighFive](https://github.com/BlueBrain/HighFive). This is optional but speeds up the reading of large files and it is highly recommended. 
 
