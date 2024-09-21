@@ -28,8 +28,8 @@ Here we breifly outline the Ichnos repository structure and what information eac
 * **Bin** is the folder which holds the windows executable of ichnos. 
 * **IchnosRwrksp** contains R scripts related to ichnos. (Currently we are using primarily Matlab threfore there is no much R scripting there)
 * **WikiExamples** contains the configuration files for the examples presented at the [wiki](https://github.com/giorgk/ichnos/wiki)
-* **docs** Was supposed to hold the doxygen documentation for the code. Currently is empty as we use codeblocks 
-* **ichnos_code** contains the c++ code files.
+* **docs** was supposed to hold the doxygen documentation for the code. Currently it is empty as we use codeblocks 
+* **ichnos_code** contains the c++ code.
 * **ichnos_hou** contains project files and data for various [Houdini visualizations](https://www.sidefx.com/)
 
 --------------
