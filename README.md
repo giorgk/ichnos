@@ -19,7 +19,7 @@ At the moment we provide two types of positional classes `XYZ`
  
 The velocity can be defined as:
   * Transient or Steady state
-  * Stochastic flow fields (This is in an experimental stage but a demonstration of the stochastic flow field idea can be found in our [AGU 2020 poster](https://agu2020fallmeeting-agu.ipostersessions.com/?s=0C-96-C6-05-F8-AB-22-9D-63-C2-37-9D-96-2E-CD-B8) and )
+  * Stochastic flow fields (This is in an experimental stage but a demonstration of the stochastic flow field idea can be found in our [AGU 2020 poster](https://agu2020fallmeeting-agu.ipostersessions.com/?s=0C-96-C6-05-F8-AB-22-9D-63-C2-37-9D-96-2E-CD-B8) and [AGU 2023 poster](https://subsurface.gr/wp-content/uploads/2024/09/AGU2023_StochIchnos.pdf))
   * Random Walk (This is in an experimental stage)
 
 ------------
