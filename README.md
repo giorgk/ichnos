@@ -1,11 +1,14 @@
 # Ichnos overview
 Ichnos is a general purpose particle tracking code. As such, Ichnos can trace virtual particles in velocity fields. The development of the code is heavily influenced by the projects that Ichnos was developed for, which is primarily particle tracking in groundwater flow fields. In particular, in groundwater flow fields calculated from finite element groundwater models. Yet, groundwater velocity fields from finite difference and finite volume codes can also be used. A key consideration during the development of the code is to handle simulations with multi-million velocity nodes. Therefore the code can be used with velocitiy fields that can be split across many processors.
 
-A brief demonstration of the capabilities of this code can be found at our [AGU 2020 poster](https://agu2020fallmeeting-agu.ipostersessions.com/?s=0C-96-C6-05-F8-AB-22-9D-63-C2-37-9D-96-2E-CD-B8).
+A brief demonstration of the capabilities of this code can be found at our paper </br>
+[Kourakos G., Harter T., Dahlke H.E. (2024) Ichnos: A universal parallel particle tracking tool for groundwater flow simulations. SoftwareX 28,101893. 10.1016/j.softx.2024.101893](https://www.softxjournal.com/article/S2352-7110(24)00263-2/fulltext)
 
-Note that this is a continuation of a previous project [IWFMtrack](https://gwt.ucdavis.edu/research-tools-and-applications/iwfm-track).
+ <!-- [AGU 2020 poster](https://agu2020fallmeeting-agu.ipostersessions.com/?s=0C-96-C6-05-F8-AB-22-9D-63-C2-37-9D-96-2E-CD-B8). -->
 
-In particle tracking codes there are essentially two main functionalities. i) Tracing the particles in a velocity field. ii) Interpolating a velocity field. The code has been designed so that tracing functions are unaware of the details of the velocity field. To do so the code contains a velocity base class that communicates with the tracing class. Then each different type of field has to derive from the base velocity class and overwrite a few functions. The velocity field can be split into 2 components. The positional information of the points where the velocity is known and the velocity itself. Each of those components are defined in based classes. The positional base class `class XYZ` is responsible to calculate the weight contribution of each velocity point in the field for a given particle position. Then it passes the weights to the `Velocity` class which calculates the velocity value. Using this separation it is possible to combine different data structures in the code.
+<!-- Note that this is a continuation of a previous project [IWFMtrack](https://gwt.ucdavis.edu/research-tools-and-applications/iwfm-track). -->
+
+In particle tracking there are essentially two main functionalities. i) Tracing the particles in a velocity field. ii) Interpolating a velocity field. The code has been designed so that tracing functions are unaware of the details of the velocity field. To do so the code contains a velocity base class that communicates with the tracing class. Then each different type of field has to derive from the base velocity class and overwrite a few functions. The velocity field can be split into 2 components. The positional information of the points where the velocity is known and the velocity itself. Each of those components are defined in based classes. The positional base class `class XYZ` is responsible to calculate the weight contribution of each velocity point in the field for a given particle position. Then it passes the weights to the `Velocity` class which calculates the velocity value. Using this separation it is possible to combine different data structures in the code.
 
 At the moment we provide two types of positional classes `XYZ` 
   1. **CLOUD** </br>
@@ -16,7 +19,7 @@ At the moment we provide two types of positional classes `XYZ`
  
 The velocity can be defined as:
   * Transient or Steady state
-  * Stochastic flow fields (This is in an experimental stage)
+  * Stochastic flow fields (This is in an experimental stage but a demonstration of the stochastic flow field idea can be found in our [AGU 2020 poster](https://agu2020fallmeeting-agu.ipostersessions.com/?s=0C-96-C6-05-F8-AB-22-9D-63-C2-37-9D-96-2E-CD-B8) and )
   * Random Walk (This is in an experimental stage)
 
 ------------
