@@ -785,10 +785,84 @@ namespace ICHNOS{
             }
             out = true;
 
-        }
+        }// If velocity is transient
         else{
-            // TODO
-            std::cout << "Transient state reader for FACE interpolation has not implemented yet" << std::endl;
+            std::vector<std::vector<double>> VHOR;
+            std::vector<std::vector<double>> VVER;
+            if (Suffix.compare(".h5") == 0) {
+#if _USEHF > 0
+                // TODO
+                std::string filename = Prefix + ic::num2Padstr(proc_id, leadingZeros) + Suffix;
+                const std::string VHORNameSet("VHOR");
+                const std::string VVERNameSet("VVER");
+                HighFive::File HDFNfile(filename, HighFive::File::ReadOnly);
+                HighFive::DataSet datasetVHOR = HDFNfile.getDataSet(VHORNameSet);
+                HighFive::DataSet datasetVVER = HDFNfile.getDataSet(VVERNameSet);
+
+                datasetVHOR.read(VHOR);
+                datasetVVER.read(VVER);
+                bisascii = false;
+#endif
+            }
+            else{
+                std::string filenameHOR = Prefix + "VHOR_" + ic::num2Padstr(proc_id, leadingZeros) + Suffix;
+                std::string filenameVER = Prefix + "VVER_" + ic::num2Padstr(proc_id, leadingZeros) + Suffix;
+                bool tf = READ::read2Darray<double>(filenameHOR, nSteps, VHOR);
+                if (VHOR[0].size() != nSteps){
+                    std::cout << "The number of time steps (" << VHOR[0].size() << ") in the file " << filenameHOR
+                              << "\n does not match the number of steps in the Time step file " << nSteps << std::endl;
+                    return false;
+                }
+                if (!tf){
+                    return false;
+                }
+                tf = READ::read2Darray<double>(filenameVER, nSteps, VVER);
+                if (!tf){
+                    return false;
+                }
+            }
+
+            int nTotalVERface;
+            if (bisascii){
+                nTotalHORFaces = static_cast<int>(VHOR.size());
+                nTotalVERface = static_cast<int>(VVER.size());
+            }
+            else{
+                nTotalHORFaces = static_cast<int>(VHOR[0].size());
+                nTotalVERface = static_cast<int>(VVER[0].size());
+            }
+
+            nFaceVelperLayer = nTotalHORFaces/nLayers;
+            nTotalFaces = nTotalHORFaces + nTotalVERface;
+            int n = nTotalVERface / (nLayers + 1);
+            if (nElements != n){
+                bisascii = false;
+                std::cout << "The number of elements in Element file is not the same as the elements in the VVER file" << std::endl;
+                return false;
+            }
+            VEL.init(nTotalFaces, nSteps, 1);
+            for (int i = 0; i < nTotalHORFaces; ++i){
+                for (int j = 0; j < nSteps; ++j){
+                    if (bisascii){
+                        VEL.setVELvalue(VHOR[i][j] * multiplier, i, j, ic::coordDim::vx);
+                    }
+                    else{
+                        VEL.setVELvalue(VHOR[j][i] * multiplier, i, j, ic::coordDim::vx);
+                    }
+                }
+            }
+
+            for (int i = 0; i < nTotalVERface; ++i){
+                for (int j = 0; j < nSteps; ++j){
+                    if (bisascii){
+                        VEL.setVELvalue(VVER[i][j] * multiplier, i + nTotalHORFaces, j, ic::coordDim::vx);
+                    }
+                    else{
+                        VEL.setVELvalue(VVER[j][i] * multiplier, i + nTotalHORFaces, j, ic::coordDim::vx);
+                    }
+                }
+            }
+            out = true;
         }
 
         if (out){
