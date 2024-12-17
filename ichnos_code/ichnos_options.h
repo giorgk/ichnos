@@ -175,7 +175,7 @@ namespace ICHNOS {
 		:
 		world(world_in)
 	{
-        Version = "0.5.06";
+        Version = "0.5.07";
 	}
     
 	bool options::readInput(int argc, char* argv[]) {
@@ -270,6 +270,9 @@ namespace ICHNOS {
 			("InputOutput.OutputFile", po::value<std::string >(), "Prefix for the output file")
             ("InputOutput.PrintH5", po::value<int>()->default_value(0), "Print output as hdf5")
             ("InputOutput.PrintASCII", po::value<int>()->default_value(1), "Print output as ASCII")
+            ("InputOutput.Pprecision", po::value<int>()->default_value(3), "Printing precision for Position (ASCII only)")
+            ("InputOutput.Vprecision", po::value<int>()->default_value(6), "Printing precision for Velocity (ASCII only)")
+            ("InputOutput.Tprecision", po::value<int>()->default_value(3), "Printing precision for Time (ASCII only)")
 			("InputOutput.ParticlesInParallel", po::value<int>()->default_value(1000), "Maximum number run in parallel")
 			("InputOutput.GatherOneFile", po::value<int>()->default_value(1), "Put all streamlines into one file")
 
@@ -427,8 +430,11 @@ namespace ICHNOS {
 					Popt.WellFile = vm_cfg["InputOutput.WellFile"].as<std::string>();
 					Popt.OutputFile = vm_cfg["InputOutput.OutputFile"].as<std::string>();
 					Popt.ParticlesInParallel = vm_cfg["InputOutput.ParticlesInParallel"].as<int>();
-                    Popt.printH5 = vm_cfg["InputOutput.PrintH5"].as<int>() != 0;
-                    Popt.printASCII = vm_cfg["InputOutput.PrintASCII"].as<int>() !=0;
+                    Popt.printOpt.printH5 = vm_cfg["InputOutput.PrintH5"].as<int>() != 0;
+                    Popt.printOpt.printASCII = vm_cfg["InputOutput.PrintASCII"].as<int>() !=0;
+                    Popt.printOpt.Pprec = vm_cfg["InputOutput.Pprecision"].as<int>();
+                    Popt.printOpt.Vprec = vm_cfg["InputOutput.Vprecision"].as<int>();
+                    Popt.printOpt.Tprec = vm_cfg["InputOutput.Tprecision"].as<int>();
                 }
 			}
 			catch (std::exception& E)

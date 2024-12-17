@@ -846,6 +846,14 @@ namespace ICHNOS {
         double Tolerance;
     };
 
+    struct PrintOptions{
+        bool printH5;
+        bool printASCII;
+        int Pprec;
+        int Vprec;
+        int Tprec;
+    };
+
 
 	struct ParticleOptions {
 		
@@ -874,10 +882,10 @@ namespace ICHNOS {
 		std::string WellFile;
 		int ParticlesInParallel;
 		std::string OutputFile;
-		bool printH5;
-		bool printASCII;
+
+        PrintOptions printOpt;
         bool printVex;
-		// During gathering puut all streamlines into one file.
+		// During gathering put all streamlines into one file.
 		// If false each file will contain ParticlesInParallel streamlines per file
 		bool gatherOneFile;
 		std::string configfile;

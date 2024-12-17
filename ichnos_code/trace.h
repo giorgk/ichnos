@@ -220,7 +220,7 @@ namespace ICHNOS {
 
 			}
             const std::string out_file_name = (popt.OutputFile + "_ireal_" + num2Padstr(ireal, 4) + "_iter_" + num2Padstr(iter, 4) + "_proc_" + num2Padstr(my_rank, 4));
-            WRITE::writeStreamlines(S, out_file_name, popt.printH5, popt.printASCII, append);
+            WRITE::writeStreamlines(S, out_file_name, popt.printOpt, append);
             append = true;
 
             world.barrier();
@@ -837,7 +837,7 @@ namespace ICHNOS {
                         }
                     }
 
-                    WRITE::writeStreamlines(Streamlines4thread, filename, popt.printH5, popt.printASCII);
+                    WRITE::writeStreamlines(Streamlines4thread, filename, popt.printOpt);
                     world.barrier();
                 }
                 else{
@@ -864,7 +864,7 @@ namespace ICHNOS {
                         filename = popt.OutputFile + "_iter_" + num2Padstr(iter, 4) + "_ireal_" + num2Padstr(ireal, 4);
                     else
                         filename = popt.OutputFile+ "_iter_" + num2Padstr(iter, 4);
-                    WRITE::writeStreamlines(Streamlines4thread, filename, popt.printH5, popt.printASCII);
+                    WRITE::writeStreamlines(Streamlines4thread, filename, popt.printOpt);
                 }
 
 

@@ -1335,17 +1335,17 @@ namespace ICHNOS {
 	
 
 	namespace WRITE {
-		void PrintParticle2Log(std::ofstream& log_file, Streamline& S, int i) {
+		void PrintParticle2Log(std::ofstream& log_file, Streamline& S, int i, PrintOptions printOpt) {
 			Particle pp = S.getParticle(i);
 			log_file << pp.getPid() << " "
 				<< S.getEid() << " "
 				<< S.getSid() << " "
-				<< std::setprecision(2) << std::fixed
+				<< std::setprecision(printOpt.Pprec) << std::fixed
 				<< pp.getP().x << " " << pp.getP().y << " " << pp.getP().z << " "
-				<< std::setprecision(6) << std::scientific
+				<< std::setprecision(printOpt.Vprec) << std::scientific
 				<< pp.getV().x << " " << pp.getV().y << " " << pp.getV().z << " "
                 //<< pp.getV().len() << " "
-                << std::setprecision(2) << std::fixed
+                << std::setprecision(printOpt.Tprec) << std::scientific
 				<< pp.getTime() << std::endl;
 		}
 		void PrintExitReason(std::ofstream& log_file, Streamline& S, ExitReason er) {
@@ -1420,12 +1420,11 @@ namespace ICHNOS {
 		 */
 		void writeStreamlines(std::vector<Streamline>& S,
                               std::string filename,
-                              bool printH5,
-                              bool printASCI,
+                              PrintOptions printOpt,
                               bool append = false){
             //std::cout << "S size = " << S.size() << std::endl;
 #if _USEHF > 0
-            if (printH5){ //print with Highfive
+            if (printOpt.printH5){ //print with Highfive
                 const std::string FILE_NAME(filename + ".h5");
                 const std::string DATASET_NAME("PVA");
                 const std::string DATASET_IDS("ESID");
@@ -1467,7 +1466,7 @@ namespace ICHNOS {
                 datasetEXIT.write(ExitReason);
             }
 #endif
-            if (printASCI){
+            if (printOpt.printASCII){
                 const std::string log_file_name = (filename + ".traj");
                 //std::cout << "Printing Output to " << log_file_name << std::endl;
                 std::ofstream log_file;
@@ -1482,9 +1481,9 @@ namespace ICHNOS {
                     if (!S[i].printIt())
                         continue;
                     for (unsigned int j = 0; j < S[i].size()-1; ++j) {
-                        WRITE::PrintParticle2Log(log_file, S[i], j);
+                        WRITE::PrintParticle2Log(log_file, S[i], j, printOpt);
                     }
-                    WRITE::PrintParticle2Log(log_file, S[i], S[i].size() - 1);
+                    WRITE::PrintParticle2Log(log_file, S[i], S[i].size() - 1, printOpt);
                     WRITE::PrintExitReason(log_file, S[i], S[i].getExitReason());
                 }
                 log_file.close();
