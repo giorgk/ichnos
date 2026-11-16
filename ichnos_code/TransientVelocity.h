@@ -225,12 +225,22 @@ namespace ICHNOS{
         auto start = std::chrono::high_resolution_clock::now();
 
         if (isVeltrans){
+			if (Suffix.size() >= 4 &&
+			    Suffix.compare(Suffix.size() - 4, 4, ".bin") == 0) {
+				std::cout << "Binary redistributed CLOUD files support steady-state "
+				             "velocity only." << std::endl;
+				return false;
+			}
 
             if (Suffix.compare(".h5") == 0){
 #if _USEHF > 0
                 std::string fileVXYZ = Prefix + ic::num2Padstr(proc_id, leadingZeros) + Suffix;
                 tf = READ::H5Transient3DVelocity(fileVXYZ, nSteps, multiplier, VEL);
                 nPoints = VEL.getNpoints();
+#else
+				std::cout << "HDF5 CLOUD input was requested, but this Ichnos build "
+				             "does not include HDF5 support." << std::endl;
+				return false;
 #endif
             }
             else{
@@ -299,20 +309,83 @@ namespace ICHNOS{
                     }
                     tf = true;
                 }
+#else
+				std::cout << "HDF5 CLOUD input was requested, but this Ichnos build "
+				             "does not include HDF5 support." << std::endl;
+				return false;
 #endif
             }
+			else if (Suffix.size() >= 4 &&
+			         Suffix.compare(Suffix.size() - 4, 4, ".bin") == 0) {
+				READ::RedistributedVelocityHeader header;
+				std::vector<READ::RedistributedVelocityRecord> records;
+				tf = READ::readRedistributedVelocityBinary(
+					fileVXYZ, proc_id, header, records);
+				if (tf) {
+					const int vxColumn = READ::findRedistributedColumn(header, 1);
+					const int vyColumn = READ::findRedistributedColumn(header, 2);
+					const int vzColumn = READ::findRedistributedColumn(header, 3);
+					if (vxColumn < 0 || vyColumn < 0 || vzColumn < 0) {
+						std::cout << "Binary CLOUD input requires source columns "
+						             "1, 2 and 3 (vx, vy, vz) in " << fileVXYZ << std::endl;
+						return false;
+					}
+					if (records.size() != static_cast<std::size_t>(XYZ.getNpnts())) {
+						std::cout << "The binary CLOUD coordinate and velocity point counts "
+						             "do not agree in " << fileVXYZ << std::endl;
+						return false;
+					}
+					nPoints = static_cast<int>(records.size());
+					VEL.init(nPoints, 1, 3);
+					for (int i = 0; i < nPoints; ++i) {
+						VEL.setVELvalue(records[i].data[vxColumn] * multiplier,
+						                i, 0, coordDim::vx);
+						VEL.setVELvalue(records[i].data[vyColumn] * multiplier,
+						                i, 0, coordDim::vy);
+						VEL.setVELvalue(records[i].data[vzColumn] * multiplier,
+						                i, 0, coordDim::vz);
+					}
+				}
+			}
             else{
-                std::vector<std::vector<double>> data;
-                tf = READ::read2Darray<double>(fileVXYZ, 9, data);
-                if (tf){
-                    nPoints = static_cast<int>(data.size());
-                    VEL.init(nPoints, 1, 3);
-                    for (int i = 0; i < nPoints; i++){
-                        VEL.setVELvalue(data[i][6]*multiplier, i, 0, coordDim::vx);
-                        VEL.setVELvalue(data[i][7]*multiplier, i, 0, coordDim::vy);
-                        VEL.setVELvalue(data[i][8]*multiplier, i, 0, coordDim::vz);
-                    }
-                }
+				std::ifstream input(fileVXYZ.c_str());
+				if (!input.good()) {
+					std::cout << "Can't open the file " << fileVXYZ << std::endl;
+					return false;
+				}
+				std::vector<vec3> velocities;
+				std::string line;
+				while (std::getline(input, line)) {
+					if (line.size() <= 1)
+						continue;
+					std::istringstream row(line.c_str());
+					double x, y, z, owner, diameter, ratio;
+					vec3 velocity;
+					std::string extra;
+					if (!(row >> x >> y >> z >> owner >> diameter >> ratio
+					          >> velocity.x >> velocity.y >> velocity.z) ||
+					    (row >> extra)) {
+						std::cout << "Invalid steady ASCII CLOUD record in "
+						          << fileVXYZ
+						          << "; expected x y z owner diameter ratio vx vy vz."
+						          << std::endl;
+						return false;
+					}
+					velocities.push_back(velocity);
+				}
+				if (velocities.size() != static_cast<std::size_t>(XYZ.getNpnts())) {
+					std::cout << "The ASCII CLOUD coordinate and velocity point counts "
+					             "do not agree in " << fileVXYZ << std::endl;
+					return false;
+				}
+				nPoints = static_cast<int>(velocities.size());
+				VEL.init(nPoints, 1, 3);
+				for (int i = 0; i < nPoints; ++i) {
+					VEL.setVELvalue(velocities[i].x * multiplier, i, 0, coordDim::vx);
+					VEL.setVELvalue(velocities[i].y * multiplier, i, 0, coordDim::vy);
+					VEL.setVELvalue(velocities[i].z * multiplier, i, 0, coordDim::vz);
+				}
+				tf = true;
             }
         }
 

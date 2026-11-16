@@ -175,7 +175,7 @@ namespace ICHNOS {
 		:
 		world(world_in)
 	{
-        Version = "0.5.07";
+        Version = "0.5.08";
 	}
     
 	bool options::readInput(int argc, char* argv[]) {

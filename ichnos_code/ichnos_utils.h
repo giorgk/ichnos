@@ -2,6 +2,9 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <cstdint>
+#include <cstring>
+#include <limits>
 
 #include <boost/geometry/algorithms/assign.hpp>
 #include <boost/math/constants/constants.hpp>
@@ -650,6 +653,129 @@ namespace ICHNOS {
     }
 
 	namespace READ {
+		struct RedistributedVelocityHeader {
+			std::uint32_t version;
+			std::uint32_t dimension;
+			std::uint32_t rank;
+			std::uint32_t nproc;
+			std::uint32_t ndata;
+			std::uint64_t npoints;
+			std::vector<std::uint32_t> sourceColumns;
+		};
+
+		struct RedistributedVelocityRecord {
+			double x;
+			double y;
+			double z;
+			std::int32_t owner;
+			std::vector<double> data;
+		};
+
+		template <typename T>
+		bool readBinaryValue(std::istream& input, T& value) {
+			input.read(reinterpret_cast<char*>(&value), sizeof(T));
+			return input.good();
+		}
+
+		int findRedistributedColumn(const RedistributedVelocityHeader& header,
+		                            std::uint32_t sourceColumn) {
+			for (std::size_t i = 0; i < header.sourceColumns.size(); ++i) {
+				if (header.sourceColumns[i] == sourceColumn)
+					return static_cast<int>(i);
+			}
+			return -1;
+		}
+
+		bool readRedistributedVelocityBinary(
+			const std::string& filename,
+			int expectedRank,
+			RedistributedVelocityHeader& header,
+			std::vector<RedistributedVelocityRecord>& records) {
+			std::cout << "\tReading file " << filename << std::endl;
+			static_assert(sizeof(double) == 8,
+			              "Redistributed binary velocity files require 64-bit doubles");
+			std::ifstream input(filename.c_str(), std::ios::in | std::ios::binary);
+			if (!input.good()) {
+				std::cout << "Can't open the file " << filename << std::endl;
+				return false;
+			}
+
+			char magic[8] = {0,0,0,0,0,0,0,0};
+			const char expectedMagic[8] = {'R','D','I','V','E','L','1','\0'};
+			input.read(magic, 8);
+			if (!input.good() || std::memcmp(magic, expectedMagic, 8) != 0) {
+				std::cout << "Invalid redistributed velocity magic in " << filename << std::endl;
+				return false;
+			}
+
+			if (!readBinaryValue(input, header.version) ||
+			    !readBinaryValue(input, header.dimension) ||
+			    !readBinaryValue(input, header.rank) ||
+			    !readBinaryValue(input, header.nproc) ||
+			    !readBinaryValue(input, header.ndata) ||
+			    !readBinaryValue(input, header.npoints)) {
+				std::cout << "Incomplete redistributed velocity header in " << filename << std::endl;
+				return false;
+			}
+
+			if (header.version != 1 || header.dimension != 3 ||
+			    header.rank != static_cast<std::uint32_t>(expectedRank) ||
+			    header.nproc == 0 || header.rank >= header.nproc ||
+			    header.ndata == 0 || header.ndata > 1024 ||
+			    header.npoints > static_cast<std::uint64_t>(std::numeric_limits<int>::max())) {
+				std::cout << "Unsupported or inconsistent redistributed velocity header in "
+				          << filename << std::endl;
+				return false;
+			}
+
+			header.sourceColumns.resize(header.ndata);
+			for (std::uint32_t i = 0; i < header.ndata; ++i) {
+				if (!readBinaryValue(input, header.sourceColumns[i]) ||
+				    header.sourceColumns[i] == 0) {
+					std::cout << "Invalid redistributed velocity column metadata in "
+					          << filename << std::endl;
+					return false;
+				}
+				for (std::uint32_t j = 0; j < i; ++j) {
+					if (header.sourceColumns[j] == header.sourceColumns[i]) {
+						std::cout << "Duplicate redistributed velocity column in "
+						          << filename << std::endl;
+						return false;
+					}
+				}
+			}
+
+			records.clear();
+			records.reserve(static_cast<std::size_t>(header.npoints));
+			for (std::uint64_t i = 0; i < header.npoints; ++i) {
+				RedistributedVelocityRecord record;
+				record.data.resize(header.ndata);
+				if (!readBinaryValue(input, record.x) ||
+				    !readBinaryValue(input, record.y) ||
+				    !readBinaryValue(input, record.z) ||
+				    !readBinaryValue(input, record.owner)) {
+					std::cout << "Incomplete redistributed velocity record in "
+					          << filename << std::endl;
+					return false;
+				}
+				for (std::uint32_t j = 0; j < header.ndata; ++j) {
+					if (!readBinaryValue(input, record.data[j])) {
+						std::cout << "Incomplete redistributed velocity record in "
+						          << filename << std::endl;
+						return false;
+					}
+				}
+				if (record.owner < 0 ||
+				    static_cast<std::uint32_t>(record.owner) >= header.nproc) {
+					std::cout << "Invalid owner rank in redistributed velocity record in "
+					          << filename << std::endl;
+					return false;
+				}
+				records.push_back(record);
+			}
+			return true;
+		}
+
 		void readTopBot(std::string filename, PointSet2& Pset, bool top, bool bot) {
 			std::ifstream datafile(filename.c_str());
 			if (!datafile.good()) {
@@ -717,11 +843,35 @@ namespace ICHNOS {
             return false;
 		}
 
-		bool readXYZfile(std::string fileXYZ, std::vector<cgal_point_3>& pp, std::vector<Pnt_info>& dd) {
+		bool readXYZfile(std::string fileXYZ, int expectedRank,
+		                 std::vector<cgal_point_3>& pp, std::vector<Pnt_info>& dd) {
             std::cout << "\tReading file " + fileXYZ << std::endl;
 
 
             std::string ext = getExtension(fileXYZ);
+			if (ext.compare("bin") == 0) {
+				RedistributedVelocityHeader header;
+				std::vector<RedistributedVelocityRecord> records;
+				if (!readRedistributedVelocityBinary(fileXYZ, expectedRank, header, records))
+					return false;
+				const int diameterColumn = findRedistributedColumn(header, 5);
+				const int ratioColumn = findRedistributedColumn(header, 6);
+				if (diameterColumn < 0 || ratioColumn < 0) {
+					std::cout << "Binary CLOUD input requires source columns 5 (diameter) "
+					             "and 6 (ratio) in " << fileXYZ << std::endl;
+					return false;
+				}
+				for (std::size_t i = 0; i < records.size(); ++i) {
+					Pnt_info info;
+					info.proc = static_cast<int>(records[i].owner);
+					info.diameter = records[i].data[diameterColumn];
+					info.ratio = records[i].data[ratioColumn];
+					info.id = static_cast<int>(i);
+					pp.push_back(cgal_point_3(records[i].x, records[i].y, records[i].z));
+					dd.push_back(info);
+				}
+				return true;
+			}
             if (ext.compare("h5") == 0){
 #if _USEHF > 0
                 const std::string XYZDRNameSet("XYZDR");
@@ -744,6 +894,8 @@ namespace ICHNOS {
                 }
                 return true;
 #endif
+				std::cout << "HDF5 CLOUD input was requested, but this Ichnos build "
+				             "does not include HDF5 support." << std::endl;
                 return false;
             }
 
@@ -759,13 +911,12 @@ namespace ICHNOS {
                 int cnt = 0;
                 while (getline(datafile, line)) {
                     if (line.size() > 1) {
-                        std::istringstream inp(line.c_str());
-                        inp >> x;
-                        inp >> y;
-                        inp >> z;
-                        inp >> td.proc;
-                        inp >> td.diameter;
-                        inp >> td.ratio;
+						std::istringstream inp(line.c_str());
+						if (!(inp >> x >> y >> z >> td.proc >> td.diameter >> td.ratio)) {
+							std::cout << "Invalid ASCII CLOUD coordinate record in "
+							          << fileXYZ << std::endl;
+							return false;
+						}
                         td.id = cnt;
                         cnt = cnt + 1;
 

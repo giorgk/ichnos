@@ -26,6 +26,7 @@ namespace ICHNOS{
         //virtual void sendVec3Data(std::vector<vec3>& data){};
         bool runAsThread;
         virtual int getINTInfo(infoType I){return 0;};
+        virtual int getNpnts(){return 0;}
     protected:
         boost::mpi::communicator world;
 
@@ -143,19 +144,6 @@ namespace ICHNOS{
             fileXYZ = prefix + "XYZ_" + num2Padstr(/*dbg_rank*/proc_id, leadZeros) + suffix;
         }
 
-        if (vm_vfo.count("CLOUD.GraphPrefix")){
-            std::string graphPrefix = vm_vfo["CLOUD.GraphPrefix"].as<std::string>();
-            if (!graphPrefix.empty()){
-                buseGraph = true;
-                std::string fileGraph;
-                fileGraph = graphPrefix + num2Padstr(/*dbg_rank*/proc_id, leadZeros) + ".grph";
-                bool tf = CGRAPH.readGraphFile(fileGraph, world.rank());
-                if (!tf)
-                    return false;
-            }
-        }
-
-
         Threshold = vm_vfo["CLOUD.Threshold"].as<double>();
         Scale = vm_vfo["CLOUD.Scale"].as<double>();
         Power = vm_vfo["CLOUD.Power"].as<double>();
@@ -163,9 +151,24 @@ namespace ICHNOS{
         initial_ratio = vm_vfo["CLOUD.InitRatio"].as<double>();
 
         std::vector<cgal_point_3> pp;
-        bool tf = READ::readXYZfile(fileXYZ, pp, pntDATA);
+        bool tf = READ::readXYZfile(fileXYZ, proc_id, pp, pntDATA);
         if (!tf)
             return false;
+
+        if (vm_vfo.count("CLOUD.GraphPrefix")){
+            std::string graphPrefix = vm_vfo["CLOUD.GraphPrefix"].as<std::string>();
+            if (!graphPrefix.empty()){
+                buseGraph = true;
+                const bool binaryGraph = suffix.size() >= 4 &&
+                    suffix.compare(suffix.size() - 4, 4, ".bin") == 0;
+                const std::string graphSuffix = binaryGraph ? ".grph.bin" : ".grph";
+                const std::string fileGraph = graphPrefix +
+                    num2Padstr(proc_id, leadZeros) + graphSuffix;
+                tf = CGRAPH.readGraphFile(fileGraph, proc_id, pp.size());
+                if (!tf)
+                    return false;
+            }
+        }
 
         pntCOORD.resize(pp.size());
         for (int i = 0; i < pp.size(); ++i){

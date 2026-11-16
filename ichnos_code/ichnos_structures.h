@@ -37,6 +37,9 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <cstdint>
+#include <cstring>
+#include <limits>
 
 
 namespace ICHNOS {
@@ -1364,7 +1367,8 @@ namespace ICHNOS {
     class CellGraph{
     public:
         CellGraph(){};
-        bool readGraphFile(std::string filename, int rank);
+        bool readGraphFile(std::string filename, int rank,
+                           std::size_t expectedVelocityCount);
         bool getNearVelocities(vec3& p, std::vector<int>& velIds);
 
     private:
@@ -1374,40 +1378,143 @@ namespace ICHNOS {
         std::vector<std::vector<int>> velids;
     };
 
-    bool CellGraph::readGraphFile(std::string filename, int rank) {
+    template <typename T>
+    bool readCellGraphBinaryValue(std::istream& input, T& value) {
+        input.read(reinterpret_cast<char*>(&value), sizeof(T));
+        return input.good();
+    }
+
+    bool CellGraph::readGraphFile(std::string filename, int rank,
+                                  std::size_t expectedVelocityCount) {
         std::cout << "\tReading file " + filename << std::endl;
 
-        std::ifstream datafile(filename.c_str());
+        const bool binary = filename.size() >= 4 &&
+            filename.compare(filename.size() - 4, 4, ".bin") == 0;
+        std::ifstream datafile(filename.c_str(), binary
+            ? (std::ios::in | std::ios::binary) : std::ios::in);
         if (!datafile.good()) {
             std::cout << "Can't open the file " << filename << std::endl;
             return false;
+        }
+
+        std::vector<cgal_point_3> pp;
+        std::vector<int> dd;
+        if (binary) {
+            const char expectedMagic[8] = {'R','D','I','G','R','P','1','\0'};
+            char magic[8] = {0,0,0,0,0,0,0,0};
+            std::uint32_t version = 0;
+            std::uint32_t dimension = 0;
+            std::uint32_t fileRank = 0;
+            std::uint32_t nproc = 0;
+            std::uint64_t nCells = 0;
+            std::uint64_t nVelocityPoints = 0;
+            datafile.read(magic, 8);
+            if (!datafile.good() || std::memcmp(magic, expectedMagic, 8) != 0 ||
+                !readCellGraphBinaryValue(datafile, version) ||
+                !readCellGraphBinaryValue(datafile, dimension) ||
+                !readCellGraphBinaryValue(datafile, fileRank) ||
+                !readCellGraphBinaryValue(datafile, nproc) ||
+                !readCellGraphBinaryValue(datafile, nCells) ||
+                !readCellGraphBinaryValue(datafile, nVelocityPoints)) {
+                std::cout << "Invalid or incomplete redistributed graph header in "
+                          << filename << std::endl;
+                return false;
+            }
+            if (version != 1 || dimension != 3 ||
+                fileRank != static_cast<std::uint32_t>(rank) || nproc == 0 ||
+                nCells > static_cast<std::uint64_t>(std::numeric_limits<int>::max()) ||
+                nVelocityPoints != static_cast<std::uint64_t>(expectedVelocityCount)) {
+                std::cout << "Unsupported or inconsistent redistributed graph header in "
+                          << filename << std::endl;
+                return false;
+            }
+
+            pp.reserve(static_cast<std::size_t>(nCells));
+            dd.reserve(static_cast<std::size_t>(nCells));
+            for (std::uint64_t cell = 0; cell < nCells; ++cell) {
+                double x = 0.0;
+                double y = 0.0;
+                double z = 0.0;
+                std::uint32_t nNeighbors = 0;
+                std::uint32_t nVels = 0;
+                if (!readCellGraphBinaryValue(datafile, x) ||
+                    !readCellGraphBinaryValue(datafile, y) ||
+                    !readCellGraphBinaryValue(datafile, z) ||
+                    !readCellGraphBinaryValue(datafile, nNeighbors) ||
+                    !readCellGraphBinaryValue(datafile, nVels)) {
+                    std::cout << "Incomplete redistributed graph record in "
+                              << filename << std::endl;
+                    return false;
+                }
+				if (static_cast<std::uint64_t>(nNeighbors) > nCells ||
+				    static_cast<std::uint64_t>(nVels) > nVelocityPoints) {
+					std::cout << "Invalid redistributed graph record counts in "
+					          << filename << std::endl;
+					return false;
+				}
+
+                std::vector<int> cells;
+                std::vector<int> vels;
+                cells.reserve(nNeighbors);
+                vels.reserve(nVels);
+                for (std::uint32_t i = 0; i < nNeighbors; ++i) {
+                    std::uint64_t id = 0;
+                    if (!readCellGraphBinaryValue(datafile, id) || id >= nCells) {
+                        std::cout << "Invalid neighbor-cell reference in "
+                                  << filename << std::endl;
+                        return false;
+                    }
+                    cells.push_back(static_cast<int>(id));
+                }
+                for (std::uint32_t i = 0; i < nVels; ++i) {
+                    std::uint64_t id = 0;
+                    if (!readCellGraphBinaryValue(datafile, id) ||
+                        id >= nVelocityPoints) {
+                        std::cout << "Invalid velocity reference in "
+                                  << filename << std::endl;
+                        return false;
+                    }
+                    vels.push_back(static_cast<int>(id));
+                }
+                pp.push_back(cgal_point_3(x, y, z));
+                dd.push_back(static_cast<int>(cell));
+                neighElem.push_back(cells);
+                velids.push_back(vels);
+            }
         }
         else{
             std::string line;
             int ncells, id, nvels;
             int idx = 0;
             double x, y ,z;
-            std::vector<cgal_point_3> pp;
-            std::vector<int> dd;
             while (getline(datafile, line)){
                 if (line.size() > 1){
                     std::istringstream inp(line.c_str());
-                    inp >> x;
-                    inp >> y;
-                    inp >> z;
+                    if (!(inp >> x >> y >> z >> ncells >> nvels) ||
+                        ncells < 0 || nvels < 0) {
+                        std::cout << "Invalid ASCII graph record in " << filename << std::endl;
+                        return false;
+                    }
                     pp.push_back(cgal_point_3(x, y, z));
                     dd.push_back(idx);
                     idx = idx + 1;
-                    inp >> ncells;
-                    inp >> nvels;
                     std::vector<int> cells;
                     for (int i = 0; i < ncells; ++i){
-                        inp >> id;
+                        if (!(inp >> id) || id < 0) {
+                            std::cout << "Invalid neighbor-cell reference in "
+                                      << filename << std::endl;
+                            return false;
+                        }
                         cells.push_back(id);
                     }
                     std::vector<int> vels;
                     for (int i = 0; i < nvels; ++i){
-                        inp >> id;
+                        if (!(inp >> id) || id < 0 ||
+                            static_cast<std::size_t>(id) >= expectedVelocityCount) {
+                            std::cout << "Invalid velocity reference in "
+                                      << filename << std::endl;
+                            return false;
+                        }
                         vels.push_back(id);
                     }
                     neighElem.push_back(cells);
@@ -1415,16 +1522,26 @@ namespace ICHNOS {
                 }
             }
 
-            std::cout << "Rank " << rank << ":" << neighElem.size() << ", " << velids.size() << std::endl;
-            auto start = std::chrono::high_resolution_clock::now();
-            Tree.insert(boost::make_zip_iterator(boost::make_tuple( pp.begin(), dd.begin() )),
-                        boost::make_zip_iterator(boost::make_tuple( pp.end(), dd.end() ) )  );
-            Tree.build();
-            auto finish = std::chrono::high_resolution_clock::now();
-            std::chrono::duration<double> elapsed = finish - start;
-            std::cout << "\tPoint Set Building time for rank: " << rank << " : " << elapsed.count() << std::endl;
-            return true;
+            for (std::size_t i = 0; i < neighElem.size(); ++i) {
+                for (std::size_t j = 0; j < neighElem[i].size(); ++j) {
+                    if (static_cast<std::size_t>(neighElem[i][j]) >= neighElem.size()) {
+                        std::cout << "Neighbor-cell reference is out of range in "
+                                  << filename << std::endl;
+                        return false;
+                    }
+                }
+            }
         }
+
+        std::cout << "Rank " << rank << ":" << neighElem.size() << ", " << velids.size() << std::endl;
+        auto start = std::chrono::high_resolution_clock::now();
+        Tree.insert(boost::make_zip_iterator(boost::make_tuple( pp.begin(), dd.begin() )),
+                    boost::make_zip_iterator(boost::make_tuple( pp.end(), dd.end() ) )  );
+        Tree.build();
+        auto finish = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> elapsed = finish - start;
+        std::cout << "\tPoint Set Building time for rank: " << rank << " : " << elapsed.count() << std::endl;
+        return true;
     }
 
     bool CellGraph::getNearVelocities(vec3 &p, std::vector<int>& outvel) {
