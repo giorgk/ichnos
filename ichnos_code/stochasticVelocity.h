@@ -70,7 +70,8 @@ namespace ICHNOS {
 	}
 
 	bool MarkovChainVelCloud::readVelocityField(std::string vf_file) {
-        CloudVel::readVelocityField(vf_file);
+        //TODO: Test failed base velocity loading in Markov mode.
+        if (!CloudVel::readVelocityField(vf_file)) { return false; }
         if (world.rank() == 0)
 		    std::cout << "Markov Chain related parameters: " << vf_file << std::endl;
 
@@ -107,10 +108,12 @@ namespace ICHNOS {
 			TPM.setNstates(Nstates);
             std::string tpmatrixfile = vm_vfo["MarkovChain.TPmatrix"].as<std::string>();
             if (!tpmatrixfile.empty()){
-                TPM.readData(tpmatrixfile);
+                //TODO: Test missing/invalid Markov input propagation.
+                if (!TPM.readData(tpmatrixfile)) { return false; }
 
 				std::string timesperiodfile = vm_vfo["MarkovChain.TimesPerPeriod"].as<std::string>();
-				TPM.readTimesPerPeriod(timesperiodfile);
+				//TODO: Test missing/invalid Markov input propagation.
+                if (!TPM.readTimesPerPeriod(timesperiodfile)) { return false; }
             }
             else{
                 std::string sequenfile = vm_vfo["MarkovChain.StateSequence"].as<std::string>();
@@ -538,7 +541,8 @@ namespace ICHNOS {
     }
 
     bool MarkovChainVelMESH2D::readVelocityField(std::string vf_file) {
-        Mesh2DVel::readVelocityField(vf_file);
+        //TODO: Test failed base velocity loading in Markov mode.
+        if (!Mesh2DVel::readVelocityField(vf_file)) { return false; }
         if (world.rank() == 0)
             std::cout << "Markov Chain related parameters: " << vf_file << std::endl;
 
@@ -573,9 +577,11 @@ namespace ICHNOS {
             TPM.setNstates(Nstates);
             std::string tpmatrixfile = vm_vfo["MarkovChain.TPmatrix"].as<std::string>();
             if (!tpmatrixfile.empty()){
-                TPM.readData(tpmatrixfile);
+                //TODO: Test missing/invalid Markov input propagation.
+                if (!TPM.readData(tpmatrixfile)) { return false; }
                 std::string timesperiodfile = vm_vfo["MarkovChain.TimesPerPeriod"].as<std::string>();
-                TPM.readTimesPerPeriod(timesperiodfile);
+                //TODO: Test missing/invalid Markov input propagation.
+                if (!TPM.readTimesPerPeriod(timesperiodfile)) { return false; }
             }
             else{
                 std::string sequenfile = vm_vfo["MarkovChain.StateSequence"].as<std::string>();

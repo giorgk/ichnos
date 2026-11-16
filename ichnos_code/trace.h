@@ -85,10 +85,14 @@ namespace ICHNOS {
 		bool tfp = false;
 		if (!popt.WellFile.empty()) {
 			tfw = READ::readWellFile(popt.WellFile, S, VF.isVelTransient());
+			//TODO: Test that one missing input is not hidden by another valid input.
+			if (!tfw) return false;
 		}
 
 		if (!popt.ParticleFile.empty()) {
 			tfp = READ::readParticleFile(popt.ParticleFile, S, VF.isVelTransient());
+			//TODO: Test combined well/particle input failure propagation.
+			if (!tfp) return false;
 		}
 
 		if (tfw || tfp)
@@ -118,7 +122,9 @@ namespace ICHNOS {
 		std::vector<Streamline> ALL_Streamlines;
 		std::vector<Streamline> Part_Streamlines;
 		if (my_rank == 0) {
-			bool tf = readInputFiles(ALL_Streamlines);
+			//TODO: Test missing well/particle files terminate all MPI ranks.
+            if (!readInputFiles(ALL_Streamlines))
+                throw std::runtime_error("Cannot load well/particle input files");
 		}
 		// All processors have to wait for the master
 		world.barrier();
@@ -796,7 +802,8 @@ namespace ICHNOS {
         std::vector<Streamline> AllStreamlines;
         bool tf = readInputFiles(AllStreamlines);
         if (!tf){
-            return;
+            //TODO: Test missing input in threaded tracing mode.
+            throw std::runtime_error("Cannot load well/particle input files");
         }
 
         int particle_index_start = 0;

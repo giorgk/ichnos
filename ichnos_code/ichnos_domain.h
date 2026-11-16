@@ -95,7 +95,9 @@ namespace ICHNOS {
 		:
 		DomainBase(Dopt_in)
 	{
-		domainPoly.readfromFile(Dopt.polygonFile);
+		//TODO: Test missing/invalid outline files abort initialization.
+        if (!domainPoly.readfromFile(Dopt.polygonFile))
+            throw std::runtime_error("Cannot load domain outline: " + Dopt.polygonFile);
 		nProc = Dopt_in.nProc;
 
 		if (nProc > 1 & !Dopt_in.RunAsThread){
@@ -144,14 +146,20 @@ namespace ICHNOS {
 
 		if (getTopFromFile){
 			if (useSamePoints) {
-			    readTopBot(Dopt.TopElevationFile, true, true);
+			    //TODO: Test surface load failures stop before tracing.
+                if (!readTopBot(Dopt.TopElevationFile, true, true))
+                    throw std::runtime_error("Cannot load domain top/bottom surface");
 			}
 			else{
-                readTopBot(Dopt.TopElevationFile, true, false);
+                //TODO: Test surface load failures stop before tracing.
+                if (!readTopBot(Dopt.TopElevationFile, true, false))
+                    throw std::runtime_error("Cannot load domain top/bottom surface");
 			}
 		}
 		if (getBotFromFile){
-            readTopBot(Dopt.BottomeElevationFile, false, true);
+            //TODO: Test surface load failures stop before tracing.
+                if (!readTopBot(Dopt.BottomeElevationFile, false, true))
+                    throw std::runtime_error("Cannot load domain top/bottom surface");
 		}
 
 		if (!Dopt.AttractorsFile.empty()) {
@@ -270,7 +278,8 @@ namespace ICHNOS {
 	    return false;
 	}
 
-	bool Domain2D::readTopBot(std::string filename, bool top, bool bot) {
+	//TODO: Test normalized text records and rejection of malformed input.
+    bool Domain2D::readTopBot(std::string filename, bool top, bool bot) {
         std::ifstream datafile(filename.c_str());
         if (!datafile.good()) {
             std::cout << "Can't open the file" << filename << std::endl;
@@ -281,7 +290,8 @@ namespace ICHNOS {
             type interpolation_type;
             std::string line;
             { // Read the TYPE
-                getline(datafile, line);
+                readTextLine(datafile, line);
+                //TODO: Verify surface headers use the shared LF/CRLF normalization.
                 if (line.compare("CLOUD") == 0){
                     interpolation_type = type::CLOUD;
                 }
@@ -303,12 +313,14 @@ namespace ICHNOS {
                 Bot_interpolation_type = interpolation_type;
 
             {// read data
-                getline(datafile, line);
-                std::istringstream inp(line.c_str());
+                readTextLine(datafile, line);
+                CheckedInput inp(line, filename);
                 if (interpolation_type == type::CLOUD){
                     double rad, pw;
                     inp >> rad;
                     inp >> pw;
+                    if (rad <= 0 || pw <= 0)
+                        throw std::runtime_error("Invalid surface interpolation parameters in " + filename);
                     if (top){
                         TopRadius = rad*rad;
                         TopPower = pw;
@@ -318,10 +330,10 @@ namespace ICHNOS {
                         BotPower = pw;
                     }
                     double x, y;
-                    while (getline(datafile, line)){
-                        if (line.size() > 1){
+                    while (readTextLine(datafile, line)){
+                        if (!line.empty()){
                             elev_data el_data;
-                            std::istringstream inp1(line.c_str());
+                            CheckedInput inp1(line, filename);
                             inp1 >> x;
                             inp1 >> y;
                             if (top && bot){
@@ -357,6 +369,9 @@ namespace ICHNOS {
                     inp >> Nelem;
                     //inp >> splitQuads;
                     inp >> rad;
+                    //TODO: Test invalid mesh counts, radius, and connectivity.
+                    if (Nnodes <= 0 || Nelem <= 0 || rad <= 0)
+                        throw std::runtime_error("Invalid surface mesh header in " + filename);
                     if (top){
                         TopRadius = rad*rad;
                     }
@@ -366,8 +381,8 @@ namespace ICHNOS {
                     double x,y,v;
                     std::vector<vec3> nodes;
                     for(int i = 0; i < Nnodes; ++i){
-                        getline(datafile, line);
-                        std::istringstream inp1(line.c_str());
+                        readTextLine(datafile, line);
+                        CheckedInput inp1(line, filename);
                         inp1 >> x;
                         inp1 >> y;
                         nodes.push_back(vec3(x,y,0.0));
@@ -391,14 +406,14 @@ namespace ICHNOS {
                     int idx;
                     std::vector<std::vector<int>> m;
                     for (int i = 0; i < Nelem; ++i){
-                        getline(datafile, line);
-                        std::istringstream inp1(line.c_str());
+                        readTextLine(datafile, line);
+                        CheckedInput inp1(line, filename);
                         std::vector<int> tmp;
                         for (int j = 0; j < 4; ++j){
                             inp1 >> idx;
                             if (idx != 0){
                                 idx = idx-1;
-                                if (idx < 0){
+                                if (idx < 0 || idx >= Nnodes){
                                     idx = idx + 1;
                                     std::cout << "I found a mesh index for top/Bottom function equal to " << idx << std::endl;
                                     return false;
@@ -406,6 +421,8 @@ namespace ICHNOS {
                                 tmp.push_back(idx);
                             }
                         }
+                        if (tmp.size() != 3 && tmp.size() != 4)
+                            throw std::runtime_error("Invalid surface element in " + filename);
                         if (splitQuads == 1 && tmp.size() == 4){
                             std::vector<int> tmp1{tmp[0], tmp[1], tmp[2]};
                             std::vector<int> tmp2{tmp[0], tmp[2], tmp[3]};

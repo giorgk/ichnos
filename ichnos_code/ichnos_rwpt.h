@@ -45,7 +45,8 @@ namespace ICHNOS{
     }
 
     bool CloudRWVel::readVelocityField(std::string vf_file) {
-        CloudVel::readVelocityField(vf_file);
+        //TODO: Test failed base velocity loading in RWPT mode.
+        if (!CloudVel::readVelocityField(vf_file)) { return false; }
         if (world.rank() == 0)
             std::cout << "--> Random Walk related parameters file: " << vf_file << std::endl;
 

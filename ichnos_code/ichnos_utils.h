@@ -776,19 +776,21 @@ namespace ICHNOS {
 			return true;
 		}
 
-		void readTopBot(std::string filename, PointSet2& Pset, bool top, bool bot) {
+		//TODO: Test normalized text records and rejection of malformed input.
+        void readTopBot(std::string filename, PointSet2& Pset, bool top, bool bot) {
 			std::ifstream datafile(filename.c_str());
 			if (!datafile.good()) {
-				std::cout << "Can't open the file" << filename << std::endl;
+                //TODO: Test missing mandatory domain input aborts the run.
+                throw std::runtime_error("Cannot open input file: " + filename);
 			}
 			else {
 				std::vector< std::pair<cgal_point_2,elev_data> > xy_data;
 				elev_data el_data;
 				std::string line;
 				double x, y;
-				while (getline(datafile, line)) {
-					if (line.size() > 1) {
-						std::istringstream inp(line.c_str());
+				while (readTextLine(datafile, line)) {
+					if (!line.empty()) {
+						CheckedInput inp(line, filename);
 						inp >> x;
 						inp >> y;
 						if (top && bot){
@@ -813,7 +815,8 @@ namespace ICHNOS {
 			}
 		}
 
-		bool readGraphFile(std::string fileGraph, std::vector< std::vector<int> >& data){
+		//TODO: Test normalized text records and rejection of malformed input.
+        bool readGraphFile(std::string fileGraph, std::vector< std::vector<int> >& data){
             std::cout << "\tReading file " + fileGraph << std::endl;
 
             std::ifstream datafile(fileGraph.c_str());
@@ -824,10 +827,12 @@ namespace ICHNOS {
                 std::string line;
                 int n, id;
                 int idx = 0;
-                while (getline(datafile, line)){
-                    if (line.size() > 1){
-                        std::istringstream inp(line.c_str());
+                while (readTextLine(datafile, line)){
+                    if (!line.empty()){
+                        CheckedInput inp(line, fileGraph);
                         inp >> n;
+                        //TODO: Test negative graph neighbor counts.
+                        if (n < 0) throw std::runtime_error("Negative neighbor count in " + fileGraph);
                         std::vector<int>tmp(n+1);
                         tmp[0] = idx;
                         for (int i = 0; i < n; ++i) {
@@ -1084,26 +1089,28 @@ namespace ICHNOS {
 			}
 		}*/
 
-		void readProcessorDomain(std::string filename, boostPolygon& polygon, int myRank) {
+		//TODO: Test normalized text records and rejection of malformed input.
+        void readProcessorDomain(std::string filename, boostPolygon& polygon, int myRank) {
 			std::ifstream datafile(filename.c_str());
 			if (!datafile.good()) {
-				std::cout << "Can't open the ProcessorPolys file:[" << filename << "]" << std::endl;
+                //TODO: Test missing mandatory domain input aborts the run.
+                throw std::runtime_error("Cannot open input file: " + filename);
 			}
 			else {
 				std::vector<boostPoint> polygonPoints;
 				std::string line;
-				getline(datafile, line);
+				readTextLine(datafile, line);
 				int Npoly, id, nVerts;
 				double x, y;
 				{
-					std::istringstream inp(line.c_str());
+					CheckedInput inp(line, filename);
 					inp >> Npoly;
 				}
 				bool myPolyFound = false;
 				for (int i = 0; i < Npoly; ++i) {
-					getline(datafile, line);
+					readTextLine(datafile, line);
 					{
-						std::istringstream inp(line.c_str());
+						CheckedInput inp(line, filename);
 						inp >> id;
 						inp >> nVerts;
 						if (id == myRank){
@@ -1111,9 +1118,9 @@ namespace ICHNOS {
 						}
 					}
 					for (int j = 0; j < nVerts; ++j) {
-						getline(datafile, line);
+						readTextLine(datafile, line);
 						if (myPolyFound) {
-							std::istringstream inp(line.c_str());
+							CheckedInput inp(line, filename);
 							inp >> x;
 							inp >> y;
 							polygonPoints.push_back(boostPoint(x, y));
@@ -1135,12 +1142,16 @@ namespace ICHNOS {
 						break;
 					}
 				}
-				datafile.close();
+				//TODO: Test a processor rank absent from the polygon file.
+                if (!myPolyFound)
+                    throw std::runtime_error("Missing processor polygon in " + filename);
+                datafile.close();
 			}
 		}
 
 
-		bool readParticleFile(std::string filename, std::vector <Streamline>& S, bool isTransient) {
+		//TODO: Test normalized text records and rejection of malformed input.
+        bool readParticleFile(std::string filename, std::vector <Streamline>& S, bool isTransient) {
 			std::ifstream datafile(filename.c_str());
 			if (!datafile.good()) {
 				std::cout << "Can't open the file " << filename << std::endl;
@@ -1152,14 +1163,14 @@ namespace ICHNOS {
 				int eid, sid;
 				double rt = 0;
 				vec3 pp;
-				while (getline(datafile, line)) {
+				while (readTextLine(datafile, line)) {
 					if (line.size() >= 1 && !line.empty())
 						if (comment.compare(0, 1, line, 0, 1) == 0)
 							continue;
                     if (line.empty())
                         continue;
 
-					std::istringstream inp(line.c_str());
+					CheckedInput inp(line, filename);
 					inp >> eid;
 					inp >> sid;
 					inp >> pp.x;
@@ -1175,7 +1186,8 @@ namespace ICHNOS {
 			}
 		}
 
-		bool readWellFile(std::string filename, std::vector <Streamline>& S, bool isTransient) {
+		//TODO: Test normalized text records and rejection of malformed input.
+        bool readWellFile(std::string filename, std::vector <Streamline>& S, bool isTransient) {
 			std::ifstream datafile(filename.c_str());
 			if (!datafile.good()) {
 				std::cout << "Can't open the file " << filename << std::endl;
@@ -1184,29 +1196,36 @@ namespace ICHNOS {
 			else {
                 std::string comment("#");
 				WellOptions wopt;
+                bool headerFound = false;
 				std::string line;
 				int eid;
 				double rt = 0;
 				double x, y, top, bot;
-				while (getline(datafile, line)){
+				while (readTextLine(datafile, line)){
                     if (line.size() >= 1 && !line.empty())
                         if (comment.compare(0, 1, line, 0, 1) == 0)
                             continue;
                     if (line.empty())
                         continue;
-					std::istringstream inp(line.c_str());
+					CheckedInput inp(line, filename);
 					inp >> wopt.Nparticles;
 					inp >> wopt.Nlayer;
 					inp >> wopt.Radius;
+                    //TODO: Test invalid well release counts and a missing header.
+                    if (wopt.Nlayer <= 0 || wopt.Nparticles < wopt.Nlayer || wopt.Radius < 0)
+                        throw std::runtime_error("Invalid well release parameters in " + filename);
+                    headerFound = true;
 					break;
 				}
-				while (getline(datafile, line)) {
+				if (!headerFound)
+                    throw std::runtime_error("Missing well header in " + filename);
+                while (readTextLine(datafile, line)) {
                     if (line.size() >= 1 && !line.empty())
                         if (comment.compare(0, 1, line, 0, 1) == 0)
                             continue;
                     if (line.empty())
                         continue;
-					std::istringstream inp(line.c_str());
+					CheckedInput inp(line, filename);
 					inp >> eid;
 					inp >> x;
 					inp >> y;
@@ -1315,7 +1334,8 @@ namespace ICHNOS {
 		}
 
 		template<typename T>
-		bool read2Darray(std::string filename, int ncols, std::vector<std::vector<T>> &data){
+		//TODO: Test normalized text records and rejection of malformed input.
+        bool read2Darray(std::string filename, int ncols, std::vector<std::vector<T>> &data){
             std::ifstream datafile(filename.c_str());
             if (!datafile.good()) {
                 std::cout << "Can't open the file " << filename << std::endl;
@@ -1324,11 +1344,13 @@ namespace ICHNOS {
             else{
                 T d;
                 data.clear();
+                //TODO: Test nonpositive array column counts.
+                if (ncols <= 0) throw std::runtime_error("Invalid column count for " + filename);
                 std::vector<T> vecd(ncols);
                 std::string line;
-                while (getline(datafile, line)){
-                    if (line.size() > 1){
-                        std::istringstream inp(line.c_str());
+                while (readTextLine(datafile, line)){
+                    if (!line.empty()){
+                        CheckedInput inp(line, filename);
                         for (int i = 0; i < ncols; ++i) {
                             inp >> d;
                             vecd[i] = d;
@@ -1340,7 +1362,8 @@ namespace ICHNOS {
             return true;
 		}
 
-		bool readTimeStepFile(std::string filename, std::vector<double>& TS){
+		//TODO: Test normalized text records and rejection of malformed input.
+        bool readTimeStepFile(std::string filename, std::vector<double>& TS){
             std::ifstream datafile(filename.c_str());
             if (!datafile.good()){
                 std::cout << "Can't open the file " << filename << std::endl;
@@ -1349,9 +1372,9 @@ namespace ICHNOS {
             else{
                 std::string line;
                 double v;
-                while (getline(datafile, line)){
-                    if (line.size() > 0){
-                        std::istringstream inp(line.c_str());
+                while (readTextLine(datafile, line)){
+                    if (!line.empty()){
+                        CheckedInput inp(line, filename);
                         inp >> v;
                         TS.push_back(v);
                     }
@@ -1415,7 +1438,8 @@ namespace ICHNOS {
             return false;
 		}
 
-		bool ASCIISteadState3DVelocity(std::string filename, int nPoints, int nInfoSkip, double multiplier, VelTR& VEL){
+		//TODO: Test normalized text records and rejection of malformed input.
+        bool ASCIISteadState3DVelocity(std::string filename, int nPoints, int nInfoSkip, double multiplier, VelTR& VEL){
             std::cout << "\tReading file " + filename << std::endl;
             std::ifstream datafile(filename.c_str());
             if (!datafile.good()){
@@ -1426,8 +1450,8 @@ namespace ICHNOS {
                 std::string line;
                 double tmp, vx, vy, vz;
                 for (int i = 0; i < nPoints; ++i){
-                    getline(datafile, line);
-                    std::istringstream inp(line.c_str());
+                    readTextLine(datafile, line);
+                    CheckedInput inp(line, filename);
                     for (int j = 0; j < nInfoSkip; ++j){
                         inp >> tmp;
                     }

@@ -101,6 +101,8 @@ namespace ICHNOS{
         tf = readElev(Elevfile);
         if (!tf){return false;}
         tf = readMesh(Meshfile);
+        //TODO: Test missing and malformed mesh files propagate failure.
+        if (!tf) { return false; }
 
         if (world.size() > 1 && runAsThread == 0){
             std::cout << "Proc: " << world.rank() << " has ND: " << nodes.size() << ", MSH: " << mesh.size() << ", ELEV: " << elev.size() << std::endl;

@@ -1,4 +1,5 @@
 #pragma once
+#include "ichnos_text_input.h"
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/point_xy.hpp>
 #include <boost/geometry/geometries/polygon.hpp>
@@ -323,6 +324,7 @@ namespace ICHNOS {
         }
     }
 
+    //TODO: Test blank lines and truncated numeric records in this reader.
     bool MCVpools::readPoolData(std::string poolfile){
         std::ifstream datafile(poolfile.c_str());
         if (!datafile.good()) {
@@ -332,9 +334,9 @@ namespace ICHNOS {
         else{
             int istate, iper, idx;
             std::string line;
-            while (getline(datafile, line)){
-                if (line.size() > 1){
-                    std::istringstream inp(line.c_str());
+            while (readTextLine(datafile, line)){
+                if (!line.empty()){
+                    CheckedInput inp(line, poolfile);
                     inp >> iper;
                     inp >> istate;
                     inp >> idx;
@@ -1140,7 +1142,8 @@ namespace ICHNOS {
 	// Repeat the following N times
 	// Np points of the polygons 1 for polygon or 0 if its a hole
 	// Read Np coordinates x,y. Orientation doesn't matter and will be corrected inside the code
-	bool multiPoly::readfromFile(std::string filename) {
+	//TODO: Test blank lines and truncated numeric records in this reader.
+    bool multiPoly::readfromFile(std::string filename) {
 		std::ifstream datafile(filename.c_str());
 		if (!datafile.good()) {
 			std::cout << "Can't open the file" << filename << std::endl;
@@ -1150,16 +1153,16 @@ namespace ICHNOS {
 			int Np, orien;
 			double x, y;
 			std::string line;
-			while (getline(datafile, line))
+			while (readTextLine(datafile, line))
 			{
-				std::istringstream inp(line.c_str());
+				CheckedInput inp(line, filename);
 				boostPolygon polygon;
 				std::vector<boostPoint> polygonPoints;
 				inp >> Np;
 				inp >> orien;
 				for (int j = 0; j < Np; ++j) {
-					getline(datafile, line);
-					std::istringstream inp1(line.c_str());
+					readTextLine(datafile, line);
+					CheckedInput inp1(line, filename);
 					inp1 >> x;
 					inp1 >> y;
 					polygonPoints.push_back(boostPoint(x, y));
@@ -1287,6 +1290,7 @@ namespace ICHNOS {
 		return newstate;
 	}
 
+    //TODO: Test blank lines and truncated numeric records in this reader.
     bool TransitionProbabilityMatrix::readTimesPerPeriod(std::string filename) {
         std::ifstream datafile(filename.c_str());
         if (!datafile.good()) {
@@ -1296,8 +1300,8 @@ namespace ICHNOS {
         else{
             std::string line;
             double tm;
-            while (getline(datafile, line)){
-                std::istringstream inp(line.c_str());
+            while (readTextLine(datafile, line)){
+                CheckedInput inp(line, filename);
                 inp >> tm;
                 timesPerPeriod.push_back(tm);
             }
@@ -1306,7 +1310,8 @@ namespace ICHNOS {
         return true;
     }
 
-	bool TransitionProbabilityMatrix::readData(std::string filename) {
+	//TODO: Test blank lines and truncated numeric records in this reader.
+    bool TransitionProbabilityMatrix::readData(std::string filename) {
 		if (Nstates == 0) {
 			std::cout << "The number of states is zero" << std::endl;
 			return false;
@@ -1322,8 +1327,8 @@ namespace ICHNOS {
 			double x, y;
 			int nverts;
 			{
-				getline(datafile, line);
-				std::istringstream inp(line.c_str());
+				readTextLine(datafile, line);
+				CheckedInput inp(line, filename);
 
 				inp >> Nmatrices;
 			}
@@ -1331,15 +1336,15 @@ namespace ICHNOS {
 				TPMatrices.push_back(std::vector<std::vector<double>>(Nstates, std::vector<double>(Nstates)));
 				{
 					{
-						getline(datafile, line);
-						std::istringstream inp(line.c_str());
+						readTextLine(datafile, line);
+						CheckedInput inp(line, filename);
 						inp >> nverts;
 					}
 					boostPolygon polygon;
 					std::vector<boostPoint> polygonPoints;
 					for (int j = 0; j < nverts; ++j) {
-						getline(datafile, line);
-						std::istringstream inp(line.c_str());
+						readTextLine(datafile, line);
+						CheckedInput inp(line, filename);
 						inp >> x;
 						inp >> y;
 						polygonPoints.push_back(boostPoint(x, y));
@@ -1349,8 +1354,8 @@ namespace ICHNOS {
 					TPMpolygons.push_back(polygon);
 
 					for (int i = 0; i < Nstates; ++i) {
-						getline(datafile, line);
-						std::istringstream inp(line.c_str());
+						readTextLine(datafile, line);
+						CheckedInput inp(line, filename);
 						for (int j = 0; j < Nstates; ++j) {
 							inp >> x;
 							TPMatrices[imat][i][j] = x;

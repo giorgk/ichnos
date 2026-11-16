@@ -47,6 +47,8 @@ int main(int argc, char* argv[])
         //RG->printSeed();
     //}
 
+    //TODO: Test malformed input on one MPI rank terminates all ranks.
+    try {
     if (world.rank() == 0) {
         std::time_t result = std::time(nullptr);
         std::cout << "Ichnos started at " << std::asctime(std::localtime(&result)) << std::endl;
@@ -186,4 +188,9 @@ int main(int argc, char* argv[])
     }
 
     return 0;
+    } catch (const std::exception& error) {
+        std::cerr << "Rank " << world.rank() << ": " << error.what() << std::endl;
+        world.abort(1);
+        return 1;
+    }
    }

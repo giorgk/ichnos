@@ -175,7 +175,8 @@ namespace ICHNOS {
 		:
 		world(world_in)
 	{
-        Version = "0.5.08";
+        //TODO: Verify input configurations declare Other.Version = 0.5.09.
+        Version = "0.5.09";
 	}
     
 	bool options::readInput(int argc, char* argv[]) {

@@ -70,6 +70,7 @@ namespace ICHNOS{
         return out;
     }
 
+    //TODO: Test normalized text records and rejection of malformed input.
     bool Porosity_base::readFile(std::string filename) {
         std::ifstream datafile(filename.c_str());
         if (!datafile.good()) {
@@ -79,7 +80,7 @@ namespace ICHNOS{
         else{
             std::string line;
             { // Read the TYPE
-                getline(datafile, line);
+                readTextLine(datafile, line);
                 if (line.compare("CLOUD") == 0){
                     porInterpolation = interpType::CLOUD;
                 }
@@ -90,8 +91,8 @@ namespace ICHNOS{
             }
 
             {//Read data
-                getline(datafile, line);
-                std::istringstream inp(line.c_str());
+                readTextLine(datafile, line);
+                CheckedInput inp(line, filename);
                 double rad, pw, thr;
                 inp >> rad;
                 inp >> pw;
@@ -107,9 +108,9 @@ namespace ICHNOS{
                 std::vector<Pnt_info> dd;
 
                 double meanRatio = 0.0;
-                while (getline(datafile, line)){
-                    if (line.size() > 1){
-                        std::istringstream inp1(line.c_str());
+                while (readTextLine(datafile, line)){
+                    if (!line.empty()){
+                        CheckedInput inp1(line, filename);
                         inp1 >> x;
                         inp1 >> y;
                         inp1 >> z;
@@ -125,6 +126,9 @@ namespace ICHNOS{
                         dd.push_back(td);
                     }
                 }
+                //TODO: Test empty porosity clouds fail before building a search tree.
+                if (cnt == 0)
+                    throw std::runtime_error("Empty porosity cloud in " + filename);
                 ratioInit = meanRatio/static_cast<double>(cnt);
 
                 datafile.close();
