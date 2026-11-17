@@ -829,6 +829,18 @@ namespace ICHNOS {
 		}
 	}
 
+	int castExitReason2BinaryCode(ExitReason exitreason) {
+		return static_cast<int>(exitreason);
+	}
+
+	bool castBinaryCode2ExitReason(int code, ExitReason& exitreason) {
+		if (code < static_cast<int>(ExitReason::CHANGE_PROCESSOR) ||
+		    code > static_cast<int>(ExitReason::NO_REASON))
+			return false;
+		exitreason = static_cast<ExitReason>(code);
+		return true;
+	}
+
 
 
 	struct AdaptStepOptions{
@@ -854,6 +866,7 @@ namespace ICHNOS {
     struct PrintOptions{
         bool printH5;
         bool printASCII;
+        bool printBinary;
         int Pprec;
         int Vprec;
         int Tprec;
@@ -1110,7 +1123,7 @@ namespace ICHNOS {
 
 	struct gStream {
 		std::map<int, gPart> particles;
-		ExitReason ex;
+		ExitReason ex = ExitReason::NO_REASON;
 	};
 
 	//				 Eid		  Sid	

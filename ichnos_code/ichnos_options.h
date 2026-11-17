@@ -175,8 +175,8 @@ namespace ICHNOS {
 		:
 		world(world_in)
 	{
-        //TODO: Verify input configurations declare Other.Version = 0.5.09.
-        Version = "0.5.09";
+        //TODO: Verify input configurations declare Other.Version = 0.5.10.
+        Version = "0.5.10";
 	}
     
 	bool options::readInput(int argc, char* argv[]) {
@@ -271,6 +271,7 @@ namespace ICHNOS {
 			("InputOutput.OutputFile", po::value<std::string >(), "Prefix for the output file")
             ("InputOutput.PrintH5", po::value<int>()->default_value(0), "Print output as hdf5")
             ("InputOutput.PrintASCII", po::value<int>()->default_value(1), "Print output as ASCII")
+            ("InputOutput.PrintBinary", po::value<int>()->default_value(0), "Print output as binary")
             ("InputOutput.Pprecision", po::value<int>()->default_value(3), "Printing precision for Position (ASCII only)")
             ("InputOutput.Vprecision", po::value<int>()->default_value(6), "Printing precision for Velocity (ASCII only)")
             ("InputOutput.Tprecision", po::value<int>()->default_value(3), "Printing precision for Time (ASCII only)")
@@ -433,6 +434,7 @@ namespace ICHNOS {
 					Popt.ParticlesInParallel = vm_cfg["InputOutput.ParticlesInParallel"].as<int>();
                     Popt.printOpt.printH5 = vm_cfg["InputOutput.PrintH5"].as<int>() != 0;
                     Popt.printOpt.printASCII = vm_cfg["InputOutput.PrintASCII"].as<int>() !=0;
+                    Popt.printOpt.printBinary = vm_cfg["InputOutput.PrintBinary"].as<int>() != 0;
                     Popt.printOpt.Pprec = vm_cfg["InputOutput.Pprecision"].as<int>();
                     Popt.printOpt.Vprec = vm_cfg["InputOutput.Vprecision"].as<int>();
                     Popt.printOpt.Tprec = vm_cfg["InputOutput.Tprecision"].as<int>();

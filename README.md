@@ -170,6 +170,27 @@ cmake -DUSEHF=True \
 
 ------------
 
+# Binary streamline workflow
+
+Set `InputOutput.PrintBinary = 1` to write binary streamline fragments during
+tracing. In gather mode the same option selects binary fragment input and
+binary gathered output; the existing ASCII workflow is unchanged.
+
+Each binary record contains seven native 64-bit doubles. A particle record is
+`pid, Eid, Sid, x, y, z, velocity_magnitude`. A termination record is
+`-1, last_pid, Eid, Sid, exit_reason, 0, 0`, where `exit_reason` is the numeric
+value of the Ichnos `ExitReason` enum. Binary trajectory files have the `.bin`
+extension and no header.
+
+The current numeric exit reasons are: `0 CHANGE_PROCESSOR`, `1 EXIT_TOP`,
+`2 EXIT_BOTTOM`, `3 EXIT_SIDE`, `4 INIT_OUT`, `5 STUCK`, `6 NO_EXIT`,
+`7 MAX_INNER_ITER`, `8 FIRST_POINT_GHOST`, `9 FAR_AWAY`, `10 MAX_AGE`,
+`11 ATTRACT`, `12 NOT_IN_SUBDOMAIN`, and `13 NO_REASON`.
+
+The CLOUD velocity-field reader also accepts redistributed `.bin` coordinate
+and velocity files produced by `redist`.
+
+------------
 
 # Running Ichnos
 More information about running Ichnos can he found in the [wiki section](https://github.com/giorgk/ichnos/wiki#run-ichnos). 

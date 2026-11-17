@@ -2,6 +2,8 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <array>
+#include <cmath>
 #include <cstdint>
 #include <cstring>
 #include <limits>
@@ -653,6 +655,84 @@ namespace ICHNOS {
     }
 
 	namespace READ {
+		bool readTrajectoryBinaryId(double value, int& id) {
+			if (!std::isfinite(value) || value < 0.0 ||
+			    value > static_cast<double>(std::numeric_limits<int>::max()) ||
+			    std::floor(value) != value)
+				return false;
+			id = static_cast<int>(value);
+			return true;
+		}
+
+		bool readTrajfilesBinary(std::string filename, streamlineMap& Smap) {
+			static_assert(sizeof(double) == 8,
+			              "Binary trajectory files require 64-bit doubles");
+			std::ifstream datafile(filename.c_str(), std::ios::in | std::ios::binary);
+			if (!datafile.good()) {
+				std::cout << "Can't open the file " << filename << std::endl;
+				return false;
+			}
+
+			std::array<double, 7> row;
+			while (true) {
+				datafile.read(reinterpret_cast<char*>(row.data()),
+				              static_cast<std::streamsize>(row.size() * sizeof(double)));
+				if (!datafile) {
+					if (datafile.eof() && datafile.gcount() == 0)
+						return true;
+					std::cout << "Incomplete binary trajectory record in " << filename << std::endl;
+					return false;
+				}
+
+				if (row[0] == -1.0) {
+					int lastPid, eid, sid;
+					ExitReason exitreason;
+					if (!readTrajectoryBinaryId(row[1], lastPid) ||
+					    !readTrajectoryBinaryId(row[2], eid) ||
+					    !readTrajectoryBinaryId(row[3], sid) ||
+					    !std::isfinite(row[4]) || std::floor(row[4]) != row[4] ||
+					    row[4] < static_cast<double>(std::numeric_limits<int>::min()) ||
+					    row[4] > static_cast<double>(std::numeric_limits<int>::max())) {
+						std::cout << "Invalid binary trajectory termination record in "
+						          << filename << std::endl;
+						return false;
+					}
+					const int exitCode = static_cast<int>(row[4]);
+					if (!castBinaryCode2ExitReason(exitCode, exitreason)) {
+						std::cout << "Unknown Ichnos exit reason in " << filename << std::endl;
+						return false;
+					}
+
+					streamlineMap::iterator eIt = Smap.find(eid);
+					if (eIt != Smap.end()) {
+						std::map<int, gStream>::iterator sIt = eIt->second.find(sid);
+						if (sIt != eIt->second.end() && !sIt->second.particles.empty() &&
+						    sIt->second.particles.rbegin()->first == lastPid)
+							sIt->second.ex = exitreason;
+					}
+					continue;
+				}
+
+				int pid, eid, sid;
+				if (!readTrajectoryBinaryId(row[0], pid) ||
+				    !readTrajectoryBinaryId(row[1], eid) ||
+				    !readTrajectoryBinaryId(row[2], sid) ||
+				    !std::isfinite(row[3]) || !std::isfinite(row[4]) ||
+				    !std::isfinite(row[5]) || !std::isfinite(row[6]) || row[6] < 0.0) {
+					std::cout << "Invalid binary trajectory sample record in "
+					          << filename << std::endl;
+					return false;
+				}
+
+				gPart particle;
+				particle.p = vec3(row[3], row[4], row[5]);
+				particle.v = vec3(row[6], 0.0, 0.0);
+				particle.age = 0.0;
+				gStream& streamline = Smap[eid][sid];
+				streamline.particles.insert(std::make_pair(pid, particle));
+			}
+		}
+
 		struct RedistributedVelocityHeader {
 			std::uint32_t version;
 			std::uint32_t dimension;
@@ -1510,6 +1590,43 @@ namespace ICHNOS {
 	
 
 	namespace WRITE {
+		void writeTrajectoryBinaryRow(std::ofstream& output,
+		                              const std::array<double, 7>& row) {
+			output.write(reinterpret_cast<const char*>(row.data()),
+			             static_cast<std::streamsize>(row.size() * sizeof(double)));
+		}
+
+		void printStreamslineMapBinary(std::string filename, streamlineMap& SM) {
+			static_assert(sizeof(double) == 8,
+			              "Binary trajectory files require 64-bit doubles");
+			std::ofstream out_file(filename.c_str(), std::ios::out | std::ios::binary);
+			if (!out_file.good())
+				throw std::runtime_error("Cannot open binary trajectory output: " + filename);
+
+			for (streamlineMap::iterator eit = SM.begin(); eit != SM.end(); ++eit) {
+				for (std::map<int, gStream>::iterator sit = eit->second.begin();
+				     sit != eit->second.end(); ++sit) {
+					for (std::map<int, gPart>::iterator pit = sit->second.particles.begin();
+					     pit != sit->second.particles.end(); ++pit) {
+						std::array<double, 7> row = {{
+							static_cast<double>(pit->first), static_cast<double>(eit->first),
+							static_cast<double>(sit->first), pit->second.p.x, pit->second.p.y,
+							pit->second.p.z, pit->second.v.len()}};
+						writeTrajectoryBinaryRow(out_file, row);
+					}
+					if (!sit->second.particles.empty()) {
+						std::array<double, 7> row = {{
+							-1.0, static_cast<double>(sit->second.particles.rbegin()->first),
+							static_cast<double>(eit->first), static_cast<double>(sit->first),
+							static_cast<double>(castExitReason2BinaryCode(sit->second.ex)), 0.0, 0.0}};
+						writeTrajectoryBinaryRow(out_file, row);
+					}
+				}
+			}
+			if (!out_file.good())
+				throw std::runtime_error("Failed writing binary trajectory output: " + filename);
+		}
+
 		void PrintParticle2Log(std::ofstream& log_file, Streamline& S, int i, PrintOptions printOpt) {
 			Particle pp = S.getParticle(i);
 			log_file << pp.getPid() << " "
@@ -1641,6 +1758,38 @@ namespace ICHNOS {
                 datasetEXIT.write(ExitReason);
             }
 #endif
+            if (printOpt.printBinary) {
+                static_assert(sizeof(double) == 8,
+                              "Binary trajectory files require 64-bit doubles");
+                const std::string binary_file_name = filename + ".bin";
+                std::ofstream binary_file;
+                if (append)
+                    binary_file.open(binary_file_name.c_str(), std::ios::out | std::ios::binary | std::ios::app);
+                else
+                    binary_file.open(binary_file_name.c_str(), std::ios::out | std::ios::binary);
+                if (!binary_file.good())
+                    throw std::runtime_error("Cannot open binary trajectory output: " + binary_file_name);
+
+                for (unsigned int i = 0; i < S.size(); ++i) {
+                    if (!S[i].printIt() || S[i].size() == 0)
+                        continue;
+                    for (unsigned int j = 0; j < S[i].size(); ++j) {
+                        Particle pp = S[i].getParticle(j);
+                        std::array<double, 7> row = {{
+                            static_cast<double>(pp.getPid()), static_cast<double>(S[i].getEid()),
+                            static_cast<double>(S[i].getSid()), pp.getP().x, pp.getP().y,
+                            pp.getP().z, pp.getV().len()}};
+                        writeTrajectoryBinaryRow(binary_file, row);
+                    }
+                    std::array<double, 7> row = {{
+                        -1.0, static_cast<double>(S[i].getParticle(S[i].size() - 1).getPid()),
+                        static_cast<double>(S[i].getEid()), static_cast<double>(S[i].getSid()),
+                        static_cast<double>(castExitReason2BinaryCode(S[i].getExitReason())), 0.0, 0.0}};
+                    writeTrajectoryBinaryRow(binary_file, row);
+                }
+                if (!binary_file.good())
+                    throw std::runtime_error("Failed writing binary trajectory output: " + binary_file_name);
+            }
             if (printOpt.printASCII){
                 const std::string log_file_name = (filename + ".traj");
                 //std::cout << "Printing Output to " << log_file_name << std::endl;
@@ -1667,6 +1816,34 @@ namespace ICHNOS {
 	}
 
 	void gather_particles(ICHNOS::options& opt) {
+		if (opt.Popt.printOpt.printBinary) {
+			for (int ireal = 0; ireal < opt.Popt.Nrealizations; ++ireal) {
+				streamlineMap Smap;
+				for (int i = 0; i < opt.niter; ++i) {
+					for (int j = 0; j < opt.nproc; ++j) {
+						std::string filename = opt.Popt.OutputFile + "_ireal_" + num2Padstr(ireal, 4) +
+							"_iter_" + num2Padstr(i, 4) + "_proc_" + num2Padstr(j, 4) + ".bin";
+						std::cout << "Reading ... " << filename << std::endl;
+						if (!READ::readTrajfilesBinary(filename, Smap)) {
+							std::cout << "Error while reading binary trajectory files" << std::endl;
+							return;
+						}
+					}
+					if (!opt.Popt.gatherOneFile) {
+						std::string filename = opt.Popt.OutputFile + "_ireal_" + num2Padstr(ireal, 4) +
+							"_gather_iter_" + num2Padstr(i, 4) + ".bin";
+						WRITE::printStreamslineMapBinary(filename, Smap);
+						Smap.clear();
+					}
+				}
+				if (opt.Popt.gatherOneFile) {
+					std::string filename = opt.Popt.OutputFile + "_ireal_" + num2Padstr(ireal, 4) +
+						"_gather_ALL.bin";
+					WRITE::printStreamslineMapBinary(filename, Smap);
+				}
+			}
+			return;
+		}
 		for (int ireal = 0; ireal < opt.Popt.Nrealizations; ++ireal) {
 			streamlineMap Smap;
 			for (int i = 0; i < opt.niter; ++i) {
