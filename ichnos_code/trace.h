@@ -3,6 +3,7 @@
 #include <boost/multi_array.hpp>
 
 #include <chrono>
+#include <cmath>
 #include <thread>
 
 #if _USEHF > 0
@@ -208,9 +209,41 @@ namespace ICHNOS {
 		std::vector<Streamline> Snew;
 		while (true) {
 			Snew.clear();
+            const bool show_progress = popt.OutputFrequency > 0.0 &&
+                                       std::isfinite(popt.OutputFrequency);
+            std::vector<unsigned char> in_processor;
+            int local_count = 0;
+            int reporting_rank = -1;
+            if (show_progress) {
+                // The initial batch is replicated on every rank. Count only
+                // particles this rank will trace, and reuse the polygon checks.
+                in_processor.resize(S.size());
+                for (std::size_t i = 0; i < S.size(); ++i) {
+                    bool inside;
+                    Domain.bisInProcessorPolygon(S[i].getLastParticle().getP(), inside);
+                    in_processor[i] = inside;
+                    if (inside) ++local_count;
+                }
+                int local_work[2] = {local_count, my_rank};
+                int largest_work[2];
+                // MAXLOC breaks ties using the lowest rank. This is the only
+                // extra communication for progress, once per tracing pass.
+                MPI_Allreduce(local_work, largest_work, 1, MPI_2INT, MPI_MAXLOC, world);
+                if (largest_work[0] > 0) reporting_rank = largest_work[1];
+            }
+            const bool report_progress = my_rank == reporting_rank;
+            int processed = 0;
+            double next_progress = popt.OutputFrequency;
+            if (report_progress) {
+                std::cout << "||        Rank " << my_rank << " (" << local_count
+                          << " particles), pass " << trace_iter + 1 << ": " << std::flush;
+            }
 			for (unsigned int i = 0; i < S.size(); ++i) {
 				bool tf;
-				Domain.bisInProcessorPolygon(S[i].getLastParticle().getP(),tf);
+                if (show_progress)
+                    tf = in_processor[i] != 0;
+                else
+                    Domain.bisInProcessorPolygon(S[i].getLastParticle().getP(),tf);
 				if (!tf){
                     S[i].Close(ExitReason::NOT_IN_SUBDOMAIN);
                     continue;
@@ -225,7 +258,21 @@ namespace ICHNOS {
 					Snew.push_back(Streamline(
 						S[i].getEid(), S[i].getSid(), S[i].getLastParticle(), S[i].getBBlow(), S[i].getBBupp(), S[i].StuckIter(), S[i].getAge()));
 				}
-
+                if (report_progress) {
+                    ++processed;
+                    const double percent = 100.0 * processed / local_count;
+                    if (processed == local_count) {
+                        std::cout << "100 % (local pass complete)" << std::endl;
+                    } else if (percent >= next_progress) {
+                        // Coalesce thresholds crossed by a single particle,
+                        // keeping even very small OutFreq values inexpensive.
+                        const double milestone = std::floor(percent / popt.OutputFrequency);
+                        const double reached = std::isfinite(milestone)
+                            ? milestone * popt.OutputFrequency : percent;
+                        std::cout << reached << " - " << std::flush;
+                        next_progress = reached + popt.OutputFrequency;
+                    }
+                }
 			}
             const std::string out_file_name = (popt.OutputFile + "_ireal_" + num2Padstr(ireal, 4) + "_iter_" + num2Padstr(iter, 4) + "_proc_" + num2Padstr(my_rank, 4));
             writeTraceBatch(S, out_file_name, append);

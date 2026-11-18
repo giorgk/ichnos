@@ -212,6 +212,23 @@ and velocity files produced by `redist`.
 ------------
 
 # Running Ichnos
+For MPI domain-decomposed tracing, set `Other.OutFreq = 10` to print progress
+at approximately 10-percent intervals during each tracing pass:
+
+```text
+||    Simulating from 0 - 24999 out of 3773600
+||        Rank 3 (8200 particles), pass 1: 10 - 20 - 30 - ... 100 % (local pass complete)
+```
+
+Before each pass, including after processor exchanges, one small MPI reduction
+selects the rank with the most particles inside its processor domain. Ties use
+the lowest rank. Only that rank prints progress; there is no additional MPI
+communication inside the tracing loop. The percentage counts particles processed
+by that rank in the current pass, not global completion or elapsed time. Other
+ranks may still be working when it reaches 100%. The existing global active-particle
+count follows after all ranks finish the pass. Small batches can skip percentage
+milestones. `Other.OutFreq = 0` disables this logging and its extra reduction.
+
 More information about running Ichnos can he found in the [wiki section](https://github.com/giorgk/ichnos/wiki#run-ichnos). 
 
 ------------

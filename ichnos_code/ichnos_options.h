@@ -286,7 +286,7 @@ namespace ICHNOS {
             ("Other.nThreads", po::value<int>()->default_value(1), "Number of threads")
             ("Other.RunAsThread", po::value<int>()->default_value(0), "Run multi Core as multi-Thread")
 			("Other.Version", po::value<std::string >(), "The version of the Ichnos. (Check ichnos.exe -v)")
-            ("Other.OutFreq", po::value<double>()->default_value(0.0), "Show progress every x % of particles. Set 0 to deactivate")
+            ("Other.OutFreq", po::value<double>()->default_value(0.0), "Show progress every x % of particles (MPI: rank with most local particles per pass). Set 0 to deactivate")
             ("Other.PrintVex", po::value<int>()->default_value(0.0), "Print points to console output as vex code")
 
 		;
