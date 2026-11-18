@@ -175,8 +175,7 @@ namespace ICHNOS {
 		:
 		world(world_in)
 	{
-        //TODO: Verify input configurations declare Other.Version = 0.5.10.
-        Version = "0.5.10";
+        Version = "0.5.11";
 	}
     
 	bool options::readInput(int argc, char* argv[]) {
@@ -269,6 +268,10 @@ namespace ICHNOS {
 			("InputOutput.ParticleFile", po::value<std::string >(), "A filename with the initial positions of particles")
 			("InputOutput.WellFile", po::value<std::string >(), "A filename with the well locations")
 			("InputOutput.OutputFile", po::value<std::string >(), "Prefix for the output file")
+            ("InputOutput.OutputWriteBatchSize", po::value<int>()->default_value(1), "Maximum concurrent tracing writers")
+            ("InputOutput.OutputWriteDelaySeconds", po::value<int>()->default_value(0), "Delay between successful write batches")
+            ("InputOutput.OutputWriteMaxAttempts", po::value<int>()->default_value(3), "Maximum attempts for non-append trajectory write batches")
+            ("InputOutput.OutputWriteRetryDelaySeconds", po::value<int>()->default_value(10), "Delay before retrying a write batch")
             ("InputOutput.PrintH5", po::value<int>()->default_value(0), "Print output as hdf5")
             ("InputOutput.PrintASCII", po::value<int>()->default_value(1), "Print output as ASCII")
             ("InputOutput.PrintBinary", po::value<int>()->default_value(0), "Print output as binary")
@@ -435,6 +438,13 @@ namespace ICHNOS {
                     Popt.printOpt.printH5 = vm_cfg["InputOutput.PrintH5"].as<int>() != 0;
                     Popt.printOpt.printASCII = vm_cfg["InputOutput.PrintASCII"].as<int>() !=0;
                     Popt.printOpt.printBinary = vm_cfg["InputOutput.PrintBinary"].as<int>() != 0;
+                    Popt.outputWriteBatchSize = vm_cfg["InputOutput.OutputWriteBatchSize"].as<int>();
+                    Popt.outputWriteDelaySeconds = vm_cfg["InputOutput.OutputWriteDelaySeconds"].as<int>();
+                    Popt.outputWriteMaxAttempts = vm_cfg["InputOutput.OutputWriteMaxAttempts"].as<int>();
+                    Popt.outputWriteRetryDelaySeconds = vm_cfg["InputOutput.OutputWriteRetryDelaySeconds"].as<int>();
+                    if (Popt.outputWriteBatchSize < 1 || Popt.outputWriteMaxAttempts < 1 ||
+                        Popt.outputWriteDelaySeconds < 0 || Popt.outputWriteRetryDelaySeconds < 0)
+                        throw std::runtime_error("Output write batch size and attempts must be positive; delays must be nonnegative");
                     Popt.printOpt.Pprec = vm_cfg["InputOutput.Pprecision"].as<int>();
                     Popt.printOpt.Vprec = vm_cfg["InputOutput.Vprecision"].as<int>();
                     Popt.printOpt.Tprec = vm_cfg["InputOutput.Tprecision"].as<int>();

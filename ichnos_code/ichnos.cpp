@@ -66,7 +66,20 @@ int main(int argc, char* argv[])
     }
 
     if (OPT.gatherMode) {
-        ICHNOS::gather_particles(OPT);
+        int gatherStatus = 0;
+        if (world.rank() == 0) {
+            if (world.size() > 1)
+                std::cerr << "Gather runs on rank 0 only; request one MPI task to avoid idle ranks." << std::endl;
+            try {
+                ICHNOS::gather_particles(OPT);
+            } catch (const std::exception& error) {
+                std::cerr << "Gather failed: " << error.what() << std::endl;
+                gatherStatus = 1;
+            }
+        }
+        boost::mpi::broadcast(world, gatherStatus, 0);
+        if (gatherStatus != 0)
+            return gatherStatus;
     }
     else {
         ICHNOS::Domain2D domain(OPT.Dopt);

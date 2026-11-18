@@ -900,6 +900,10 @@ namespace ICHNOS {
 		std::string WellFile;
 		int ParticlesInParallel;
 		std::string OutputFile;
+        int outputWriteBatchSize = 1;
+        int outputWriteDelaySeconds = 0;
+        int outputWriteMaxAttempts = 3;
+        int outputWriteRetryDelaySeconds = 10;
 
         PrintOptions printOpt;
         bool printVex;

@@ -1590,6 +1590,35 @@ namespace ICHNOS {
 	
 
 	namespace WRITE {
+		constexpr std::streamoff trajectoryRecordBytes = 7 * sizeof(double);
+
+		std::streamoff trajectoryFileSize(const std::string& filename) {
+			std::ifstream input(filename.c_str(), std::ios::binary | std::ios::ate);
+			const std::streamoff size = input.tellg();
+			if (size < 0)
+				throw std::runtime_error("Cannot read trajectory file size: " + filename);
+			return size;
+		}
+
+		void closeTrajectoryOutput(std::ofstream& output, const std::string& filename) {
+			const bool writeFailed = !output;
+			output.close();
+			if (writeFailed)
+				throw std::runtime_error("Failed writing trajectory output: " + filename);
+			if (!output)
+				throw std::runtime_error("Failed closing trajectory output: " + filename);
+		}
+
+		void finishBinaryTrajectory(std::ofstream& output, const std::string& filename,
+		                            std::streamoff expectedSize) {
+			closeTrajectoryOutput(output, filename);
+			const std::streamoff actualSize = trajectoryFileSize(filename);
+			if (actualSize != expectedSize)
+				throw std::runtime_error("Wrong binary trajectory size for " + filename +
+				                         ": expected " + std::to_string(expectedSize) +
+				                         ", got " + std::to_string(actualSize));
+		}
+
 		void writeTrajectoryBinaryRow(std::ofstream& output,
 		                              const std::array<double, 7>& row) {
 			output.write(reinterpret_cast<const char*>(row.data()),
@@ -1602,6 +1631,7 @@ namespace ICHNOS {
 			std::ofstream out_file(filename.c_str(), std::ios::out | std::ios::binary);
 			if (!out_file.good())
 				throw std::runtime_error("Cannot open binary trajectory output: " + filename);
+			std::streamoff expectedSize = 0;
 
 			for (streamlineMap::iterator eit = SM.begin(); eit != SM.end(); ++eit) {
 				for (std::map<int, gStream>::iterator sit = eit->second.begin();
@@ -1615,6 +1645,7 @@ namespace ICHNOS {
 						writeTrajectoryBinaryRow(out_file, row);
 					}
 					if (!sit->second.particles.empty()) {
+						expectedSize += (static_cast<std::streamoff>(sit->second.particles.size()) + 1) * trajectoryRecordBytes;
 						std::array<double, 7> row = {{
 							-1.0, static_cast<double>(sit->second.particles.rbegin()->first),
 							static_cast<double>(eit->first), static_cast<double>(sit->first),
@@ -1623,8 +1654,7 @@ namespace ICHNOS {
 					}
 				}
 			}
-			if (!out_file.good())
-				throw std::runtime_error("Failed writing binary trajectory output: " + filename);
+			finishBinaryTrajectory(out_file, filename, expectedSize);
 		}
 
 		void PrintParticle2Log(std::ofstream& log_file, Streamline& S, int i, PrintOptions printOpt) {
@@ -1650,6 +1680,8 @@ namespace ICHNOS {
 		void printStreamslineMap(std::string filename, streamlineMap& SM) {
 			std::ofstream out_file;
 			out_file.open(filename.c_str());
+			if (!out_file)
+				throw std::runtime_error("Cannot open ASCII trajectory output: " + filename);
 			streamlineMap::iterator eit = SM.begin();
 			std::map<int, gStream >::iterator sit;
 			std::map<int, gPart>::iterator pit;
@@ -1702,7 +1734,7 @@ namespace ICHNOS {
 							 << std::endl;
 				}
 			}
-			out_file.close();
+			closeTrajectoryOutput(out_file, filename);
 		}
 
 		/**
@@ -1762,6 +1794,9 @@ namespace ICHNOS {
                 static_assert(sizeof(double) == 8,
                               "Binary trajectory files require 64-bit doubles");
                 const std::string binary_file_name = filename + ".bin";
+                std::streamoff expectedSize = append ? trajectoryFileSize(binary_file_name) : 0;
+                if (expectedSize % trajectoryRecordBytes != 0)
+                    throw std::runtime_error("Cannot append to a partial binary trajectory record: " + binary_file_name);
                 std::ofstream binary_file;
                 if (append)
                     binary_file.open(binary_file_name.c_str(), std::ios::out | std::ios::binary | std::ios::app);
@@ -1773,6 +1808,7 @@ namespace ICHNOS {
                 for (unsigned int i = 0; i < S.size(); ++i) {
                     if (!S[i].printIt() || S[i].size() == 0)
                         continue;
+                    expectedSize += (static_cast<std::streamoff>(S[i].size()) + 1) * trajectoryRecordBytes;
                     for (unsigned int j = 0; j < S[i].size(); ++j) {
                         Particle pp = S[i].getParticle(j);
                         std::array<double, 7> row = {{
@@ -1787,8 +1823,7 @@ namespace ICHNOS {
                         static_cast<double>(castExitReason2BinaryCode(S[i].getExitReason())), 0.0, 0.0}};
                     writeTrajectoryBinaryRow(binary_file, row);
                 }
-                if (!binary_file.good())
-                    throw std::runtime_error("Failed writing binary trajectory output: " + binary_file_name);
+                finishBinaryTrajectory(binary_file, binary_file_name, expectedSize);
             }
             if (printOpt.printASCII){
                 const std::string log_file_name = (filename + ".traj");
@@ -1800,6 +1835,8 @@ namespace ICHNOS {
                 else{
                     log_file.open(log_file_name.c_str());
                 }
+                if (!log_file)
+                    throw std::runtime_error("Cannot open ASCII trajectory output: " + log_file_name);
 
                 for (unsigned int i = 0; i < S.size(); ++i){
                     if (!S[i].printIt())
@@ -1810,7 +1847,7 @@ namespace ICHNOS {
                     WRITE::PrintParticle2Log(log_file, S[i], S[i].size() - 1, printOpt);
                     WRITE::PrintExitReason(log_file, S[i], S[i].getExitReason());
                 }
-                log_file.close();
+                closeTrajectoryOutput(log_file, log_file_name);
             }
 		}
 	}
@@ -1825,8 +1862,7 @@ namespace ICHNOS {
 							"_iter_" + num2Padstr(i, 4) + "_proc_" + num2Padstr(j, 4) + ".bin";
 						std::cout << "Reading ... " << filename << std::endl;
 						if (!READ::readTrajfilesBinary(filename, Smap)) {
-							std::cout << "Error while reading binary trajectory files" << std::endl;
-							return;
+							throw std::runtime_error("Error reading binary trajectory input: " + filename);
 						}
 					}
 					if (!opt.Popt.gatherOneFile) {
@@ -1854,8 +1890,7 @@ namespace ICHNOS {
 					std::cout << "Reading ... " << filename << std::endl;
 					bool tf = READ::readTrajfiles(filename, Smap);
 					if (!tf) {
-						std::cout << "Error while reading trajectory files" << std::endl;
-						return;
+						throw std::runtime_error("Error reading ASCII trajectory input: " + filename);
 					}
 				}
 				if (!opt.Popt.gatherOneFile) {

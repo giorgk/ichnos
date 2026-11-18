@@ -2,6 +2,7 @@
 #include <boost/mpi.hpp>
 #include <boost/multi_array.hpp>
 
+#include <chrono>
 #include <thread>
 
 #if _USEHF > 0
@@ -41,6 +42,8 @@ namespace ICHNOS {
 		bool findNextPoint(const Particle& P, vec3& pnew, vec3& vnew, double& tm, helpVars& pvlu,  ExitReason& er);
 		ExitReason traceInner(Streamline& S);
 		void traceOuter(std::vector<Streamline>& S, int iter, int ireal);
+        void writeTraceBatch(std::vector<Streamline>& streams, const std::string& filename,
+                             bool append = false);
 		ExitReason CheckNewPoint(vec3& p);
 		ExitReason CheckNewPointAndCalcVelocity(vec3& p, vec3& v,helpVars& pvlu/*, int &proc*/, double tm = 0);
 
@@ -226,10 +229,9 @@ namespace ICHNOS {
 
 			}
             const std::string out_file_name = (popt.OutputFile + "_ireal_" + num2Padstr(ireal, 4) + "_iter_" + num2Padstr(iter, 4) + "_proc_" + num2Padstr(my_rank, 4));
-            WRITE::writeStreamlines(S, out_file_name, popt.printOpt, append);
+            writeTraceBatch(S, out_file_name, append);
             append = true;
 
-            world.barrier();
 			//std::cout << "Proc " << my_rank << " will send " << Snew.size() << " particles" << std::endl;
 			int N_part2track = Snew.size();
 			//std::cout << "Proc " << my_rank << " N_part2send = " << N_part2send << std::endl;
@@ -798,6 +800,35 @@ namespace ICHNOS {
         pvlu.actualStep = std::min<double>(stepTime, stepLen);
 	}
 
+    void ParticleTrace::writeTraceBatch(std::vector<Streamline>& streams,
+                                        const std::string& filename, bool append) {
+        world.barrier();
+        const int batchSize = popt.outputWriteBatchSize;
+        const int lastBatch = (world.size() - 1) / batchSize;
+        const int maxAttempts = append || popt.printOpt.printH5 ? 1 : popt.outputWriteMaxAttempts;
+        for (int batch = 0; batch <= lastBatch; ++batch) {
+            for (int attempt = 0; ; ++attempt) {
+                int localFailure = 0;
+                if (world.rank() / batchSize == batch) {
+                    try {
+                        WRITE::writeStreamlines(streams, filename, popt.printOpt, append);
+                    } catch (const std::exception& error) {
+                        std::cerr << "Rank " << world.rank() << ", write attempt " << attempt + 1
+                                  << " for " << filename << ": " << error.what() << std::endl;
+                        localFailure = 1;
+                    }
+                }
+                if (!boost::mpi::all_reduce(world, localFailure, boost::mpi::maximum<int>()))
+                    break;
+                if (attempt + 1 == maxAttempts)
+                    throw std::runtime_error("Tracing output batch " + std::to_string(batch) + " failed");
+                std::this_thread::sleep_for(std::chrono::seconds(popt.outputWriteRetryDelaySeconds));
+            }
+            if (batch < lastBatch && popt.outputWriteDelaySeconds > 0)
+                std::this_thread::sleep_for(std::chrono::seconds(popt.outputWriteDelaySeconds));
+        }
+    }
+
 	void ParticleTrace::multi_threading_trace() {
         std::vector<Streamline> AllStreamlines;
         bool tf = readInputFiles(AllStreamlines);
@@ -844,8 +875,7 @@ namespace ICHNOS {
                         }
                     }
 
-                    WRITE::writeStreamlines(Streamlines4thread, filename, popt.printOpt);
-                    world.barrier();
+                    writeTraceBatch(Streamlines4thread, filename);
                 }
                 else{
                     for (int i = particle_index_start; i < particle_index_end; ++i){
@@ -871,7 +901,7 @@ namespace ICHNOS {
                         filename = popt.OutputFile + "_iter_" + num2Padstr(iter, 4) + "_ireal_" + num2Padstr(ireal, 4);
                     else
                         filename = popt.OutputFile+ "_iter_" + num2Padstr(iter, 4);
-                    WRITE::writeStreamlines(Streamlines4thread, filename, popt.printOpt);
+                    writeTraceBatch(Streamlines4thread, filename);
                 }
 
 

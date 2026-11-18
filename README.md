@@ -174,7 +174,26 @@ cmake -DUSEHF=True \
 
 Set `InputOutput.PrintBinary = 1` to write binary streamline fragments during
 tracing. In gather mode the same option selects binary fragment input and
-binary gathered output; the existing ASCII workflow is unchanged.
+binary gathered output; the ASCII file format is unchanged.
+
+Run gather after tracing succeeds. Request one MPI task for gather; only rank
+0 performs gather I/O even if more tasks are launched. Pass the original
+tracking rank and iteration counts as `--nproc` and `--iter`.
+
+During tracing, all ranks finish computing the current exchange round or
+chunk before output starts. The `[InputOutput]` settings are:
+
+- `OutputWriteBatchSize = 1`: maximum concurrent writers. Increase only after
+  testing on the shared filesystem.
+- `OutputWriteDelaySeconds = 0`: optional pause between successful batches.
+- `OutputWriteMaxAttempts = 3`: attempt limit for non-append trajectory writes.
+  Append and HDF5 batches are not retried.
+- `OutputWriteRetryDelaySeconds = 10`: pause before retrying a failed batch.
+
+Binary output is checked after close against its expected byte size. A failed
+job can leave partial output; use a fresh output prefix when restarting and
+do not gather from a failed tracing run. Set `Other.Version = 0.5.11` in
+configuration files used with this version.
 
 Each binary record contains seven native 64-bit doubles. A particle record is
 `pid, Eid, Sid, x, y, z, velocity_magnitude`. A termination record is
