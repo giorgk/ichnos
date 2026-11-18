@@ -70,7 +70,7 @@ namespace ICHNOS{
     }
 
     bool Mesh2D::isElementInMesh(int elid, vec3 &p, vec3 &uv) {
-        if (elid >= mesh.size())
+        if (elid < 0 || static_cast<std::size_t>(elid) >= mesh.size())
             return false;
 
         if (mesh[elid].size() == 3){
@@ -126,7 +126,7 @@ namespace ICHNOS{
 
     void Mesh2D::getElementIDs(int elid, std::vector<int> &ids) {
         ids.clear();
-        if (elid >= mesh.size())
+        if (elid < 0 || static_cast<std::size_t>(elid) >= mesh.size())
             return;
         else
             ids = mesh[elid];

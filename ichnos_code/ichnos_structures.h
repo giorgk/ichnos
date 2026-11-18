@@ -1577,16 +1577,16 @@ namespace ICHNOS {
             std::cout << "idx not found" << std::endl;
             return false;
         }
-        if (idx >= 0 && idx < velids.size()){
+        if (idx >= 0 && static_cast<std::size_t>(idx) < velids.size()){
             // Add the velocities of the same cell
-            for (int i = 0; i < velids[idx].size(); ++i){
+            for (std::size_t i = 0; i < velids[idx].size(); ++i){
                 outvel.push_back(velids[idx][i]);
             }
             // Loop through the neighbor elements and add the velocity ids of those elements
-            for (int i = 0; i < neighElem[idx].size(); ++i){
+            for (std::size_t i = 0; i < neighElem[idx].size(); ++i){
                 int elid = neighElem[idx][i];
-                if (elid >= 0 && elid < velids.size()){
-                    for (int j = 0; j < velids[elid].size(); ++j){
+                if (elid >= 0 && static_cast<std::size_t>(elid) < velids.size()){
+                    for (std::size_t j = 0; j < velids[elid].size(); ++j){
                         outvel.push_back(velids[elid][j]);
                     }
                 }

@@ -101,7 +101,7 @@ namespace ICHNOS{
                 Power = pw;
                 Threshold = thr;
 
-                double x, y, z, v, diam, ratio;
+                double x, y, z, v;
                 Pnt_info td;
                 int cnt = 0;
                 std::vector<cgal_point_3> pp;

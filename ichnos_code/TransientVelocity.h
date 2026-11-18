@@ -264,7 +264,7 @@ namespace ICHNOS{
                     std::vector<std::vector<double>> data;
                     tf = READ::read2Darray<double>(fileVY, nSteps, data);
                     if (tf){
-                        if (nPoints != data.size()){
+                        if (nPoints < 0 || static_cast<std::size_t>(nPoints) != data.size()){
                             std::cout << "The number of data (" << nPoints << ") in VX file is different than the VY file (" << data.size() << ")" << std::endl;
                             tf = false;
                         }
@@ -280,7 +280,7 @@ namespace ICHNOS{
                     std::vector<std::vector<double>> data;
                     tf = READ::read2Darray<double>(fileVZ, nSteps, data);
                     if (tf){
-                        if (nPoints != data.size()){
+                        if (nPoints < 0 || static_cast<std::size_t>(nPoints) != data.size()){
                             std::cout << "The number of data (" << nPoints << ") in VX and VY file is different than the VZ file (" << data.size() << ")" << std::endl;
                             tf = false;
                         }

@@ -377,11 +377,11 @@ namespace ICHNOS{
             bool tf = ic::READ::read2Darray(filename,4,fids);
             if (!tf){return false;}
         }
-        for (int i = 0; i < fids.size(); i++){
+        for (const auto& face : fids){
             std::vector<int> tmp_ids;
-            for (int j = 0; j < fids[i].size(); ++j){
-                if (fids[i][j] != 0){
-                    tmp_ids.push_back(fids[i][j]);
+            for (int faceId : face){
+                if (faceId != 0){
+                    tmp_ids.push_back(faceId);
                 }
             }
             FaceIds.push_back(tmp_ids);
@@ -687,14 +687,14 @@ namespace ICHNOS{
                 if (!tf)
                     return false;
 
-                if (VX[0].size() != nSteps){
+                if (nSteps < 0 || VX[0].size() != static_cast<std::size_t>(nSteps)){
                     std::cout << "The number of time steps (" << VX[0].size() << ") in the file " << filenameVX
                               << "\n does not match the number of steps in the Time step file " << nSteps << std::endl;
                     return false;
                 }
                 VEL.init(VX.size(), nSteps, 3);
-                for (int i = 0; i < VX.size(); i++){
-                    for (int j = 0; j < VX[i].size(); ++j) {
+                for (int i = 0; static_cast<std::size_t>(i) < VX.size(); ++i){
+                    for (int j = 0; static_cast<std::size_t>(j) < VX[i].size(); ++j) {
                         VEL.setVELvalue(VX[i][j]*multiplier, i, j, ICHNOS::coordDim::vx);
                         VEL.setVELvalue(VY[i][j]*multiplier, i, j, ICHNOS::coordDim::vy);
                         VEL.setVELvalue(VZ[i][j]*multiplier, i, j, ICHNOS::coordDim::vz);
@@ -808,7 +808,7 @@ namespace ICHNOS{
                 std::string filenameHOR = Prefix + "VHOR_" + ic::num2Padstr(proc_id, leadingZeros) + Suffix;
                 std::string filenameVER = Prefix + "VVER_" + ic::num2Padstr(proc_id, leadingZeros) + Suffix;
                 bool tf = READ::read2Darray<double>(filenameHOR, nSteps, VHOR);
-                if (VHOR[0].size() != nSteps){
+                if (nSteps < 0 || VHOR[0].size() != static_cast<std::size_t>(nSteps)){
                     std::cout << "The number of time steps (" << VHOR[0].size() << ") in the file " << filenameHOR
                               << "\n does not match the number of steps in the Time step file " << nSteps << std::endl;
                     return false;

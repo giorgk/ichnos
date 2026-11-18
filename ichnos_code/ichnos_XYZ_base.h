@@ -171,7 +171,7 @@ namespace ICHNOS{
         }
 
         pntCOORD.resize(pp.size());
-        for (int i = 0; i < pp.size(); ++i){
+        for (std::size_t i = 0; i < pp.size(); ++i){
             pntCOORD[i].x = pp[i].x();
             pntCOORD[i].y = pp[i].y();
             pntCOORD[i].z = pp[i].z();
@@ -262,7 +262,6 @@ namespace ICHNOS{
             }
             // por_xyz refers to point translated to origin
             double porx, pory, porz, scaled_dist, actual_dist, w;
-            bool calc_average = true;
             double sumW = 0;
             vec3 sumWVal;
             double mindist = 1000000000;
@@ -337,10 +336,9 @@ namespace ICHNOS{
             return;
         }
         else{
-            double diam = pntDATA[velIds[0]].diameter;
             double ratio = pntDATA[velIds[0]].ratio;
-            for (int i = 0; i < velIds.size(); ++i){
-                idx = velIds[i];
+            for (int velocityId : velIds){
+                idx = velocityId;
                 dx =  pntCOORD[idx].x - p.x;
                 dy =  pntCOORD[idx].y - p.y;
                 dz =  pntCOORD[idx].z - p.z;

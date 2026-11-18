@@ -74,11 +74,10 @@ namespace ICHNOS {
 		DomainBase& dom_in,
 		ParticleOptions &popt_in)
 		:
-		world(world_in),
-        //XYZ(XYZ_in),
+		popt(popt_in),
 		VF(VF_in),
 		Domain(dom_in),
-		popt(popt_in)
+		world(world_in)
 	{
 		//adaptStepSize = popt.StepOpt.StepSize;
 	}
@@ -924,7 +923,7 @@ namespace ICHNOS {
             double show_every = popt.OutputFrequency;
             double cnt = 0.0;
             double Nsize = static_cast<double>(Streamlines4thread.size());
-            for (int i = 0; i < Streamlines4thread.size(); ++i){
+            for (std::size_t i = 0; i < Streamlines4thread.size(); ++i){
                 if (popt.OutputFrequency > 0.1){
                     if (100*cnt/Nsize > show_every){
                         std::cout << "-" << show_every << " % |" << i << " of " << Nsize << std::endl;

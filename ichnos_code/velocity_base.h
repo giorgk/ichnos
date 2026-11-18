@@ -52,8 +52,8 @@ namespace ICHNOS {
 
 	velocityField::velocityField(boost::mpi::communicator& world_in, XYZ_base &XYZ_in)
 		:
-		world(world_in),
-        XYZ(XYZ_in)
+        XYZ(XYZ_in),
+		world(world_in)
 	{}
 
 	void velocityField::SetStepOptions(StepOptions stepOpt_in) {

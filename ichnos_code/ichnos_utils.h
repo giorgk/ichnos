@@ -2416,7 +2416,7 @@ namespace ICHNOS {
 			// that they should go on the current processor
 			world.barrier();
 			for (unsigned int i = 0; i < px.size(); ++i) {
-				if (i == my_rank)
+				if (i == static_cast<unsigned int>(my_rank))
 					continue;
 				for (unsigned int j = 0; j < px[i].size(); ++j) {
 					if (boost::geometry::within(boostPoint(px[i][j], py[i][j]), thisdomain )) {
